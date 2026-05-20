@@ -1171,29 +1171,29 @@ function clearAPIKey() {
 function resetAll() {
   if (!confirm('Tüm cevaplar, bulgular ve yapay zeka analizleri silinecek. Emin misiniz?')) return;
   
-  // Tüm durum (state) verilerini fabrikasyon ayarlarına döndürüyoruz
   STATE.cevaplar     = {};
   STATE.cevaplar1296 = {};
-  STATE.currentIdx   = 0;         // 🎯 1. sorudan başlamasını sağlıyoruz
-  STATE.page1296     = 0;         // Sayfa 2'deki listeleme sayfasını sıfırlıyoruz
-  STATE.activePage   = 'sorular'; // Kullanıcıyı doğrudan Soru Formu sekmesine yönlendiriyoruz
-  STATE.activeFilter = 'all';     // Filtreleri temizliyoruz
+  STATE.currentIdx   = 0;
+  STATE.page1296     = 0;
+  STATE.activePage   = 'sorular';
+  STATE.activeFilter = 'all';
+  STATE.aiNotes      = {};
+  STATE.riskCache    = {};
+  STATE.firmaAdi     = ''; // 🏢 Firma adını da sıfırlıyoruz
   
-  // Yeni eklediğimiz yapay zeka havuzları varsa onları da temizleyelim
-  if (STATE.aiNotes) STATE.aiNotes = {};
-  if (STATE.riskCache) STATE.riskCache = {};
-
-  // LocalStorage'ı tamamen temizleyip yeni temiz durumu kaydediyoruz
   localStorage.removeItem(STORAGE_KEY);
   save(); 
 
-  // Arayüzü (UI) güncel durumla yeniden çiziyoruz
   buildSidebar();
-  switchTab('sorular'); // Sekme geçişini tetikleyerek UI'ı tazeleyelim
+  switchTab('sorular');
   renderQuestion();
   updateStats();
   
-  toast('✅ Tüm veriler sıfırlandı, 1. sorudan başlandı!');
+  // Eğer arayüzde input varsa onu da temizleyelim
+  const input = document.getElementById('customer-name-input');
+  if(input) input.value = '';
+  
+  toast('✅ Tüm veriler ve firma adı sıfırlandı!');
 }
 
 function exportData() {
