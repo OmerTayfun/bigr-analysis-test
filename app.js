@@ -96,6 +96,34 @@ function switchTab(name) {
   if (name === 'ozet')      renderOzet();
 }
 // app.js
+
+function importData(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      const importedState = JSON.parse(e.target.result);
+      
+      // STATE nesnesini gelen veriyle güncelliyoruz
+      Object.assign(STATE, importedState);
+      
+      // Güncellenen durumu kaydet
+      save();
+      
+      // UI'ı yeniden çiz
+      buildSidebar();
+      renderQuestion();
+      updateStats();
+      
+      toast(`✅ "${STATE.projeAdi || 'Dosya'}" başarıyla yüklendi!`);
+    } catch (err) {
+      toast('❌ Dosya okunamadı, format hatalı!', 'error');
+    }
+  };
+  reader.readAsText(file);
+}
 function updateProjeAdi(yeniIsim) {
   STATE.projeAdi = yeniIsim;
   STATE.tarih = new Date().toLocaleDateString();
