@@ -33,8 +33,8 @@ function save() {
       currentIdx:   STATE.currentIdx,
       activeFilter: STATE.activeFilter,
       activePage:   STATE.activePage,
-      riskAnalizi: STATE.riskAnalizi,
-      page1296:     STATE.page1296
+      page1296:     STATE.page1296,
+      riskAnalizi:  STATE.riskAnalizi
     };
     localStorage.setItem(STORAGE_KEY, JSON.stringify(toSave));
   } catch(e) { console.warn('Save hatası:', e); }
@@ -53,8 +53,8 @@ function load() {
     STATE.currentIdx  = d.currentIdx  || 0;
     STATE.activeFilter= d.activeFilter|| 'all';
     STATE.activePage  = d.activePage  || 'sorular';
-    STATE.riskAnalizi = d.riskAnalizi || {};
     STATE.page1296    = d.page1296    || 0;
+    STATE.riskAnalizi = d.riskAnalizi || {};
   } catch(e) { console.warn('Load hatası:', e); }
 }
 
@@ -506,6 +506,11 @@ function buildRiskKategorileriHTML(q, cv) {
     </div>
   `).join('');
 }
+
+// ══════════════════════════════════════════════════════════════
+// AI RİSK ANALİZİ
+// ══════════════════════════════════════════════════════════════
+
 async function aiRiskAnaliziUret(qId) {
   const q  = SORULAR_100.find(s => s.id === qId);
   const cv = STATE.cevaplar[qId];
@@ -630,6 +635,7 @@ function clearRiskAnalizi(qId) {
   const btn = document.getElementById(`risk-ai-btn-${qId}`);
   if (btn) btn.innerHTML = '🤖 AI Risk Analizi';
 }
+
 function buildDanismanKart(q) {
   const cv  = STATE.cevaplar[q.id];
   const rd  = riskDurumu(q, cv.c);
@@ -757,11 +763,7 @@ function buildDanismanKart(q) {
   </div>
 
   <div class="dk-kolon">
-    <div class="dk-kolon-baslik"><span class="dk-kolon-baslik-icon">💡</span> İyileştirme Önerileri</div>
-    ${oneriHTML}
-  </div>
-
-  </div>
+    <div class="dk-kolon-baslik"><span class="dk-kolon-baslik-icon">💡</span>
 
   <div class="dk-footer">
     <span class="dk-footer-no">${q.tedbirNo} • S${q.id} / 100 • Kapsam: ${q.kapsananSayi} Tedbir</span>
@@ -771,7 +773,6 @@ function buildDanismanKart(q) {
     </div>
   </div>
 </div>`;
-}
 }
 
 // ══════════════════════════════════════════════════════════════
@@ -1235,18 +1236,35 @@ function clearAPIKey() {
 }
 
 function resetAll() {
-  if (!confirm('Tüm cevaplar ve bulgular silinecek. Emin misiniz?')) return;
+  if (!confirm('Tüm cevaplar, bulgular ve yapay zeka analizleri silinecek. Emin misiniz?')) return;
+  
+  // Tüm durum (state) verilerini fabrikasyon ayarlarına döndürüyoruz
   STATE.cevaplar     = {};
   STATE.cevaplar1296 = {};
-  STATE.page1296     = 0;
-  STATE.projeAdi     = 'Yeni Proje';                              // ← ekle
-  const projeInput = document.getElementById('proje-adi-input');
-  if (projeInput) projeInput.value = '';                          // ← ekle
+  STATE.currentIdx   = 0;         // 🎯 1. sorudan başlamasını sağlıyoruz
+  STATE.page1296     = 0;         // Sayfa 2'deki listeleme sayfasını sıfırlıyoruz
+  STATE.activePage   = 'sorular'; // Kullanıcıyı doğrudan Soru Formu sekmesine yönlendiriyoruz
+  STATE.activeFilter = 'all';     // Filtreleri temizliyoruz
+  
+  // Yeni eklediğimiz yapay zeka havuzları varsa onları da temizleyelim
+  if (STATE.aiNotes) STATE.aiNotes = {};
+  if (STATE.riskCache) STATE.riskCache = {};
+  STATE.riskAnalizi = {};
+  STATE.projeAdi = 'Yeni Proje';
+  const pi = document.getElementById('proje-adi-input');
+  if (pi) pi.value = '';
+
+  // LocalStorage'ı tamamen temizleyip yeni temiz durumu kaydediyoruz
   localStorage.removeItem(STORAGE_KEY);
+  save(); 
+
+  // Arayüzü (UI) güncel durumla yeniden çiziyoruz
   buildSidebar();
+  switchTab('sorular'); // Sekme geçişini tetikleyerek UI'ı tazeleyelim
   renderQuestion();
   updateStats();
-  toast('✅ Sıfırlandı');
+  
+  toast('✅ Tüm veriler sıfırlandı, 1. sorudan başlandı!');
 }
 // Risk Analizi Üretme Fonksiyonu
 
