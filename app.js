@@ -498,8 +498,8 @@ function buildDanismanKart(q) {
   </div>
   <div class="dk-body">
     <div class="dk-kolon">
-      <div class="dk-kolon-baslik"><span class="dk-kolon-baslik-icon">🔍</span> Tespitler</div>
-      <div class="dk-tespit-text">${tespitMetni}</div>
+      <div class="dk-kolon-baslik"><span class="dk-kolon-baslik-icon">⚠️</span> Risk Analizi</div>
+      ${buildRiskKategorileriHTML(q, cv)}
     </div>
     <div class="dk-kolon">
       <div class="dk-kolon-baslik"><span class="dk-kolon-baslik-icon">⚠️</span> Risk Analizi</div>
