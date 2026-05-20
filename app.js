@@ -763,7 +763,11 @@ function buildDanismanKart(q) {
   </div>
 
   <div class="dk-kolon">
-    <div class="dk-kolon-baslik"><span class="dk-kolon-baslik-icon">💡</span>
+    <div class="dk-kolon-baslik"><span class="dk-kolon-baslik-icon">💡</span> İyileştirme Önerileri</div>
+    ${oneriHTML}
+  </div>
+
+  </div>
 
   <div class="dk-footer">
     <span class="dk-footer-no">${q.tedbirNo} • S${q.id} / 100 • Kapsam: ${q.kapsananSayi} Tedbir</span>
