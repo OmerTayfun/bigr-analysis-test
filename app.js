@@ -16,6 +16,7 @@ const STATE = {
   currentIdx: 0,
   activeFilter: 'all',
   activePage: 'sorular',
+  riskAnalizi: {},
   page1296: 0
 };
 
@@ -32,6 +33,7 @@ function save() {
       currentIdx:   STATE.currentIdx,
       activeFilter: STATE.activeFilter,
       activePage:   STATE.activePage,
+      riskAnalizi: STATE.riskAnalizi,
       page1296:     STATE.page1296
     };
     localStorage.setItem(STORAGE_KEY, JSON.stringify(toSave));
@@ -51,6 +53,7 @@ function load() {
     STATE.currentIdx  = d.currentIdx  || 0;
     STATE.activeFilter= d.activeFilter|| 'all';
     STATE.activePage  = d.activePage  || 'sorular';
+    STATE.riskAnalizi = d.riskAnalizi || {};
     STATE.page1296    = d.page1296    || 0;
   } catch(e) { console.warn('Load hatası:', e); }
 }
@@ -503,6 +506,130 @@ function buildRiskKategorileriHTML(q, cv) {
     </div>
   `).join('');
 }
+async function aiRiskAnaliziUret(qId) {
+  const q  = SORULAR_100.find(s => s.id === qId);
+  const cv = STATE.cevaplar[qId];
+  if (!q || !cv) return;
+
+  // Cache kontrolü
+  if (STATE.riskAnalizi[qId]) {
+    document.getElementById(`risk-ai-box-${qId}`).innerHTML = renderRiskAIBox(qId);
+    return;
+  }
+
+  const apiKey = localStorage.getItem(API_KEY_STOR);
+  if (!apiKey) { showAPIKeyModal(); return; }
+
+  const btn = document.getElementById(`risk-ai-btn-${qId}`);
+  if (btn) { btn.disabled = true; btn.innerHTML = '<span class="loader"></span>'; }
+
+  const tespitMetni = cv.bulgu || cv.obs || `"${q.tedbir}" tedbiri uygulanmamaktadır.`;
+  const mev  = lkp('mev',  q.mev);
+  const iso1 = lkp('iso1', q.iso1);
+
+  const prompt = `Sen kıdemli bir bilgi güvenliği danışmanısın. Aşağıdaki denetim bulgusuna göre yönetimin anlayacağı sade ve net dilde risk analizi yaz.
+
+BULGU: "${tespitMetni}"
+TEDBİR: ${q.tedbir} (${q.tedbirNo})
+KATEGORİ: ${q.altKat}
+KRİTİKLİK: ${q.kritiklik === 3 ? 'Yüksek' : q.kritiklik === 2 ? 'Orta' : 'Düşük'}
+${mev ? 'MEVZUAT: ' + mev : ''}
+${iso1 ? 'ISO 27001: ' + iso1.replace(/\n/g, ', ') : ''}
+
+Aşağıdaki 4 risk kategorisi için birer paragraf yaz (her biri 1-2 cümle, teknik jargon kullanma, yönetim kuruluna hitap eden dil):
+
+STRATEJİK RİSK:
+OPERASYONELRİSK:
+FİNANSAL RİSK:
+İTİBAR RİSKİ:
+
+Sadece bu 4 başlık ve içeriklerini yaz, başka açıklama ekleme.`;
+
+  try {
+    const resp = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent?key=${encodeURIComponent(apiKey)}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: prompt }] }],
+          generationConfig: { temperature: 0.4, maxOutputTokens: 1000 }
+        })
+      }
+    );
+    if (!resp.ok) throw new Error(`API ${resp.status}`);
+    const data = await resp.json();
+    const text = data.candidates?.[0]?.content?.parts?.map(p => p.text).join('\n') || '';
+
+    STATE.riskAnalizi[qId] = text.trim();
+    save();
+
+    const box = document.getElementById(`risk-ai-box-${qId}`);
+    if (box) box.innerHTML = renderRiskAIBox(qId);
+    toast('✅ Risk analizi üretildi', 'success');
+  } catch(e) {
+    toast('AI hatası: ' + e.message, 'error');
+  } finally {
+    if (btn) { btn.disabled = false; btn.innerHTML = '🤖 AI Risk Analizi'; }
+  }
+}
+
+function renderRiskAIBox(qId) {
+  const text = STATE.riskAnalizi[qId];
+  if (!text) return '';
+
+  // Metni kategorilere böl
+  const kategoriler = [
+    { key: 'STRATEJİK RİSK',  icon: '⚡', color: '#f87171' },
+    { key: 'OPERASYONELRİSK', icon: '🔧', color: '#fb923c' },
+    { key: 'FİNANSAL RİSK',   icon: '💰', color: '#fbbf24' },
+    { key: 'İTİBAR RİSKİ',    icon: '📣', color: '#a78bfa' }
+  ];
+
+  let html = `<div style="margin-top:10px;border-top:1px solid rgba(255,255,255,0.1);padding-top:10px">
+    <div style="font-size:9px;font-weight:700;color:#6366f1;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">
+      🤖 AI Risk Değerlendirmesi
+      <button onclick="clearRiskAnalizi(${qId})" style="background:none;border:none;color:#64748b;cursor:pointer;font-size:9px;margin-left:8px;text-decoration:underline">Sil</button>
+    </div>`;
+
+  // Satırları parse et
+  const lines = text.split('\n').filter(l => l.trim());
+  let current = null;
+  let currentText = [];
+  const parsed = {};
+
+  lines.forEach(line => {
+    const match = kategoriler.find(k => line.toUpperCase().includes(k.key));
+    if (match) {
+      if (current && currentText.length) parsed[current] = currentText.join(' ').trim();
+      current = match.key;
+      currentText = [line.replace(/.*(?:RİSK[İ]?|RİSK):?\s*/i, '').trim()];
+    } else if (current) {
+      currentText.push(line.trim());
+    }
+  });
+  if (current && currentText.length) parsed[current] = currentText.join(' ').trim();
+
+  kategoriler.forEach(kat => {
+    const icerik = parsed[kat.key] || text; // parse edilemezse ham metin
+    html += `<div style="margin-bottom:7px;padding:7px 10px;background:rgba(0,0,0,0.2);border-radius:5px;border-left:3px solid ${kat.color}">
+      <div style="font-size:10px;font-weight:700;color:${kat.color};margin-bottom:3px">${kat.icon} ${kat.key}</div>
+      <div style="font-size:11px;color:#d1d5db;line-height:1.5">${icerik}</div>
+    </div>`;
+  });
+
+  html += '</div>';
+  return html;
+}
+
+function clearRiskAnalizi(qId) {
+  delete STATE.riskAnalizi[qId];
+  save();
+  const box = document.getElementById(`risk-ai-box-${qId}`);
+  if (box) box.innerHTML = '';
+  const btn = document.getElementById(`risk-ai-btn-${qId}`);
+  if (btn) btn.innerHTML = '🤖 AI Risk Analizi';
+}
 function buildDanismanKart(q) {
   const cv  = STATE.cevaplar[q.id];
   const rd  = riskDurumu(q, cv.c);
@@ -600,12 +727,18 @@ function buildDanismanKart(q) {
     </div>
 
     <div class="dk-kolon">
-      <div class="dk-kolon-baslik"><span class="dk-kolon-baslik-icon">⚠️</span> Risk Analizi</div>
-      
-      <div class="dk-risk-item">
-        <span class="dk-risk-label etkisel">Etki (${etkiPuani} Puan)</span>
-        <div class="dk-risk-text">${etkiselAciklama}</div>
-      </div>
+  <div class="dk-kolon-baslik"><span class="dk-kolon-baslik-icon">⚠️</span> Risk Analizi</div>
+  ${buildRiskKategorileriHTML(q, cv)}
+  <div style="margin-top:8px">
+    <button id="risk-ai-btn-${q.id}" onclick="aiRiskAnaliziUret(${q.id})"
+      style="background:linear-gradient(135deg,#6366f1,#8b5cf6);color:#fff;border:none;padding:5px 12px;border-radius:6px;cursor:pointer;font-size:10px;font-weight:600;width:100%">
+      ${STATE.riskAnalizi[q.id] ? '🔄 Yenile' : '🤖 AI Risk Analizi'}
+    </button>
+  </div>
+  <div id="risk-ai-box-${q.id}">
+    ${STATE.riskAnalizi[q.id] ? renderRiskAIBox(q.id) : ''}
+  </div>
+</div>
       
       <div class="dk-risk-item">
         <span class="dk-risk-label kritiklik">Kritiklik (${q.kritiklik * 4} Puan)</span>
