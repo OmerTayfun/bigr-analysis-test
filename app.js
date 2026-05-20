@@ -451,76 +451,137 @@ function buildRiskKategorileriHTML(q, cv) {
 function buildDanismanKart(q) {
   const cv  = STATE.cevaplar[q.id];
   const rd  = riskDurumu(q, cv.c);
-  const mev = lkp('mev',  q.mev);
+  const mev = lkp('mev', q.mev);
   const iso1= lkp('iso1', q.iso1);
   const iso2= lkp('iso2', q.iso2);
   const iso3= lkp('iso3', q.iso3);
 
+  // ── 1. KOLON: SAF TESPİTLER METNİ ──────────────────────────────
   let tespitMetni = '';
-  if (cv.c === 'kismi' && cv.bulgu)      tespitMetni = cv.bulgu;
-  else if (cv.c === 'kismi' && cv.obs)   tespitMetni = `Denetim kapsamında "${q.tedbir}" alanında kısmi uygulama tespit edilmiştir. Danışman notu: ${cv.obs}`;
-  else if (cv.c === 'hayir')             tespitMetni = `Yapılan incelemede, "${q.tedbir}" kapsamındaki gereklilikler kurumda uygulanmamaktadır. ${q.altKat} alanına ilişkin tanımlı bir süreç veya kontrol mekanizması bulunmamaktadır. Bu durum BİGR rehberinin ${q.tedbirNo} numaralı tedbir maddesine doğrudan aykırılık teşkil etmektedir.`;
-  else                                    tespitMetni = `Kısmen uygulama durumu tespit edilmiştir. Detaylı gözlem notu eklenmemiştir.`;
+  if (cv.c === 'kismi' && cv.bulgu) {
+    tespitMetni = cv.bulgu;
+  } else if (cv.c === 'kismi' && cv.obs) {
+    tespitMetni = `Denetim kapsamında "${q.tedbir}" alanında kısmi uygulama tespit edilmiştir. Danışman notu: ${cv.obs}`;
+  } else if (cv.c === 'hayir') {
+    // Tamamen saf tespit üslubu (Risk yorumları buraya karışmıyor)
+    tespitMetni = `Yapılan saha incelemelerinde ve denetim mülakatlarında, "${q.tedbir}" kapsamındaki gerekliliklerin kurum bünyesinde uygulanmadığı tespit edilmiştir. ${q.altKat} alanına ilişkin tanımlı bir süreç, yürütülen bir kontrol mekanizması veya somut bir çalışma bulunmamaktadır. Bu durum, Bilgi ve İletişim Güvenliği Rehberi'nin (BİGR) ilgili maddelerine doğrudan uyumsuzluk teşkil etmektedir.`;
+  } else {
+    tespitMetni = `Kısmen uygulama durumu tespit edilmiştir. Detaylı gözlem notu eklenmemiştir.`;
+  }
 
-  const etkisel = cv.c === 'hayir'
-    ? (q.kritiklik===3 ? 'Tedbirin hiç uygulanmaması kuruma ciddi operasyonel, yasal ve itibar riski oluşturmaktadır.'
-     : q.kritiklik===2 ? 'Tedbirin eksikliği, kurum varlıkları ve kişisel veriler üzerinde önemli risk yaratmaktadır.'
+  // ── 2. KOLON: RİSK ANALİZİ (Tüm Risk Öğeleri Burada Toplanıyor) ──
+  // Etki Skoru Hesaplama ve Açıklaması
+  const etkiPuani = q.kritiklik * (cv.c === 'hayir' ? 4 : 3);
+  const etkiselAciklama = cv.c === 'hayir'
+    ? (q.kritiklik === 3 ? 'Tedbirin hiç uygulanmaması kuruma ciddi operasyonel, yasal ve itibar riski oluşturmaktadır. Güvenlik ihlali olasılığı yüksektir.'
+     : q.kritiklik === 2 ? 'Tedbirin eksikliği, kurum varlıkları ve kişisel veriler üzerinde önemli risk yaratmaktadır.'
      : 'Orta düzey operasyonel risk söz konusudur.')
-    : (q.kritiklik===3 ? 'Kısmi uygulama, tam güvence sağlamamakta; kontrol etkinliği yetersiz kalmaktadır.'
+    : (q.kritiklik === 3 ? 'Kısmi uygulama, tam güvence sağlamamakta; kontrol etkinliği yetersiz kalmaktadır.'
      : 'Sürecin olgunlaşması için ek adım atılması gerekmektedir.');
 
-  const hukukiRisk = `* ${q.tedbirNo} | ${cv.c==='hayir'?'Olası Riskler: ':'Kısmi Risk: '}${q.kritiklik===3?'Yüksek':q.kritiklik===2?'Orta':'Düşük'} Kritiklik (${q.kritiklik*(cv.c==='hayir'?4:3)} Puan)${mev ? `\n\n* Hukuki Yaptırım:\n${mev}` : ''}`;
+  // Hukuki Risk ve Yaptırım Verisi
+  let hukukiAks = mev ? mev : 'İlgili yasal mevzuat maddesi tanımlanmamıştır.';
 
+  const isAI = cv.c === 'kismi' && cv.bulgu;
+
+  // ── MEVZUAT KOLONU (3. KOLON) ──────────────────────────────────
   let mevzuatHTML = '';
-  if (mev) mevzuatHTML += `<div class="dk-mev-item"><div class="dk-mev-baslik">📜 İlgili Mevzuat</div><div class="dk-mev-text">${mev}</div></div>`;
-  if (iso1||iso2||iso3) {
+  if (mev) {
+    mevzuatHTML += `<div class="dk-mev-item">
+      <div class="dk-mev-baslik">📜 İlgili Mevzuat</div>
+      <div class="dk-mev-text">${mev}</div>
+    </div>`;
+  }
+  if (iso1 || iso2 || iso3) {
     mevzuatHTML += `<div class="dk-mev-item"><div class="dk-mev-baslik">🏷 Standart Referanslar</div><div>`;
-    if (iso1) iso1.split('\n').filter(Boolean).forEach(v => { mevzuatHTML += `<span class="dk-mev-iso">ISO 27001:2022 ${v.trim()}</span>`; });
-    if (iso2) iso2.split('\n').filter(Boolean).forEach(v => { mevzuatHTML += `<span class="dk-mev-iso">ISO 27701 ${v.trim()}</span>`; });
-    if (iso3) iso3.split('\n').filter(Boolean).forEach(v => { mevzuatHTML += `<span class="dk-mev-iso">ISO 20000 ${v.trim()}</span>`; });
+    if (iso1) iso1.split('\n').filter(Boolean).forEach(v => {
+      mevzuatHTML += `<span class="dk-mev-iso">ISO 27001:2022 ${v.trim()}</span>`;
+    });
+    if (iso2) iso2.split('\n').filter(Boolean).forEach(v => {
+      mevzuatHTML += `<span class="dk-mev-iso">ISO 27701 ${v.trim()}</span>`;
+    });
+    if (iso3) iso3.split('\n').filter(Boolean).forEach(v => {
+      mevzuatHTML += `<span class="dk-mev-iso">ISO 20000 ${v.trim()}</span>`;
+    });
     mevzuatHTML += `</div></div>`;
   }
-  if (!mevzuatHTML) mevzuatHTML = `<div class="dk-mev-text" style="color:#9ca3af">BİGR ${q.tedbirNo} kapsamında değerlendirilmektedir.</div>`;
+  if (!mevzuatHTML) {
+    mevzuatHTML = `<div class="dk-mev-text" style="color:#9ca3af">BİGR ${q.tedbirNo} kapsamında değerlendirilmektedir.</div>`;
+  }
 
+  // ── ÖNERİ KOLONU (4. KOLON) ─────────────────────────────────────
   const oneriLines = (q.oneri || '').split(/\n|•|-/).map(s => s.trim()).filter(s => s.length > 15);
-  let oneriHTML = oneriLines.length > 0
-    ? oneriLines.slice(0,6).map((line,i) => `<div class="dk-oneri-item"><div class="dk-oneri-no">${i+1}</div><div class="dk-oneri-text">${line}</div></div>`).join('')
-    : `<div class="dk-oneri-item"><div class="dk-oneri-no">1</div><div class="dk-oneri-text">${q.oneri || 'Kontrol mekanizması oluşturularak dokümante edilmelidir.'}</div></div>`;
+  let oneriHTML = '';
+  if (oneriLines.length > 0) {
+    oneriLines.slice(0, 6).forEach((line, i) => {
+      oneriHTML += `<div class="dk-oneri-item">
+        <div class="dk-oneri-no">${i + 1}</div>
+        <div class="dk-oneri-text">${line}</div>
+      </div>`;
+    });
+  } else {
+    oneriHTML = `<div class="dk-oneri-item">
+      <div class="dk-oneri-no">1</div>
+      <div class="dk-oneri-text">${q.oneri || 'Kontrol mekanizması oluşturularak dokümante edilmelidir.'}</div>
+    </div>`;
+  }
 
   return `
 <div class="danisman-kart" id="kart-${q.id}">
   <div class="dk-header">
-    <div>
+    <div class="dk-header-left">
       <div class="dk-ustbaslik">Danışmanlık Görüşü</div>
       <div class="dk-baslik">${q.altKat} — ${q.tedbir}</div>
     </div>
-    <span class="dk-risk-badge ${rd?.cls||'dk-risk-orta'}">${rd?.label||'Orta Riskli'}</span>
+    <div class="dk-header-right">
+      <span class="dk-risk-badge ${rd?.cls || 'dk-risk-orta'}">${rd?.label || 'Orta Riskli'}</span>
+    </div>
   </div>
+
   <div class="dk-body">
     <div class="dk-kolon">
-       <div class="dk-kolon-baslik"><span class="dk-kolon-baslik-icon">🔍</span> Tespitler</div>
+      <div class="dk-kolon-baslik"><span class="dk-kolon-baslik-icon">🔍</span> Tespitler</div>
       <div class="dk-tespit-text">${tespitMetni}</div>
     </div>
+
     <div class="dk-kolon">
       <div class="dk-kolon-baslik"><span class="dk-kolon-baslik-icon">⚠️</span> Risk Analizi</div>
-      <div class="dk-risk-item"><span class="dk-risk-label etkisel">Etki (${q.kritiklik*(cv.c==='hayir'?4:3)})</span><div class="dk-risk-text">${etkisel}</div></div>
-      <div class="dk-risk-item"><span class="dk-risk-label kritiklik">Kritiklik (${q.kritiklik*4})</span><div class="dk-risk-text">BİGR kritiklik: <strong>${q.kritiklik===3?'Yüksek':q.kritiklik===2?'Orta':'Düşük'}</strong></div></div>
-      <div class="dk-risk-item"><span class="dk-risk-label hukuki">Hukuki</span><div class="dk-risk-text" style="white-space:pre-line">${hukukiRisk}</div></div>
+      
+      <div class="dk-risk-item">
+        <span class="dk-risk-label etkisel">Etki (${etkiPuani} Puan)</span>
+        <div class="dk-risk-text">${etkiselAciklama}</div>
+      </div>
+      
+      <div class="dk-risk-item">
+        <span class="dk-risk-label kritiklik">Kritiklik (${q.kritiklik * 4} Puan)</span>
+        <div class="dk-risk-text">BİGR Rehberi Kritiklik Derecesi: <strong>${q.kritiklik === 3 ? 'Yüksek (3)' : q.kritiklik === 2 ? 'Orta (2)' : 'Düşük (1)'}</strong></div>
+      </div>
+      
+      <div class="dk-risk-item">
+        <span class="dk-risk-label hukuki">Hukuki Risk</span>
+        <div class="dk-risk-text" style="font-size:12px; line-height:1.5; color:var(--text); font-weight:500;">
+          ⚠️ ${cv.c === 'hayir' ? 'Yüksek Uyumsuzluk Riski: ' : 'Kısmi Uyumsuzluk Riski: '}
+          <div style="margin-top: 4px; font-weight: normal; color: var(--text2); white-space: pre-line;">${hukukiAks}</div>
+        </div>
+      </div>
     </div>
+
     <div class="dk-kolon">
       <div class="dk-kolon-baslik"><span class="dk-kolon-baslik-icon">⚖️</span> Mevzuat Uyumu</div>
       ${mevzuatHTML}
     </div>
+
     <div class="dk-kolon">
       <div class="dk-kolon-baslik"><span class="dk-kolon-baslik-icon">💡</span> İyileştirme Önerileri</div>
       ${oneriHTML}
     </div>
   </div>
+
   <div class="dk-footer">
-    <span class="dk-footer-no">${q.tedbirNo} • S${q.id}/100 • ${q.kapsananSayi} Tedbir</span>
-    <div style="display:flex;gap:7px;align-items:center">
-      ${cv.c==='kismi'&&cv.bulgu ? '<span class="dk-ai-badge">🤖 AI Bulgu</span>' : ''}
-      <span>${cv.c==='hayir'?'❌ Uygulanmıyor':'🟡 Kısmen'}</span>
+    <span class="dk-footer-no">${q.tedbirNo} • S${q.id} / 100 • Kapsam: ${q.kapsananSayi} Tedbir</span>
+    <div style="display:flex;gap:8px;align-items:center">
+      ${isAI ? '<span class="dk-ai-badge">🤖 AI Bulgu</span>' : ''}
+      <span>${cv.c === 'hayir' ? '❌ Uygulanmıyor' : '🟡 Kısmen Uygulanıyor'}</span>
     </div>
   </div>
 </div>`;
