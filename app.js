@@ -19,10 +19,29 @@ const CATEGORIES = [...new Set(SORULAR_100.map(s => s.anaKat))];
 
 // ── STORAGE ────────────────────────────────────────────────────
 function save() {
-  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(STATE.cevaplar)); } catch(e) {}
+  try { 
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({
+      cevaplar: STATE.cevaplar,
+      currentIdx: STATE.currentIdx // 👈 Kaldığı sorunun sırasını da kaydediyoruz
+    })); 
+  } catch(e) {}
 }
 function load() {
-  try { const r = localStorage.getItem(STORAGE_KEY); if (r) STATE.cevaplar = JSON.parse(r); } catch(e) {}
+  try { 
+    const r = localStorage.getItem(STORAGE_KEY); 
+    if (r) {
+      const parsed = JSON.parse(r);
+      // Eski sürümden kalan veriler varsa veya doğrudan nesneyse uyumluluk koruması:
+      if (parsed.cevaplar) {
+        STATE.cevaplar = parsed.cevaplar;
+        STATE.currentIdx = typeof parsed.currentIdx === 'number' ? parsed.currentIdx : 0;
+      } else {
+        // Eğer localStorage'da sadece eski yapı kalmışsa hata vermemesi için
+        STATE.cevaplar = parsed;
+        STATE.currentIdx = 0;
+      }
+    } 
+  } catch(e) {}
 }
 
 // ── UTILS ──────────────────────────────────────────────────────
@@ -97,6 +116,7 @@ function filterCat(cat, el) {
   const list = filteredList();
   if (list.length) STATE.currentIdx = SORULAR_100.indexOf(list[0]);
   renderQuestion();
+save();
 }
 
 function filteredList() {
@@ -112,6 +132,7 @@ function navigate(dir) {
     renderQuestion();
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
+save();
 }
 
 function renderQuestion() {
