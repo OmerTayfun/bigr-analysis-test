@@ -29,12 +29,11 @@ function save() {
       cevaplar1296: STATE.cevaplar1296,
       currentIdx:   STATE.currentIdx,
       activeFilter: STATE.activeFilter,
-      activePage:   STATE.activePage
+      activePage:   STATE.activePage,   // 👈 Buraya eksik olan virgül eklendi!
       firmaAdi:     STATE.firmaAdi
     }));
   } catch(e) {}
 }
-
 function load() {
   try {
     const r = localStorage.getItem(STORAGE_KEY);
