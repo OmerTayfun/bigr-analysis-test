@@ -8,8 +8,11 @@ const PUAN = { evet: 1, kismi: 0.5, hayir: 0 };
 const PAGE_SIZE_1296 = 50;
 
 const STATE = {
+  projeAdi: "Yeni Proje",     // Yeni eklendi
+  tarih: "",                 // Yeni eklendi
   cevaplar: {},
   cevaplar1296: {},
+  riskCache: {},             // Yeni eklendi (Cache mekanizması için)
   currentIdx: 0,
   activeFilter: 'all',
   activePage: 'sorular',
@@ -21,14 +24,8 @@ const CATEGORIES = [...new Set(SORULAR_100.map(s => s.anaKat))];
 // ── STORAGE ──────────────────────────────────────────────────
 function save() {
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify({
-      cevaplar:     STATE.cevaplar,
-      cevaplar1296: STATE.cevaplar1296,
-      currentIdx:   STATE.currentIdx,
-      activeFilter: STATE.activeFilter,
-      activePage:   STATE.activePage
-    }));
-  } catch(e) {}
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(STATE));
+  } catch(e) { console.error("Kaydetme hatası:", e); }
 }
 
 function load() {
@@ -36,13 +33,11 @@ function load() {
     const r = localStorage.getItem(STORAGE_KEY);
     if (!r) return;
     const d = JSON.parse(r);
-    STATE.cevaplar     = d.cevaplar     || {};
-    STATE.cevaplar1296 = d.cevaplar1296 || {};
-    STATE.currentIdx   = d.currentIdx   || 0;
-    STATE.activeFilter = d.activeFilter || 'all';
-    STATE.activePage   = d.activePage   || 'sorular';
-  } catch(e) {}
+    // Mevcut state'i koruyarak yeni verileri üzerine yazıyoruz
+    Object.assign(STATE, d); 
+  } catch(e) { console.error("Yükleme hatası:", e); }
 }
+
 
 // ── UTILS ────────────────────────────────────────────────────
 function shortCat(c) { return c.replace(/^\d+\.\d+\.\s*/, ''); }
