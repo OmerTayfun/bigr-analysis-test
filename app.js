@@ -20,29 +20,27 @@ const CATEGORIES = [...new Set(SORULAR_100.map(s => s.anaKat))];
 
 // ── STORAGE ──────────────────────────────────────────────────
 function save() {
-  try { 
+  try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify({
-      cevaplar: STATE.cevaplar,
-      currentIdx: STATE.currentIdx // 👈 Kaldığı sorunun sırasını da kaydediyoruz
-    })); 
+      cevaplar:     STATE.cevaplar,
+      cevaplar1296: STATE.cevaplar1296,
+      currentIdx:   STATE.currentIdx,
+      activeFilter: STATE.activeFilter,
+      activePage:   STATE.activePage
+    }));
   } catch(e) {}
 }
 
 function load() {
-  try { 
-    const r = localStorage.getItem(STORAGE_KEY); 
-    if (r) {
-      const parsed = JSON.parse(r);
-      // Eski sürümden kalan veriler varsa veya doğrudan nesneyse uyumluluk koruması:
-      if (parsed.cevaplar) {
-        STATE.cevaplar = parsed.cevaplar;
-        STATE.currentIdx = typeof parsed.currentIdx === 'number' ? parsed.currentIdx : 0;
-      } else {
-        // Eğer localStorage'da sadece eski yapı kalmışsa hata vermemesi için
-        STATE.cevaplar = parsed;
-        STATE.currentIdx = 0;
-      }
-    } 
+  try {
+    const r = localStorage.getItem(STORAGE_KEY);
+    if (!r) return;
+    const d = JSON.parse(r);
+    STATE.cevaplar     = d.cevaplar     || {};
+    STATE.cevaplar1296 = d.cevaplar1296 || {};
+    STATE.currentIdx   = d.currentIdx   || 0;
+    STATE.activeFilter = d.activeFilter || 'all';
+    STATE.activePage   = d.activePage   || 'sorular';
   } catch(e) {}
 }
 
@@ -135,7 +133,7 @@ function filterCat(cat, el) {
   const list = filteredList();
   if (list.length) STATE.currentIdx = SORULAR_100.indexOf(list[0]);
   renderQuestion();
-save();
+  save();
 }
 
 function filteredList() {
@@ -151,9 +149,9 @@ function navigate(dir) {
   if (np >= 0 && np < list.length) {
     STATE.currentIdx = SORULAR_100.indexOf(list[np]);
     renderQuestion();
+    save();
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
-save();
 }
 
 function renderQuestion() {
@@ -946,6 +944,22 @@ function exportData() {
 document.addEventListener('DOMContentLoaded', () => {
   load();
   buildSidebar();
-  renderQuestion();
   updateStats();
+
+  if (STATE.activePage !== 'sorular') {
+    switchTab(STATE.activePage);
+  } else {
+    renderQuestion();
+  }
+
+  if (STATE.activeFilter !== 'all') {
+    const idx = CATEGORIES.indexOf(STATE.activeFilter);
+    if (idx >= 0) {
+      const el = document.getElementById(`cat-${idx}`);
+      if (el) {
+        document.querySelectorAll('.cat-item').forEach(b => b.classList.remove('active'));
+        el.classList.add('active');
+      }
+    }
+  }
 });
