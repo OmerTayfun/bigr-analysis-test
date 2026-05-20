@@ -24,15 +24,35 @@ const CATEGORIES = [...new Set(SORULAR_100.map(s => s.anaKat))];
 // ── STORAGE ──────────────────────────────────────────────────
 // save fonksiyonunu güncelleyelim
 function save() {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(STATE));
+  try {
+    const toSave = {
+      projeAdi:     STATE.projeAdi,
+      cevaplar:     STATE.cevaplar,
+      cevaplar1296: STATE.cevaplar1296,
+      currentIdx:   STATE.currentIdx,
+      activeFilter: STATE.activeFilter,
+      activePage:   STATE.activePage,
+      page1296:     STATE.page1296
+    };
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(toSave));
+  } catch(e) { console.warn('Save hatası:', e); }
 }
 
 // load fonksiyonunu güncelleyelim
 function load() {
-  const r = localStorage.getItem(STORAGE_KEY);
-  if (!r) return;
-  const d = JSON.parse(r);
-  Object.assign(STATE, d); // Tüm nesneyi olduğu gibi aktarır
+  try {
+    const r = localStorage.getItem(STORAGE_KEY);
+    if (!r) return;
+    const d = JSON.parse(r);
+    STATE.projeAdi    = d.projeAdi    || 'Yeni Proje';
+    STATE.cevaplar    = d.cevaplar    || {};
+    STATE.cevaplar1296= d.cevaplar1296|| {};
+    STATE.riskCache   = {};
+    STATE.currentIdx  = d.currentIdx  || 0;
+    STATE.activeFilter= d.activeFilter|| 'all';
+    STATE.activePage  = d.activePage  || 'sorular';
+    STATE.page1296    = d.page1296    || 0;
+  } catch(e) { console.warn('Load hatası:', e); }
 }
 
 
@@ -94,26 +114,7 @@ function switchTab(name) {
 }
 // app.js
 
-async function generateRiskAnalysis(bulguMetni) {
-  // 1. Cache kontrolü: Bu bulgu daha önce analiz edildi mi?
-  if (STATE.riskCache[bulguMetni]) {
-    return STATE.riskCache[bulguMetni];
-  }
 
-  // 2. API çağrısı
-  const prompt = `Bulgu: "${bulguMetni}"
-  Bu bulguyu üst yönetim için risk perspektifiyle değerlendir.
-  Finansal Risk, Operasyonel Risk, Stratejik Risk ve İtibar Riski başlıklarını kullan.
-  Her biri için yönetimin anlayacağı, net ve kısa birer cümle ile açıklama yap.`;
-
-  const result = await fetchGemini(prompt); // Mevcut fetchGemini fonksiyonunuzu kullanır
-
-  // 3. Sonucu cache'e kaydet ve projeyi diske kaydet
-  STATE.riskCache[bulguMetni] = result;
-  save(); 
-  
-  return result;
-}
 function importData(event) {
   const file = event.target.files[0];
   if (!file) return;
@@ -122,14 +123,22 @@ function importData(event) {
   reader.onload = function(e) {
     try {
       const importedState = JSON.parse(e.target.result);
-      
-      // STATE nesnesini gelen veriyle güncelliyoruz
-      Object.assign(STATE, importedState);
-      
-      // Güncellenen durumu kaydet
+
+      // Sadece bilinen alanları aktar (riskCache hariç)
+      STATE.projeAdi    = importedState.projeAdi    || 'Yeni Proje';
+      STATE.cevaplar    = importedState.cevaplar    || {};
+      STATE.cevaplar1296= importedState.cevaplar1296|| {};
+      STATE.riskCache   = {};
+      STATE.currentIdx  = importedState.currentIdx  || 0;
+      STATE.activeFilter= importedState.activeFilter|| 'all';
+      STATE.activePage  = importedState.activePage  || 'sorular';
+      STATE.page1296    = importedState.page1296    || 0;
+
+      // Firma adını input'a yaz
+      const projeInput = document.getElementById('proje-adi-input');
+      if (projeInput) projeInput.value = STATE.projeAdi;
+
       save();
-      
-      // UI'ı yeniden çiz
       buildSidebar();
       renderQuestion();
       updateStats();
@@ -270,25 +279,16 @@ function renderQuestion() {
         <textarea id="kismi-obs"
           style="width:100%;min-height:85px;padding:9px;background:var(--bg);border:1px solid rgba(255,255,255,0.1);border-radius:7px;color:var(--text);font-size:13px;line-height:1.6;resize:vertical;font-family:inherit"
           placeholder="Gözlem notlarınızı buraya yazın...">${obs}</textarea>
-        
         <div style="display:flex;gap:7px;margin-top:7px;justify-content:flex-end">
-          ${sel !== 'evet' ? `
-            <button class="btn-ai" id="ai-gen-btn" onclick="bulguUret()" ${!obs.trim() ? 'disabled' : ''}>🤖 Bulgu Üret</button>
-            <button class="btn-ai" style="background:#6366f1" id="ai-risk-btn" onclick="riskAnaliziUret()" ${!obs.trim() ? 'disabled' : ''}>📊 Risk Analizi</button>
-          ` : ''}
+          ${sel !== 'evet' ? `<button class="btn-ai" id="ai-gen-btn" onclick="bulguUret()" ${!obs.trim() ? 'disabled' : ''}>🤖 Bulgu Üret</button>` : ''}
         </div>
-
-        <div id="risk-analysis-preview" style="background:rgba(99,102,241,0.1);border:1px solid rgba(99,102,241,0.25);border-radius:7px;padding:.9rem;margin-top:.6rem;display:${STATE.riskCache && STATE.riskCache[obs] ? 'block' : 'none'}">
-          <div style="font-size:11px;font-weight:600;color:#6366f1;margin-bottom:.35rem">📊 Yönetim İçin Risk Değerlendirmesi</div>
-          <div style="font-size:12px;color:var(--text);line-height:1.6;white-space:pre-line">${STATE.riskCache && STATE.riskCache[obs] ? STATE.riskCache[obs] : ''}</div>
-        </div>
-
         ${bulgu ? `
         <div style="background:rgba(167,139,250,0.1);border:1px solid rgba(167,139,250,0.25);border-radius:7px;padding:.9rem;margin-top:.6rem">
           <div style="font-size:11px;font-weight:600;color:#a78bfa;margin-bottom:.35rem">🤖 Üretilen Bulgu</div>
           <div style="font-size:12px;color:var(--text);line-height:1.6;white-space:pre-line">${bulgu}</div>
         </div>` : '<div id="bulgu-preview"></div>'}
       </div>` : ''}
+    </div>`;
 
   const ta = document.getElementById('kismi-obs');
   if (ta) {
@@ -345,7 +345,7 @@ KONTROL:
 - Tedbir No: ${q.tedbirNo} | Tedbir: ${q.tedbir}
 - Kategori: ${q.altKat} | Kritiklik: ${q.kritiklik===3?'Yüksek':q.kritiklik===2?'Orta':'Düşük'}
 - Mevzuat: ${mev || 'BİGR Kapsamı'}
-${iso1 ? `- ISO 27001:2022: ${iso1.replace(/\n/g,', ')}` : ''}
+${iso1 ? "- ISO 27001:2022: " + iso1.replace(/\n/g,", ") : ""}
 - BİGR Öneri: ${q.oneri || 'Standarda uygun uygulama'}
 
 DANIŞMAN GÖZLEMI: "${obs}"
@@ -1130,44 +1130,9 @@ function resetAll() {
   toast('✅ Tüm veriler sıfırlandı, 1. sorudan başlandı!');
 }
 // Risk Analizi Üretme Fonksiyonu
-async function riskAnaliziUret() {
-  const ta = document.getElementById('kismi-obs');
-  const obs = ta.value;
-  if (!obs.trim()) return;
 
-  const btn = document.getElementById('ai-risk-btn');
-  btn.innerText = "Analiz ediliyor...";
-  btn.disabled = true;
 
-  // Cache kontrolü
-  if (STATE.riskCache && STATE.riskCache[obs]) {
-      renderRiskResult(STATE.riskCache[obs]);
-      btn.innerText = "📊 Risk Analizi";
-      btn.disabled = false;
-      return;
-  }
 
-  const prompt = `Bulgu/Gözlem: "${obs}"
-  Bu durumu üst yönetimin anlayacağı bir dille; Finansal Risk, Operasyonel Risk, Stratejik Risk ve İtibar Riski başlıkları altında 4 madde halinde değerlendir. Her biri için 1-2 cümlelik kısa ve etkili bir açıklama yap.`;
-
-  try {
-    const result = await fetchGemini(prompt);
-    STATE.riskCache[obs] = result;
-    save();
-    renderRiskResult(result);
-  } catch (e) {
-    alert("Risk analizi üretilirken hata oluştu.");
-  } finally {
-    btn.innerText = "📊 Risk Analizi";
-    btn.disabled = false;
-  }
-}
-
-function renderRiskResult(text) {
-  const area = document.getElementById('risk-analysis-preview');
-  area.style.display = 'block';
-  area.querySelector('div:last-child').innerText = text;
-}
 function exportData() {
   const dataStr = JSON.stringify(STATE, null, 2);
   const blob = new Blob([dataStr], { type:'application/json' });
@@ -1183,6 +1148,12 @@ document.addEventListener('DOMContentLoaded', () => {
   load();
   buildSidebar();
   updateStats();
+
+  // Firma adını input'a yükle
+  const projeInput = document.getElementById('proje-adi-input');
+  if (projeInput && STATE.projeAdi && STATE.projeAdi !== 'Yeni Proje') {
+    projeInput.value = STATE.projeAdi;
+  }
 
   if (STATE.activePage !== 'sorular') {
     switchTab(STATE.activePage);
