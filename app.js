@@ -1,6 +1,5 @@
 // ══════════════════════════════════════════════════════════════
-// Bilgi Güvenliği Gap Analizi v4
-// 5 Sekme: Sorular | Bulgular | Uyumluluk | 1296 Tedbir | Özet
+// Bilgi Güvenliği Gap Analizi v4 — Temiz Versiyon
 // ══════════════════════════════════════════════════════════════
 
 const STORAGE_KEY  = 'bg_gap_v4';
@@ -9,8 +8,8 @@ const PUAN = { evet: 1, kismi: 0.5, hayir: 0 };
 const PAGE_SIZE_1296 = 50;
 
 const STATE = {
-  cevaplar: {},       // {q_id: {c, obs, bulgu}} — 100 soru
-  cevaplar1296: {},   // {tedbir_indeks: 'evet'|'kismi'|'hayir'} — mapping
+  cevaplar: {},
+  cevaplar1296: {},
   currentIdx: 0,
   activeFilter: 'all',
   activePage: 'sorular',
@@ -19,7 +18,7 @@ const STATE = {
 
 const CATEGORIES = [...new Set(SORULAR_100.map(s => s.anaKat))];
 
-// ── STORAGE ────────────────────────────────────────────────────
+// ── STORAGE ──────────────────────────────────────────────────
 function save() {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify({
@@ -28,67 +27,72 @@ function save() {
     }));
   } catch(e) {}
 }
+
 function load() {
   try {
     const r = localStorage.getItem(STORAGE_KEY);
     if (!r) return;
     const d = JSON.parse(r);
-    STATE.cevaplar = d.cevaplar || {};
+    STATE.cevaplar    = d.cevaplar    || {};
     STATE.cevaplar1296 = d.cevaplar1296 || {};
   } catch(e) {}
 }
 
-// ── UTILS ──────────────────────────────────────────────────────
+// ── UTILS ────────────────────────────────────────────────────
 function shortCat(c) { return c.replace(/^\d+\.\d+\.\s*/, ''); }
+
 function toast(msg, type='') {
   const t = document.getElementById('toast');
-  t.textContent = msg; t.className = 'toast visible ' + type;
+  t.textContent = msg;
+  t.className = 'toast visible ' + type;
   setTimeout(() => t.classList.remove('visible'), 3000);
 }
+
 function critBadge(k) {
   if (k===3) return `<span class="badge badge-red">🔴 Yüksek</span>`;
   if (k===2) return `<span class="badge badge-amber">🟡 Orta</span>`;
   return `<span class="badge badge-gray">⚪ Düşük</span>`;
 }
-function lkp(type, id) { return (id >= 0 && LOOKUPS[type]) ? (LOOKUPS[type][id] || '') : ''; }
+
+function lkp(type, id) {
+  return (id >= 0 && LOOKUPS[type]) ? (LOOKUPS[type][id] || '') : '';
+}
+
 function cevapLabel(c) {
-  return {evet:'Tamamen Uygulanıyor', kismi:'Kısmen Uygulanıyor', hayir:'Uygulanmıyor'}[c] || '—';
+  return { evet:'Tamamen Uygulanıyor', kismi:'Kısmen Uygulanıyor', hayir:'Uygulanmıyor' }[c] || '—';
 }
 
 function riskDurumu(q, cevap) {
   const k = q.kritiklik;
   if (cevap === 'evet') return null;
   if (cevap === 'hayir') {
-    if (k===3) return {label:'Çok Riskli', cls:'dk-risk-cok-riskli', skor:12};
-    if (k===2) return {label:'Riskli', cls:'dk-risk-riskli', skor:8};
-    return {label:'Orta Riskli', cls:'dk-risk-orta', skor:4};
+    if (k===3) return { label:'Çok Riskli', cls:'dk-risk-cok-riskli', skor:12 };
+    if (k===2) return { label:'Riskli',     cls:'dk-risk-riskli',     skor:8  };
+    return            { label:'Orta Riskli',cls:'dk-risk-orta',       skor:4  };
   }
   if (cevap === 'kismi') {
-    if (k===3) return {label:'Riskli', cls:'dk-risk-riskli', skor:6};
-    if (k===2) return {label:'Orta Riskli', cls:'dk-risk-orta', skor:3};
-    return {label:'Orta Riskli', cls:'dk-risk-orta', skor:2};
+    if (k===3) return { label:'Riskli',     cls:'dk-risk-riskli', skor:6 };
+    if (k===2) return { label:'Orta Riskli',cls:'dk-risk-orta',   skor:3 };
+    return            { label:'Orta Riskli',cls:'dk-risk-orta',   skor:2 };
   }
   return null;
 }
 
-// 1296 propagation: 100. soruya verilen cevabı ilgili tüm tedbirlere yansıt
 function propagate1296(q100, cevap) {
   SORULAR_1296.forEach(s => {
-    if (s.p === q100.id) {
-      STATE.cevaplar1296[s.i] = cevap;
-    }
+    if (s.p === q100.id) STATE.cevaplar1296[s.i] = cevap;
   });
 }
 
-// ── TABS ───────────────────────────────────────────────────────
+// ── TABS ─────────────────────────────────────────────────────
 function switchTab(name) {
   STATE.activePage = name;
   document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.page === name));
   document.querySelectorAll('.page').forEach(p => p.classList.toggle('active', p.id === 'page-' + name));
-  if (name === 'rapor') renderRapor();
-  if (name === 'uyumlu') renderUyumlu();
+  if (name === 'rapor')     renderRapor();
+  if (name === 'uyumlu')    renderUyumlu();
   if (name === 'tedbirler') { initTedbirFilters(); render1296(); }
-  if (name === 'ozet') renderOzet();
+  if (name === 'ozet')      renderOzet();
 }
 
 // ══════════════════════════════════════════════════════════════
@@ -103,7 +107,7 @@ function buildSidebar() {
     <div class="cat-badge">${SORULAR_100.length}</div>
   </div>`;
   CATEGORIES.forEach((c, i) => {
-    const count = SORULAR_100.filter(s => s.anaKat === c).length;
+    const count    = SORULAR_100.filter(s => s.anaKat === c).length;
     const hasBulgu = SORULAR_100.filter(s => s.anaKat === c).some(s => {
       const cv = STATE.cevaplar[s.id];
       return cv && (cv.c === 'hayir' || cv.c === 'kismi');
@@ -123,40 +127,41 @@ function filterCat(cat, el) {
   const list = filteredList();
   if (list.length) STATE.currentIdx = SORULAR_100.indexOf(list[0]);
   renderQuestion();
-save();
 }
 
 function filteredList() {
-  return STATE.activeFilter === 'all' ? SORULAR_100 : SORULAR_100.filter(s => s.anaKat === STATE.activeFilter);
+  return STATE.activeFilter === 'all'
+    ? SORULAR_100
+    : SORULAR_100.filter(s => s.anaKat === STATE.activeFilter);
 }
 
 function navigate(dir) {
   const list = filteredList();
-  const pos = list.findIndex(s => s === SORULAR_100[STATE.currentIdx]);
-  const np = pos + dir;
+  const pos  = list.findIndex(s => s === SORULAR_100[STATE.currentIdx]);
+  const np   = pos + dir;
   if (np >= 0 && np < list.length) {
     STATE.currentIdx = SORULAR_100.indexOf(list[np]);
     renderQuestion();
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
-save();
 }
 
 function renderQuestion() {
-  const q = SORULAR_100[STATE.currentIdx];
+  const q   = SORULAR_100[STATE.currentIdx];
   const list = filteredList();
-  const pos = list.findIndex(s => s === q);
-  document.getElementById('q-nav-info').textContent = `Soru ${pos + 1} / ${list.length}`;
-  document.getElementById('prev-btn').disabled = pos <= 0;
-  document.getElementById('next-btn').disabled = pos >= list.length - 1;
+  const pos  = list.findIndex(s => s === q);
+
+  document.getElementById('q-nav-info').textContent  = `Soru ${pos + 1} / ${list.length}`;
+  document.getElementById('prev-btn').disabled        = pos <= 0;
+  document.getElementById('next-btn').disabled        = pos >= list.length - 1;
   document.getElementById('q-section-label').textContent = q.altKat;
 
-  const cv  = STATE.cevaplar[q.id] || null;
-  const sel = cv ? cv.c : null;
-  const obs = cv ? (cv.obs || '') : '';
+  const cv    = STATE.cevaplar[q.id] || null;
+  const sel   = cv ? cv.c   : null;
+  const obs   = cv ? (cv.obs   || '') : '';
   const bulgu = cv ? (cv.bulgu || '') : '';
 
-  const mev  = lkp('mev', q.mev);
+  const mev  = lkp('mev',  q.mev);
   const iso1 = lkp('iso1', q.iso1);
   const iso2 = lkp('iso2', q.iso2);
   const iso3 = lkp('iso3', q.iso3);
@@ -168,11 +173,13 @@ function renderQuestion() {
   if (mev)  refsHTML += `<div class="ref-mev"><span class="ref-label">Mevzuat</span><span class="ref-mev-text">${mev}</span></div>`;
   refsHTML += '</div>';
 
-  const borderColor = sel==='evet' ? 'rgba(16,185,129,0.3)' : sel==='kismi' ? 'rgba(245,158,11,0.3)' : sel==='hayir' ? 'rgba(239,68,68,0.3)' : '';
-  const bgColor     = sel==='evet' ? 'rgba(16,185,129,0.06)' : sel==='kismi' ? 'rgba(245,158,11,0.06)' : sel==='hayir' ? 'rgba(239,68,68,0.06)' : '';
+  const borderColor = sel==='evet' ? 'rgba(16,185,129,0.3)' : sel==='kismi' ? 'rgba(245,158,11,0.3)' : 'rgba(239,68,68,0.3)';
+  const bgColor     = sel==='evet' ? 'rgba(16,185,129,0.06)' : sel==='kismi' ? 'rgba(245,158,11,0.06)' : 'rgba(239,68,68,0.06)';
   const panelColor  = sel==='evet' ? '#10b981' : sel==='kismi' ? '#f59e0b' : '#f87171';
-  const panelTitle  = sel==='evet' ? '✅ Uygulama Notları' : sel==='kismi' ? '🟡 Danışman Gözlemi' : '❌ Tespit Notları';
-  const panelDesc   = sel==='evet' ? 'Kontrolün nasıl uygulandığını, kanıtları ve gözlemlerinizi yazın.'
+  const panelTitle  = sel==='evet'  ? '✅ Uygulama Notları'
+                    : sel==='kismi' ? '🟡 Danışman Gözlemi'
+                    : '❌ Tespit Notları';
+  const panelDesc   = sel==='evet'  ? 'Kontrolün nasıl uygulandığını, kanıtları ve gözlemlerinizi yazın.'
                     : sel==='kismi' ? 'Mevcut durumu açıklayın. Bu metinden otomatik bulgu üretilecektir.'
                     : 'Kontrolün neden uygulanmadığını, tespit edilen eksikliği yazın.';
 
@@ -186,17 +193,17 @@ function renderQuestion() {
       <div class="q-text">${q.soru}</div>
       ${refsHTML}
       <div class="answer-row">
-        <button class="ans ${sel==='evet'?'sel-evet':''}" onclick="setCevap('evet')">
+        <button class="ans ${sel==='evet'  ? 'sel-evet'  : ''}" onclick="setCevap('evet')">
           <span class="ans-icon">✅</span>
           <span class="ans-label">Evet</span>
           <span class="ans-desc">Tamamen uygulanıyor</span>
         </button>
-        <button class="ans ${sel==='kismi'?'sel-kismi':''}" onclick="setCevap('kismi')">
+        <button class="ans ${sel==='kismi' ? 'sel-kismi' : ''}" onclick="setCevap('kismi')">
           <span class="ans-icon">🟡</span>
           <span class="ans-label">Kısmen</span>
           <span class="ans-desc">Eksik veya kısmi uygulama</span>
         </button>
-        <button class="ans ${sel==='hayir'?'sel-hayir':''}" onclick="setCevap('hayir')">
+        <button class="ans ${sel==='hayir' ? 'sel-hayir' : ''}" onclick="setCevap('hayir')">
           <span class="ans-icon">❌</span>
           <span class="ans-label">Hayır</span>
           <span class="ans-desc">Uygulanmıyor</span>
@@ -206,9 +213,11 @@ function renderQuestion() {
       <div style="margin-top:1rem;padding:1.25rem;border-radius:10px;border:1px solid ${borderColor};background:${bgColor}">
         <div style="font-size:12px;font-weight:600;margin-bottom:5px;color:${panelColor}">${panelTitle}</div>
         <div style="font-size:12px;color:#94a3b8;margin-bottom:7px">${panelDesc}</div>
-        <textarea id="kismi-obs" style="width:100%;min-height:85px;padding:9px;background:var(--bg);border:1px solid rgba(255,255,255,0.1);border-radius:7px;color:var(--text);font-size:13px;line-height:1.6;resize:vertical;font-family:inherit" placeholder="Gözlem notlarınızı buraya yazın...">${obs}</textarea>
+        <textarea id="kismi-obs"
+          style="width:100%;min-height:85px;padding:9px;background:var(--bg);border:1px solid rgba(255,255,255,0.1);border-radius:7px;color:var(--text);font-size:13px;line-height:1.6;resize:vertical;font-family:inherit"
+          placeholder="Gözlem notlarınızı buraya yazın...">${obs}</textarea>
         <div style="display:flex;gap:7px;margin-top:7px;justify-content:flex-end">
-          ${sel !== 'evet' ? `<button class="btn-ai" id="ai-gen-btn" onclick="bulguUret()" ${!obs.trim()?'disabled':''}>🤖 Bulgu Üret</button>` : ''}
+          ${sel !== 'evet' ? `<button class="btn-ai" id="ai-gen-btn" onclick="bulguUret()" ${!obs.trim() ? 'disabled' : ''}>🤖 Bulgu Üret</button>` : ''}
         </div>
         ${bulgu ? `
         <div style="background:rgba(167,139,250,0.1);border:1px solid rgba(167,139,250,0.25);border-radius:7px;padding:.9rem;margin-top:.6rem">
@@ -230,24 +239,32 @@ function renderQuestion() {
   }
 }
 
+// ── setCevap ─────────────────────────────────────────────────
 function setCevap(val) {
-  const q = SORULAR_100[STATE.currentIdx];
-  const mevcut = STATE.cevaplar[q.id] || {};
+  const q           = SORULAR_100[STATE.currentIdx];
+  const mevcut      = STATE.cevaplar[q.id] || {};
   const oncekiCevap = mevcut.c || null;
-
-  // Cevap değiştiyse not ve bulguyu sıfırla
-  const obsTemizle = oncekiCevap && oncekiCevap !== val;
+  const obsTemizle  = oncekiCevap && oncekiCevap !== val;
 
   STATE.cevaplar[q.id] = {
-    c: val,
-    obs:   obsTemizle ? '' : (mevcut.obs || ''),
+    c:     val,
+    obs:   obsTemizle ? '' : (mevcut.obs   || ''),
     bulgu: obsTemizle ? '' : (val === 'evet' ? '' : (mevcut.bulgu || ''))
   };
 
-function bulguUret() {
-  const q = SORULAR_100[STATE.currentIdx];
+  propagate1296(q, val);
+  save();
+  updateStats();
+  buildSidebar();
+  renderQuestion();
+}
+
+// ── bulguUret ─────────────────────────────────────────────────
+async function bulguUret() {
+  const q  = SORULAR_100[STATE.currentIdx];
   const ta = document.getElementById('kismi-obs');
   if (!ta || !ta.value.trim()) { toast('Gözlem metni boş olamaz', 'error'); return; }
+
   const apiKey = localStorage.getItem(API_KEY_STOR);
   if (!apiKey) { showAPIKeyModal(); return; }
 
@@ -256,7 +273,7 @@ function bulguUret() {
   btn.disabled = true;
   btn.innerHTML = '<span class="loader"></span> Üretiliyor...';
 
-  const mev  = lkp('mev', q.mev);
+  const mev  = lkp('mev',  q.mev);
   const iso1 = lkp('iso1', q.iso1);
 
   const prompt = `Sen kıdemli bir BİGR ve KVKK baş denetçisisin. Aşağıdaki denetim kontrolü için danışman gözlemine dayalı profesyonel bulgu metni yaz.
@@ -272,16 +289,25 @@ DANIŞMAN GÖZLEMI: "${obs}"
 
 Türkçe, 3-4 cümle, resmi denetim üslubunda bulgu metni yaz. Sadece metni yaz, başlık veya açıklama ekleme.`;
 
-  fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent?key=${encodeURIComponent(apiKey)}`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }], generationConfig: { temperature: 0.4, maxOutputTokens: 800 } })
-  })
-  .then(r => { if (!r.ok) throw new Error(`API ${r.status}`); return r.json(); })
-  .then(data => {
+  try {
+    const resp = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent?key=${encodeURIComponent(apiKey)}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: prompt }] }],
+          generationConfig: { temperature: 0.4, maxOutputTokens: 800 }
+        })
+      }
+    );
+    if (!resp.ok) throw new Error(`API ${resp.status}`);
+    const data = await resp.json();
     const text = data.candidates?.[0]?.content?.parts?.map(p => p.text).join('\n') || '';
+
     STATE.cevaplar[q.id].bulgu = text.trim();
     save();
+
     const pv = document.getElementById('bulgu-preview');
     if (pv) pv.innerHTML = `
       <div style="background:rgba(167,139,250,0.1);border:1px solid rgba(167,139,250,0.25);border-radius:7px;padding:.9rem;margin-top:.6rem">
@@ -289,29 +315,33 @@ Türkçe, 3-4 cümle, resmi denetim üslubunda bulgu metni yaz. Sadece metni yaz
         <div style="font-size:12px;color:var(--text);line-height:1.6;white-space:pre-line">${text.trim()}</div>
       </div>`;
     toast('✅ Bulgu metni üretildi', 'success');
-  })
-  .catch(e => toast('AI hatası: ' + e.message, 'error'))
-  .finally(() => { btn.disabled = false; btn.innerHTML = '🤖 Bulgu Üret'; });
+  } catch(e) {
+    toast('AI hatası: ' + e.message, 'error');
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '🤖 Bulgu Üret';
+  }
 }
 
+// ── updateStats ───────────────────────────────────────────────
 function updateStats() {
-  const all   = Object.values(STATE.cevaplar);
-  const evet  = all.filter(v => v.c === 'evet').length;
-  const kismi = all.filter(v => v.c === 'kismi').length;
-  const hayir = all.filter(v => v.c === 'hayir').length;
-  const total = evet + kismi + hayir;
-  const skor  = total > 0 ? Math.round(100*(evet + kismi*0.5)/total) : null;
-  const covered1296 = Object.keys(STATE.cevaplar1296).length;
+  const all    = Object.values(STATE.cevaplar);
+  const evet   = all.filter(v => v.c === 'evet').length;
+  const kismi  = all.filter(v => v.c === 'kismi').length;
+  const hayir  = all.filter(v => v.c === 'hayir').length;
+  const total  = evet + kismi + hayir;
+  const skor   = total > 0 ? Math.round(100*(evet + kismi*0.5)/total) : null;
+  const c1296  = Object.keys(STATE.cevaplar1296).length;
 
-  document.getElementById('h-evet').textContent  = evet;
-  document.getElementById('h-kismi').textContent = kismi;
-  document.getElementById('h-hayir').textContent = hayir;
-  document.getElementById('h-score').textContent = skor !== null ? skor + '%' : '—';
-  document.getElementById('prog').style.width    = Math.round(100*total/100) + '%';
-  document.getElementById('badge-sorular').textContent  = total + '/100';
-  document.getElementById('badge-rapor').textContent    = (hayir + kismi) + ' Bulgu';
-  document.getElementById('badge-uyumlu').textContent   = evet;
-  document.getElementById('badge-tedbirler').textContent = covered1296 + '/1296';
+  document.getElementById('h-evet').textContent   = evet;
+  document.getElementById('h-kismi').textContent  = kismi;
+  document.getElementById('h-hayir').textContent  = hayir;
+  document.getElementById('h-score').textContent  = skor !== null ? skor + '%' : '—';
+  document.getElementById('prog').style.width     = Math.round(100*total/100) + '%';
+  document.getElementById('badge-sorular').textContent   = total + '/100';
+  document.getElementById('badge-rapor').textContent     = (hayir + kismi) + ' Bulgu';
+  document.getElementById('badge-uyumlu').textContent    = evet;
+  document.getElementById('badge-tedbirler').textContent = c1296 + '/1296';
 }
 
 // ══════════════════════════════════════════════════════════════
@@ -329,7 +359,11 @@ function renderRapor() {
     if (filter === 'riskli')    return riskDurumu(q, cv.c)?.label === 'Riskli';
     return true;
   });
-  sorular.sort((a, b) => (riskDurumu(b, STATE.cevaplar[b.id].c)?.skor || 0) - (riskDurumu(a, STATE.cevaplar[a.id].c)?.skor || 0));
+
+  sorular.sort((a, b) =>
+    (riskDurumu(b, STATE.cevaplar[b.id].c)?.skor || 0) -
+    (riskDurumu(a, STATE.cevaplar[a.id].c)?.skor || 0)
+  );
 
   const liste = document.getElementById('rapor-liste');
   const bos   = document.getElementById('rapor-bos');
@@ -341,19 +375,17 @@ function renderRapor() {
 function buildDanismanKart(q) {
   const cv  = STATE.cevaplar[q.id];
   const rd  = riskDurumu(q, cv.c);
-  const mev = lkp('mev', q.mev);
+  const mev = lkp('mev',  q.mev);
   const iso1= lkp('iso1', q.iso1);
   const iso2= lkp('iso2', q.iso2);
   const iso3= lkp('iso3', q.iso3);
 
-  // Tespit
   let tespitMetni = '';
-  if (cv.c === 'kismi' && cv.bulgu) tespitMetni = cv.bulgu;
-  else if (cv.c === 'kismi' && cv.obs) tespitMetni = `Denetim kapsamında "${q.tedbir}" alanında kısmi uygulama tespit edilmiştir. Danışman notu: ${cv.obs}`;
-  else if (cv.c === 'hayir') tespitMetni = `Yapılan incelemede, "${q.tedbir}" kapsamındaki gereklilikler kurumda uygulanmamaktadır. ${q.altKat} alanına ilişkin tanımlı bir süreç veya kontrol mekanizması bulunmamaktadır. Bu durum BİGR rehberinin ${q.tedbirNo} numaralı tedbir maddesine doğrudan aykırılık teşkil etmektedir.`;
-  else tespitMetni = `Kısmen uygulama durumu tespit edilmiştir. Detaylı gözlem notu eklenmemiştir.`;
+  if (cv.c === 'kismi' && cv.bulgu)      tespitMetni = cv.bulgu;
+  else if (cv.c === 'kismi' && cv.obs)   tespitMetni = `Denetim kapsamında "${q.tedbir}" alanında kısmi uygulama tespit edilmiştir. Danışman notu: ${cv.obs}`;
+  else if (cv.c === 'hayir')             tespitMetni = `Yapılan incelemede, "${q.tedbir}" kapsamındaki gereklilikler kurumda uygulanmamaktadır. ${q.altKat} alanına ilişkin tanımlı bir süreç veya kontrol mekanizması bulunmamaktadır. Bu durum BİGR rehberinin ${q.tedbirNo} numaralı tedbir maddesine doğrudan aykırılık teşkil etmektedir.`;
+  else                                    tespitMetni = `Kısmen uygulama durumu tespit edilmiştir. Detaylı gözlem notu eklenmemiştir.`;
 
-  // Risk
   const etkisel = cv.c === 'hayir'
     ? (q.kritiklik===3 ? 'Tedbirin hiç uygulanmaması kuruma ciddi operasyonel, yasal ve itibar riski oluşturmaktadır.'
      : q.kritiklik===2 ? 'Tedbirin eksikliği, kurum varlıkları ve kişisel veriler üzerinde önemli risk yaratmaktadır.'
@@ -363,7 +395,6 @@ function buildDanismanKart(q) {
 
   const hukukiRisk = `* ${q.tedbirNo} | ${cv.c==='hayir'?'Olası Riskler: ':'Kısmi Risk: '}${q.kritiklik===3?'Yüksek':q.kritiklik===2?'Orta':'Düşük'} Kritiklik (${q.kritiklik*(cv.c==='hayir'?4:3)} Puan)${mev ? `\n\n* Hukuki Yaptırım:\n${mev}` : ''}`;
 
-  // Mevzuat
   let mevzuatHTML = '';
   if (mev) mevzuatHTML += `<div class="dk-mev-item"><div class="dk-mev-baslik">📜 İlgili Mevzuat</div><div class="dk-mev-text">${mev}</div></div>`;
   if (iso1||iso2||iso3) {
@@ -375,16 +406,10 @@ function buildDanismanKart(q) {
   }
   if (!mevzuatHTML) mevzuatHTML = `<div class="dk-mev-text" style="color:#9ca3af">BİGR ${q.tedbirNo} kapsamında değerlendirilmektedir.</div>`;
 
-  // Öneriler
   const oneriLines = (q.oneri || '').split(/\n|•|-/).map(s => s.trim()).filter(s => s.length > 15);
-  let oneriHTML = '';
-  if (oneriLines.length > 0) {
-    oneriLines.slice(0, 6).forEach((line, i) => {
-      oneriHTML += `<div class="dk-oneri-item"><div class="dk-oneri-no">${i+1}</div><div class="dk-oneri-text">${line}</div></div>`;
-    });
-  } else {
-    oneriHTML = `<div class="dk-oneri-item"><div class="dk-oneri-no">1</div><div class="dk-oneri-text">${q.oneri || 'Kontrol mekanizması oluşturularak dokümante edilmelidir.'}</div></div>`;
-  }
+  let oneriHTML = oneriLines.length > 0
+    ? oneriLines.slice(0,6).map((line,i) => `<div class="dk-oneri-item"><div class="dk-oneri-no">${i+1}</div><div class="dk-oneri-text">${line}</div></div>`).join('')
+    : `<div class="dk-oneri-item"><div class="dk-oneri-no">1</div><div class="dk-oneri-text">${q.oneri || 'Kontrol mekanizması oluşturularak dokümante edilmelidir.'}</div></div>`;
 
   return `
 <div class="danisman-kart" id="kart-${q.id}">
@@ -462,12 +487,10 @@ function renderUyumlu() {
     const obs  = (cv.obs || '').trim();
     const iso1 = lkp('iso1', q.iso1);
     const iso2 = lkp('iso2', q.iso2);
-    const iso3 = lkp('iso3', q.iso3);
-    const mev  = lkp('mev', q.mev);
-    const kritikRenk = q.kritiklik===3 ? '#f87171' : q.kritiklik===2 ? '#fbbf24' : '#94a3b8';
+    const mev  = lkp('mev',  q.mev);
+    const kritikRenk  = q.kritiklik===3 ? '#f87171' : q.kritiklik===2 ? '#fbbf24' : '#94a3b8';
     const kritikLabel = q.kritiklik===3 ? '🔴 Yüksek' : q.kritiklik===2 ? '🟡 Orta' : '⚪ Düşük';
 
-    // ISO rozetleri
     let isoHTML = '';
     if (iso1) iso1.split('\n').filter(Boolean).forEach(v => {
       isoHTML += `<span style="display:inline-flex;align-items:center;background:#0d1521;border:1px solid rgba(16,185,129,0.3);border-radius:4px;padding:2px 7px;font-size:10px;color:#34d399;font-weight:600;font-family:monospace;margin:2px 2px 0 0">ISO 27001:2022 ${v.trim()}</span>`;
@@ -478,8 +501,6 @@ function renderUyumlu() {
 
     html += `
     <div style="background:var(--bg2);border:1px solid rgba(16,185,129,0.2);border-radius:10px;overflow:hidden;border-left:4px solid var(--green)">
-
-      <!-- Kart Header -->
       <div style="background:linear-gradient(135deg,rgba(16,185,129,0.08),rgba(16,185,129,0.02));padding:12px 18px;border-bottom:1px solid rgba(16,185,129,0.12);display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap">
         <div>
           <div style="font-size:10px;color:#34d399;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:3px">✅ Uyumlu Kontrol</div>
@@ -490,72 +511,27 @@ function renderUyumlu() {
           <span style="font-size:10px;color:#34d399;background:rgba(16,185,129,0.1);padding:4px 10px;border-radius:12px;font-weight:600;font-family:monospace">${q.tedbirNo}</span>
         </div>
       </div>
-
-      <!-- Kart Gövdesi -->
       <div style="display:grid;grid-template-columns:${obs ? '1fr 1fr' : '1fr'};gap:0">
-
-        <!-- Sol: Referanslar + Meta -->
         <div style="padding:14px 18px;${obs ? 'border-right:1px solid rgba(16,185,129,0.1)' : ''}">
           <div style="font-size:10px;font-weight:600;color:#34d399;text-transform:uppercase;letter-spacing:.6px;margin-bottom:8px">📋 Kapsam & Referanslar</div>
           <div style="font-size:12px;color:var(--text2);margin-bottom:8px">${shortCat(q.altKat)}</div>
           ${isoHTML ? `<div style="margin-bottom:8px">${isoHTML}</div>` : ''}
           ${mev ? `<div style="font-size:11px;color:var(--text3);margin-top:6px;line-height:1.5;padding:7px 10px;background:var(--bg3);border-radius:6px">${mev}</div>` : ''}
-          <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap">
-            <span style="font-size:11px;color:#34d399">📊 ${q.kapsananSayi} tedbiri kapsıyor</span>
-          </div>
+          <div style="margin-top:10px"><span style="font-size:11px;color:#34d399">📊 ${q.kapsananSayi} tedbiri kapsıyor</span></div>
         </div>
-
-        <!-- Sağ: Uygulama Notu (varsa) -->
         ${obs ? `
         <div style="padding:14px 18px;background:rgba(16,185,129,0.03)">
           <div style="font-size:10px;font-weight:600;color:#34d399;text-transform:uppercase;letter-spacing:.6px;margin-bottom:8px">📝 Danışman Uygulama Notu</div>
           <div style="font-size:13px;color:var(--text);line-height:1.65;white-space:pre-line">${obs}</div>
         </div>` : ''}
-
       </div>
-
-      <!-- Footer -->
       <div style="background:rgba(16,185,129,0.04);border-top:1px solid rgba(16,185,129,0.1);padding:7px 18px;display:flex;align-items:center;justify-content:space-between">
         <span style="font-size:10px;color:var(--text3);font-family:monospace">${q.tedbirNo} • S${q.id}/100</span>
         <span style="font-size:11px;color:#34d399;font-weight:600">✅ Tamamen Uygulanıyor</span>
       </div>
-
     </div>`;
   });
 
-  html += '</div>';
-  liste.innerHTML = html;
-}
-
-  const liste = document.getElementById('uyumlu-liste');
-  const bos   = document.getElementById('uyumlu-bos');
-
-  if (!sorular.length) {
-    liste.innerHTML = '';
-    bos.style.display = 'block';
-    return;
-  }
-  bos.style.display = 'none';
-
-  let html = `<div style="font-size:13px;color:var(--text2);margin-bottom:1rem">${sorular.length} uyumlu kontrol • ${sorular.filter(q => STATE.cevaplar[q.id]?.obs?.trim()).length} tanesi uygulama notu içeriyor</div>`;
-  html += '<div class="uyumlu-grid">';
-  sorular.forEach(q => {
-    const cv = STATE.cevaplar[q.id];
-    const obs = cv.obs || '';
-    const iso1 = lkp('iso1', q.iso1);
-    html += `<div class="uyumlu-kart">
-      <div class="uk-header">
-        <div class="uk-baslik">${q.tedbir}</div>
-        <span class="uk-badge">${critBadge(q.kritiklik).replace(/<[^>]+>/g,'').trim()}</span>
-      </div>
-      <div class="uk-meta">${q.tedbirNo} • ${shortCat(q.altKat)}</div>
-      ${iso1 ? `<div style="margin-bottom:.5rem">${iso1.split('\n').filter(Boolean).map(v=>`<span class="dk-mev-iso" style="background:#0d1521">ISO 27001 ${v.trim()}</span>`).join('')}</div>` : ''}
-      ${obs.trim()
-        ? `<div class="uk-not-label">📝 Danışman Uygulama Notu</div><div class="uk-not-text">${obs}</div>`
-        : `<div class="uk-no-not">Uygulama notu eklenmemiş</div>`}
-      <div class="uk-tedbir-sayi">📊 ${q.kapsananSayi} tedbiri kapsıyor</div>
-    </div>`;
-  });
   html += '</div>';
   liste.innerHTML = html;
 }
@@ -587,8 +563,12 @@ function getFiltered1296() {
     if (cevap === 'evet'  && cv !== 'evet')  return false;
     if (cevap === 'kismi' && cv !== 'kismi') return false;
     if (cevap === 'hayir' && cv !== 'hayir') return false;
-    if (cevap === 'bos'   && cv) return false;
-    if (search && !(s.q?.toLowerCase().includes(search) || s.ta?.toLowerCase().includes(search) || s.tn?.toLowerCase().includes(search))) return false;
+    if (cevap === 'bos'   && cv)             return false;
+    if (search && !(
+      s.q?.toLowerCase().includes(search) ||
+      s.ta?.toLowerCase().includes(search) ||
+      s.tn?.toLowerCase().includes(search)
+    )) return false;
     return true;
   });
 }
@@ -602,7 +582,6 @@ function render1296() {
 
   document.getElementById('t-count').textContent = total.toLocaleString('tr-TR') + ' sonuç';
 
-  // İstatistik kartları
   const allC = Object.values(STATE.cevaplar1296);
   const st = {
     evet:  allC.filter(c=>c==='evet').length,
@@ -617,132 +596,93 @@ function render1296() {
     <div class="t-stats-kart"><div class="val" style="color:var(--gray)">${st.bos}</div><div class="lbl">Cevapsız</div></div>
     <div class="t-stats-kart"><div class="val" style="color:var(--teal)">${SORULAR_1296.length - st.bos}</div><div class="lbl">Cevaplanan</div></div>`;
 
+  const wrap = document.querySelector('.t-tablo-wrap');
+
   if (!slice.length) {
-    document.getElementById('t-body').innerHTML = '';
+    if (wrap) wrap.innerHTML = `<div style="padding:3rem;text-align:center;color:var(--text2)">Bu filtrelere uygun tedbir bulunamadı.</div>`;
     document.getElementById('t-pagination').innerHTML = '';
-    document.querySelector('.t-tablo-wrap').innerHTML =
-      `<div style="padding:3rem;text-align:center;color:var(--text2)">Bu filtrelere uygun tedbir bulunamadı.</div>`;
     return;
   }
 
-  // Satır renkleri
   const rowStyle = {
-    evet:  { bg: 'rgba(16,185,129,0.04)',  border: 'rgba(16,185,129,0.25)',  left: '#10b981' },
-    kismi: { bg: 'rgba(245,158,11,0.04)',  border: 'rgba(245,158,11,0.2)',   left: '#f59e0b' },
-    hayir: { bg: 'rgba(239,68,68,0.05)',   border: 'rgba(239,68,68,0.2)',    left: '#ef4444' },
-    bos:   { bg: 'transparent',            border: 'rgba(255,255,255,0.06)', left: '#334155' }
+    evet:  { bg:'rgba(16,185,129,0.04)', left:'#10b981' },
+    kismi: { bg:'rgba(245,158,11,0.04)', left:'#f59e0b' },
+    hayir: { bg:'rgba(239,68,68,0.05)',  left:'#ef4444' },
+    bos:   { bg:'transparent',           left:'#334155' }
   };
   const cevapRenk = {
-    evet:  { bg:'rgba(16,185,129,0.15)',  color:'#34d399',  label:'✅ Uyumlu' },
-    kismi: { bg:'rgba(245,158,11,0.15)', color:'#fbbf24',  label:'🟡 Kısmen' },
-    hayir: { bg:'rgba(239,68,68,0.15)',  color:'#f87171',  label:'❌ Uyumsuz' },
-    bos:   { bg:'rgba(100,116,139,0.15)',color:'#94a3b8',  label:'— Cevapsız' }
+    evet:  { bg:'rgba(16,185,129,0.15)', color:'#34d399', label:'✅ Uyumlu'   },
+    kismi: { bg:'rgba(245,158,11,0.15)', color:'#fbbf24', label:'🟡 Kısmen'   },
+    hayir: { bg:'rgba(239,68,68,0.15)',  color:'#f87171', label:'❌ Uyumsuz'  },
+    bos:   { bg:'rgba(100,116,139,0.15)',color:'#94a3b8', label:'— Cevapsız' }
   };
-  const kritikRenk = { 3:'#f87171', 2:'#fbbf24', 1:'#94a3b8' };
-  const kritikLabel = { 3:'🔴', 2:'🟡', 1:'⚪' };
 
-  // Kategori gruplarına ayır
   const groups = {};
-  slice.forEach(s => {
-    if (!groups[s.ak]) groups[s.ak] = [];
-    groups[s.ak].push(s);
-  });
+  slice.forEach(s => { if (!groups[s.ak]) groups[s.ak]=[]; groups[s.ak].push(s); });
 
-  let html = `<div style="display:flex;flex-direction:column;gap:1.25rem">`;
+  let html = '<div style="display:flex;flex-direction:column;gap:1.25rem">';
 
   Object.entries(groups).forEach(([anaKat, items]) => {
-    const catEvet  = items.filter(s => STATE.cevaplar1296[s.i]==='evet').length;
-    const catKismi = items.filter(s => STATE.cevaplar1296[s.i]==='kismi').length;
-    const catHayir = items.filter(s => STATE.cevaplar1296[s.i]==='hayir').length;
-    const catBos   = items.filter(s => !STATE.cevaplar1296[s.i]).length;
-    const catTotal = items.length;
-    const catSkor  = catTotal > catBos
-      ? Math.round(100*(catEvet + catKismi*0.5)/(catTotal - catBos)) : 0;
-    const skorRenk = catSkor >= 70 ? '#10b981' : catSkor >= 40 ? '#f59e0b' : catSkor > 0 ? '#ef4444' : '#475569';
+    const cE = items.filter(s=>STATE.cevaplar1296[s.i]==='evet').length;
+    const cK = items.filter(s=>STATE.cevaplar1296[s.i]==='kismi').length;
+    const cH = items.filter(s=>STATE.cevaplar1296[s.i]==='hayir').length;
+    const cB = items.filter(s=>!STATE.cevaplar1296[s.i]).length;
+    const n  = items.length;
+    const skor = n > cB ? Math.round(100*(cE+cK*0.5)/(n-cB)) : 0;
+    const skorRenk = skor>=70?'#10b981':skor>=40?'#f59e0b':skor>0?'#ef4444':'#475569';
 
-    html += `
-    <div style="background:var(--bg2);border:1px solid var(--border);border-radius:10px;overflow:hidden">
-
-      <!-- Kategori Başlığı -->
+    html += `<div style="background:var(--bg2);border:1px solid var(--border);border-radius:10px;overflow:hidden">
       <div style="background:linear-gradient(135deg,var(--bg3),var(--bg2));padding:12px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
         <div style="font-size:13px;font-weight:700;color:var(--text)">${shortCat(anaKat)}</div>
         <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
-          <span style="font-size:11px;color:var(--green)">✅ ${catEvet}</span>
-          <span style="font-size:11px;color:var(--amber)">🟡 ${catKismi}</span>
-          <span style="font-size:11px;color:#f87171">❌ ${catHayir}</span>
-          <span style="font-size:11px;color:var(--gray)">— ${catBos}</span>
-          <span style="font-size:12px;font-weight:700;color:${skorRenk};background:rgba(0,0,0,0.2);padding:3px 10px;border-radius:12px">%${catSkor} Uyum</span>
-          <span style="font-size:11px;color:var(--text3)">${catTotal} tedbir</span>
+          <span style="font-size:11px;color:var(--green)">✅ ${cE}</span>
+          <span style="font-size:11px;color:var(--amber)">🟡 ${cK}</span>
+          <span style="font-size:11px;color:#f87171">❌ ${cH}</span>
+          <span style="font-size:11px;color:var(--gray)">— ${cB}</span>
+          <span style="font-size:12px;font-weight:700;color:${skorRenk};background:rgba(0,0,0,0.2);padding:3px 10px;border-radius:12px">%${skor} Uyum</span>
+          <span style="font-size:11px;color:var(--text3)">${n} tedbir</span>
         </div>
       </div>
-
-      <!-- Satırlar -->
       <div style="display:flex;flex-direction:column">`;
 
     items.forEach((s, idx) => {
       const cv  = STATE.cevaplar1296[s.i] || 'bos';
       const rs  = rowStyle[cv];
       const cr  = cevapRenk[cv];
-      const parentQ = SORULAR_100.find(q => q.id === s.p);
+      const parentQ    = SORULAR_100.find(q => q.id === s.p);
       const altKatKisa = s.altk.replace(/^\d+\.\d+\.\d+\.\s*/,'').replace(/^\d+\.\d+\.\s*/,'');
+      const bgHover    = cv==='bos' ? 'rgba(255,255,255,0.02)' : rs.bg.replace('0.04','0.08').replace('0.05','0.09');
 
-      html += `
-      <div style="display:grid;grid-template-columns:90px 160px 180px 1fr 130px 50px;gap:0;border-bottom:${idx < items.length-1 ? '1px solid rgba(255,255,255,0.04)' : 'none'};background:${rs.bg};border-left:3px solid ${rs.left};transition:background .12s"
-           onmouseover="this.style.background='${cv==='bos'?'rgba(255,255,255,0.02)':rs.bg.replace('0.04','0.08').replace('0.05','0.09')}'"
-           onmouseout="this.style.background='${rs.bg}'">
-
-        <!-- Tedbir No -->
-        <div style="padding:10px 12px;display:flex;align-items:center">
-          <span style="font-size:10px;font-family:monospace;color:var(--teal);font-weight:600">${s.tn}</span>
-        </div>
-
-        <!-- Alt Kategori -->
-        <div style="padding:10px 8px;display:flex;align-items:center">
-          <span style="font-size:10px;color:var(--text3);line-height:1.35">${altKatKisa}</span>
-        </div>
-
-        <!-- Tedbir Adı -->
-        <div style="padding:10px 8px;display:flex;align-items:center">
-          <span style="font-size:11px;color:var(--text2);font-weight:500;line-height:1.4">${s.ta}</span>
-        </div>
-
-        <!-- Denetim Sorusu -->
-        <div style="padding:10px 12px;display:flex;align-items:center">
-          <span style="font-size:12px;color:var(--text);line-height:1.5">${s.q}</span>
-        </div>
-
-        <!-- Cevap -->
+      html += `<div style="display:grid;grid-template-columns:90px 160px 180px 1fr 130px 50px;gap:0;border-bottom:${idx<items.length-1?'1px solid rgba(255,255,255,0.04)':'none'};background:${rs.bg};border-left:3px solid ${rs.left}"
+        onmouseover="this.style.background='${bgHover}'"
+        onmouseout="this.style.background='${rs.bg}'">
+        <div style="padding:10px 12px;display:flex;align-items:center"><span style="font-size:10px;font-family:monospace;color:var(--teal);font-weight:600">${s.tn}</span></div>
+        <div style="padding:10px 8px;display:flex;align-items:center"><span style="font-size:10px;color:var(--text3);line-height:1.35">${altKatKisa}</span></div>
+        <div style="padding:10px 8px;display:flex;align-items:center"><span style="font-size:11px;color:var(--text2);font-weight:500;line-height:1.4">${s.ta}</span></div>
+        <div style="padding:10px 12px;display:flex;align-items:center"><span style="font-size:12px;color:var(--text);line-height:1.5">${s.q}</span></div>
         <div style="padding:10px 8px;display:flex;align-items:center;justify-content:center">
           <span style="display:inline-block;background:${cr.bg};color:${cr.color};font-size:11px;font-weight:600;padding:4px 10px;border-radius:12px;text-align:center;white-space:nowrap">${cr.label}</span>
         </div>
-
-        <!-- Kaynak -->
         <div style="padding:10px 8px;display:flex;align-items:center;justify-content:center" title="${parentQ ? parentQ.tedbir : ''}">
           <span style="font-size:10px;color:var(--teal);font-family:monospace;font-weight:600;background:var(--teal-soft);padding:3px 7px;border-radius:8px">S${s.p}</span>
         </div>
-
       </div>`;
     });
 
     html += `</div></div>`;
   });
 
-  html += `</div>`;
-
-  // Tabloyu kaldır, yerine yeni yapıyı koy
-  const wrap = document.querySelector('.t-tablo-wrap');
+  html += '</div>';
   if (wrap) wrap.innerHTML = html;
 
-  // Pagination
   const totalPages = Math.ceil(total / PAGE_SIZE_1296);
   let pgHtml = '';
   if (totalPages > 1) {
     if (page > 0) pgHtml += `<button class="pg-btn" onclick="goPage1296(${page-1})">← Önceki</button>`;
-    const maxBtn = 7;
-    let pages = totalPages <= maxBtn
+    const pArr = totalPages <= 7
       ? Array.from({length:totalPages},(_,i)=>i)
-      : [0, ...(page>2?['...']:[]), ...Array.from({length:3},(_,i)=>Math.min(Math.max(page-1+i,1),totalPages-2)).filter((v,i,a)=>a.indexOf(v)===i), ...(page<totalPages-3?['...']:[]), totalPages-1];
-    pages.forEach(p => {
+      : [0,...(page>2?['...']:[]),...Array.from({length:3},(_,i)=>Math.min(Math.max(page-1+i,1),totalPages-2)).filter((v,i,a)=>a.indexOf(v)===i),...(page<totalPages-3?['...']:[]),totalPages-1];
+    pArr.forEach(p => {
       if (p==='...') pgHtml += `<span style="padding:6px 4px;color:var(--text3)">…</span>`;
       else pgHtml += `<button class="pg-btn ${p===page?'active':''}" onclick="goPage1296(${p})">${p+1}</button>`;
     });
@@ -757,7 +697,6 @@ function render1296() {
 function goPage1296(p) {
   STATE.page1296 = p;
   render1296();
-  document.getElementById('page-tedbirler').scrollTo({ top: 0, behavior: 'smooth' });
 }
 
 // ══════════════════════════════════════════════════════════════
@@ -770,26 +709,21 @@ function renderOzet() {
   document.getElementById('ozet-tarih').textContent =
     new Date().toLocaleDateString('tr-TR', { day:'2-digit', month:'long', year:'numeric' }) + ' tarihi itibarıyla';
 
-  const all   = Object.values(STATE.cevaplar);
-  const evet  = all.filter(v => v.c==='evet').length;
-  const kismi = all.filter(v => v.c==='kismi').length;
-  const hayir = all.filter(v => v.c==='hayir').length;
-  const total = evet + kismi + hayir;
-  const skor  = total > 0 ? Math.round(100*(evet+kismi*0.5)/total) : 0;
-
-  const kapsamQ       = SORULAR_100.filter(q => STATE.cevaplar[q.id]);
-  const tedbirEvet    = kapsamQ.filter(q => STATE.cevaplar[q.id].c==='evet').reduce((s,q) => s+q.kapsananSayi, 0);
-  const tedbirKismi   = kapsamQ.filter(q => STATE.cevaplar[q.id].c==='kismi').reduce((s,q) => s+q.kapsananSayi, 0);
-  const tedbirHayir   = kapsamQ.filter(q => STATE.cevaplar[q.id].c==='hayir').reduce((s,q) => s+q.kapsananSayi, 0);
-  const covered1296   = Object.keys(STATE.cevaplar1296).length;
+  const all    = Object.values(STATE.cevaplar);
+  const evet   = all.filter(v=>v.c==='evet').length;
+  const kismi  = all.filter(v=>v.c==='kismi').length;
+  const hayir  = all.filter(v=>v.c==='hayir').length;
+  const total  = evet+kismi+hayir;
+  const skor   = total > 0 ? Math.round(100*(evet+kismi*0.5)/total) : 0;
+  const kapQ   = SORULAR_100.filter(q => STATE.cevaplar[q.id]);
 
   document.getElementById('ozet-grid').innerHTML = `
     <div class="ozet-kart"><div class="ozet-kart-val" style="color:var(--teal)">${skor}%</div><div class="ozet-kart-lbl">Genel Uyum Skoru</div><div class="ozet-kart-sub">${total}/100 yanıtlandı</div></div>
-    <div class="ozet-kart"><div class="ozet-kart-val" style="color:var(--green)">${evet}</div><div class="ozet-kart-lbl">Uyumlu</div><div class="ozet-kart-sub">${tedbirEvet} tedbir</div></div>
-    <div class="ozet-kart"><div class="ozet-kart-val" style="color:var(--amber)">${kismi}</div><div class="ozet-kart-lbl">Kısmen</div><div class="ozet-kart-sub">${tedbirKismi} tedbir</div></div>
-    <div class="ozet-kart"><div class="ozet-kart-val" style="color:var(--red)">${hayir}</div><div class="ozet-kart-lbl">Uyumsuz</div><div class="ozet-kart-sub">${tedbirHayir} tedbir</div></div>
+    <div class="ozet-kart"><div class="ozet-kart-val" style="color:var(--green)">${evet}</div><div class="ozet-kart-lbl">Uyumlu</div><div class="ozet-kart-sub">${kapQ.filter(q=>STATE.cevaplar[q.id].c==='evet').reduce((s,q)=>s+q.kapsananSayi,0)} tedbir</div></div>
+    <div class="ozet-kart"><div class="ozet-kart-val" style="color:var(--amber)">${kismi}</div><div class="ozet-kart-lbl">Kısmen</div><div class="ozet-kart-sub">${kapQ.filter(q=>STATE.cevaplar[q.id].c==='kismi').reduce((s,q)=>s+q.kapsananSayi,0)} tedbir</div></div>
+    <div class="ozet-kart"><div class="ozet-kart-val" style="color:var(--red)">${hayir}</div><div class="ozet-kart-lbl">Uyumsuz</div><div class="ozet-kart-sub">${kapQ.filter(q=>STATE.cevaplar[q.id].c==='hayir').reduce((s,q)=>s+q.kapsananSayi,0)} tedbir</div></div>
     <div class="ozet-kart"><div class="ozet-kart-val" style="color:var(--purple)">${kismi+hayir}</div><div class="ozet-kart-lbl">Toplam Bulgu</div><div class="ozet-kart-sub">Raporda yer alan</div></div>
-    <div class="ozet-kart"><div class="ozet-kart-val" style="color:var(--teal)">${covered1296}</div><div class="ozet-kart-lbl">1296 Tedbir</div><div class="ozet-kart-sub">Cevaplanan</div></div>`;
+    <div class="ozet-kart"><div class="ozet-kart-val" style="color:var(--teal)">${Object.keys(STATE.cevaplar1296).length}</div><div class="ozet-kart-lbl">1296 Tedbir</div><div class="ozet-kart-sub">Cevaplanan</div></div>`;
 
   buildPie(evet, kismi, hayir);
   buildBar();
@@ -801,32 +735,32 @@ function buildPie(e, k, h) {
   if (pieChart) pieChart.destroy();
   pieChart = new Chart(document.getElementById('chart-pie'), {
     type: 'doughnut',
-    data: { labels: ['Uyumlu','Kısmen','Uyumsuz'], datasets: [{ data: [e,k,h], backgroundColor: ['#10b981','#f59e0b','#ef4444'], borderWidth: 0 }] },
-    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { color: '#94a3b8', font: { size: 11 }, padding: 10, usePointStyle: true } } } }
+    data: { labels:['Uyumlu','Kısmen','Uyumsuz'], datasets:[{ data:[e,k,h], backgroundColor:['#10b981','#f59e0b','#ef4444'], borderWidth:0 }] },
+    options: { responsive:true, maintainAspectRatio:false, plugins:{ legend:{ position:'bottom', labels:{ color:'#94a3b8', font:{size:11}, padding:10, usePointStyle:true } } } }
   });
 }
 
 function buildBar() {
-  const labels = CATEGORIES.map(c => shortCat(c).substring(0, 25));
+  const labels = CATEGORIES.map(c => shortCat(c).substring(0,25));
   const data   = CATEGORIES.map(cat => {
-    const qs = SORULAR_100.filter(q => q.anaKat === cat && STATE.cevaplar[q.id]);
+    const qs = SORULAR_100.filter(q => q.anaKat===cat && STATE.cevaplar[q.id]);
     if (!qs.length) return 0;
-    return Math.round(100 * qs.reduce((s, q) => s + (PUAN[STATE.cevaplar[q.id].c] || 0), 0) / qs.length);
+    return Math.round(100 * qs.reduce((s,q) => s+(PUAN[STATE.cevaplar[q.id].c]||0), 0) / qs.length);
   });
-  const colors = data.map(d => d >= 70 ? '#10b981' : d >= 40 ? '#f59e0b' : d > 0 ? '#ef4444' : '#475569');
-  const h = Math.max(300, CATEGORIES.length * 32 + 60);
-  document.getElementById('chart-bar-wrap').style.height = h + 'px';
+  const colors = data.map(d => d>=70?'#10b981':d>=40?'#f59e0b':d>0?'#ef4444':'#475569');
+  const h = Math.max(300, CATEGORIES.length*32+60);
+  document.getElementById('chart-bar-wrap').style.height = h+'px';
   if (barChart) barChart.destroy();
   barChart = new Chart(document.getElementById('chart-bar'), {
-    type: 'bar',
-    data: { labels, datasets: [{ data, backgroundColor: colors, borderRadius: 4 }] },
-    options: {
-      indexAxis: 'y', responsive: true, maintainAspectRatio: false,
-      scales: {
-        x: { beginAtZero: true, max: 100, ticks: { color: '#94a3b8', callback: v => v+'%' }, grid: { color: 'rgba(255,255,255,0.05)' } },
-        y: { ticks: { color: '#94a3b8', font: { size: 10 } }, grid: { display: false } }
+    type:'bar',
+    data:{ labels, datasets:[{ data, backgroundColor:colors, borderRadius:4 }] },
+    options:{
+      indexAxis:'y', responsive:true, maintainAspectRatio:false,
+      scales:{
+        x:{ beginAtZero:true, max:100, ticks:{ color:'#94a3b8', callback:v=>v+'%' }, grid:{ color:'rgba(255,255,255,0.05)' } },
+        y:{ ticks:{ color:'#94a3b8', font:{size:10} }, grid:{ display:false } }
       },
-      plugins: { legend: { display: false }, tooltip: { callbacks: { label: c => ` Uyum: %${c.raw}` } } }
+      plugins:{ legend:{ display:false }, tooltip:{ callbacks:{ label:c=>` Uyum: %${c.raw}` } } }
     }
   });
 }
@@ -841,7 +775,8 @@ function buildRiskMatris() {
   });
   const cell = (key, cls) => {
     const n = m[key];
-    return `<div class="rm-cell ${cls}">${n > 0 ? `<span class="rm-count">${n}</span>` : '<span class="rm-count-0">0</span>'}${n > 0 ? `<span style="font-size:9px">${cls === 'critical' ? 'Çok Riskli' : cls === 'high' ? 'Riskli' : 'Orta'}</span>` : ''}</div>`;
+    const lbl = cls==='critical'?'Çok Riskli':cls==='high'?'Riskli':'Orta';
+    return `<div class="rm-cell ${cls}">${n>0?`<span class="rm-count">${n}</span><span style="font-size:9px">${lbl}</span>`:'<span class="rm-count-0">0</span>'}</div>`;
   };
   document.getElementById('risk-matris').innerHTML = `
     <div style="font-size:11px;color:var(--text2);margin-bottom:10px">Satır: Uygulama Durumu | Sütun: Kritiklik</div>
@@ -857,12 +792,12 @@ function buildRiskMatris() {
 
 function buildKritikBulgular() {
   const bulgular = SORULAR_100
-    .filter(q => { const cv = STATE.cevaplar[q.id]; return cv && cv.c !== 'evet'; })
-    .map(q => ({ q, cv: STATE.cevaplar[q.id], rd: riskDurumu(q, STATE.cevaplar[q.id].c) }))
-    .sort((a, b) => (b.rd?.skor||0) - (a.rd?.skor||0))
-    .slice(0, 10);
+    .filter(q => { const cv=STATE.cevaplar[q.id]; return cv && cv.c!=='evet'; })
+    .map(q => ({ q, cv:STATE.cevaplar[q.id], rd:riskDurumu(q,STATE.cevaplar[q.id].c) }))
+    .sort((a,b) => (b.rd?.skor||0)-(a.rd?.skor||0))
+    .slice(0,10);
   document.getElementById('kritik-bulgular').innerHTML = bulgular.length
-    ? bulgular.map(({ q, cv, rd }) => `
+    ? bulgular.map(({q,cv,rd}) => `
       <div class="kritik-bulgu-item">
         <span class="kb-badge ${rd?.label==='Çok Riskli'?'cr':'r'}">${rd?.label||'Riskli'}</span>
         <div>
@@ -879,123 +814,80 @@ function buildKritikBulgular() {
 
 function exportExcel() {
   if (typeof XLSX === 'undefined') { toast('SheetJS yüklenemedi', 'error'); return; }
-  const wb = XLSX.utils.book_new();
+  const wb    = XLSX.utils.book_new();
   const tarih = new Date().toLocaleDateString('tr-TR');
-
-  // ── SAYFA 1: ÖZET ──────────────────────────────────────────
   const all   = Object.values(STATE.cevaplar);
-  const evet  = all.filter(v => v.c==='evet').length;
-  const kismi = all.filter(v => v.c==='kismi').length;
-  const hayir = all.filter(v => v.c==='hayir').length;
+  const evet  = all.filter(v=>v.c==='evet').length;
+  const kismi = all.filter(v=>v.c==='kismi').length;
+  const hayir = all.filter(v=>v.c==='hayir').length;
   const total = evet+kismi+hayir;
-  const skor  = total > 0 ? Math.round(100*(evet+kismi*0.5)/total) : 0;
+  const skor  = total>0 ? Math.round(100*(evet+kismi*0.5)/total) : 0;
 
-  const ws1_data = [
+  // Özet
+  const ws1 = XLSX.utils.aoa_to_sheet([
     ['BİLGİ GÜVENLİĞİ GAP ANALİZİ - YÖNETİM ÖZETİ'],
-    ['Oluşturulma Tarihi', tarih],
-    [],
-    ['KAPSAM', 'DEĞER', 'AÇIKLAMA'],
+    ['Oluşturulma Tarihi', tarih], [],
+    ['KAPSAM','DEĞER','AÇIKLAMA'],
     ['Yanıtlanan Kontrol', total, '100 kontrol üzerinden'],
-    ['Genel Uyum Skoru', skor + '%', 'Ağırlıklı ortalama'],
-    ['Tamamen Uyumlu', evet, 'Evet cevaplanan'],
-    ['Kısmen Uyumlu', kismi, 'Kısmen cevaplanan'],
-    ['Uyumsuz', hayir, 'Hayır cevaplanan'],
-    ['Toplam Bulgu', kismi+hayir, 'Raporda yer alan'],
-    [],
+    ['Genel Uyum Skoru', skor+'%', 'Ağırlıklı ortalama'],
+    ['Tamamen Uyumlu', evet, ''], ['Kısmen Uyumlu', kismi, ''], ['Uyumsuz', hayir, ''], ['Toplam Bulgu', kismi+hayir, ''], [],
     ['1296 TEDBİR KAPSAMASI'],
-    ['Cevaplanan Tedbir', Object.keys(STATE.cevaplar1296).length, '1296 tedbir üzerinden'],
-    ['Uyumlu Tedbir', Object.values(STATE.cevaplar1296).filter(c=>c==='evet').length, ''],
-    ['Kısmen Uyumlu', Object.values(STATE.cevaplar1296).filter(c=>c==='kismi').length, ''],
-    ['Uyumsuz Tedbir', Object.values(STATE.cevaplar1296).filter(c=>c==='hayir').length, ''],
-    [],
-    ['KATEGORİ BAZLI UYUM'],
-    ['Kategori', 'Uyumlu', 'Kısmen', 'Uyumsuz', 'Uyum %'],
+    ['Cevaplanan', Object.keys(STATE.cevaplar1296).length, ''],
+    ['Uyumlu',    Object.values(STATE.cevaplar1296).filter(c=>c==='evet').length,  ''],
+    ['Kısmen',    Object.values(STATE.cevaplar1296).filter(c=>c==='kismi').length, ''],
+    ['Uyumsuz',   Object.values(STATE.cevaplar1296).filter(c=>c==='hayir').length, ''], [],
+    ['KATEGORİ','Uyumlu','Kısmen','Uyumsuz','Uyum %'],
     ...CATEGORIES.map(cat => {
-      const qs = SORULAR_100.filter(q => q.anaKat===cat && STATE.cevaplar[q.id]);
-      const e = qs.filter(q=>STATE.cevaplar[q.id].c==='evet').length;
-      const k = qs.filter(q=>STATE.cevaplar[q.id].c==='kismi').length;
-      const h = qs.filter(q=>STATE.cevaplar[q.id].c==='hayir').length;
-      const n = qs.length;
-      return [shortCat(cat), e, k, h, n>0 ? Math.round(100*(e+k*0.5)/n)+'%' : '—'];
+      const qs = SORULAR_100.filter(q=>q.anaKat===cat && STATE.cevaplar[q.id]);
+      const e=qs.filter(q=>STATE.cevaplar[q.id].c==='evet').length;
+      const k=qs.filter(q=>STATE.cevaplar[q.id].c==='kismi').length;
+      const h=qs.filter(q=>STATE.cevaplar[q.id].c==='hayir').length;
+      const n=qs.length;
+      return [shortCat(cat),e,k,h,n>0?Math.round(100*(e+k*0.5)/n)+'%':'—'];
     })
-  ];
-  const ws1 = XLSX.utils.aoa_to_sheet(ws1_data);
+  ]);
   ws1['!cols'] = [{wch:35},{wch:15},{wch:40}];
   XLSX.utils.book_append_sheet(wb, ws1, 'Özet');
 
-  // ── SAYFA 2: BULGULAR (Hayır + Kısmen) ─────────────────────
-  const ws2_data = [
-    ['DANIŞMANLIK GÖRÜŞLERİ - BULGULAR'],
-    ['Sıra', 'Tedbir No', 'Ana Kategori', 'Alt Kategori', 'Tedbir Adı', 'Cevap', 'Risk Durumu', 'Danışman Gözlemi / Tespit', 'AI Bulgu Metni', 'BİGR İyileştirme Önerisi', 'İlgili Mevzuat', 'ISO 27001:2022', 'ISO 27701:2019']
-  ];
-  let bulguSira = 1;
-  SORULAR_100
-    .filter(q => { const cv = STATE.cevaplar[q.id]; return cv && cv.c !== 'evet'; })
-    .sort((a,b) => (riskDurumu(b,STATE.cevaplar[b.id].c)?.skor||0) - (riskDurumu(a,STATE.cevaplar[a.id].c)?.skor||0))
-    .forEach(q => {
-      const cv = STATE.cevaplar[q.id];
-      const rd = riskDurumu(q, cv.c);
-      ws2_data.push([
-        bulguSira++, q.tedbirNo, q.anaKat, q.altKat, q.tedbir,
-        cevapLabel(cv.c), rd?.label || '',
-        cv.obs || '', cv.bulgu || '',
-        q.oneri || '',
-        lkp('mev', q.mev), lkp('iso1', q.iso1), lkp('iso2', q.iso2)
-      ]);
+  // Bulgular
+  const ws2_data = [['BULGULAR'],['Sıra','Tedbir No','Ana Kat','Alt Kat','Tedbir','Cevap','Risk','Gözlem','AI Bulgu','Öneri','Mevzuat','ISO 27001','ISO 27701']];
+  SORULAR_100.filter(q=>{ const cv=STATE.cevaplar[q.id]; return cv&&cv.c!=='evet'; })
+    .sort((a,b)=>(riskDurumu(b,STATE.cevaplar[b.id].c)?.skor||0)-(riskDurumu(a,STATE.cevaplar[a.id].c)?.skor||0))
+    .forEach((q,i) => {
+      const cv=STATE.cevaplar[q.id]; const rd=riskDurumu(q,cv.c);
+      ws2_data.push([i+1,q.tedbirNo,q.anaKat,q.altKat,q.tedbir,cevapLabel(cv.c),rd?.label||'',cv.obs||'',cv.bulgu||'',q.oneri||'',lkp('mev',q.mev),lkp('iso1',q.iso1),lkp('iso2',q.iso2)]);
     });
   const ws2 = XLSX.utils.aoa_to_sheet(ws2_data);
-  ws2['!cols'] = [{wch:5},{wch:12},{wch:25},{wch:30},{wch:35},{wch:20},{wch:12},{wch:50},{wch:50},{wch:50},{wch:50},{wch:15},{wch:15}];
+  ws2['!cols'] = [{wch:5},{wch:12},{wch:25},{wch:25},{wch:35},{wch:20},{wch:12},{wch:50},{wch:50},{wch:50},{wch:50},{wch:15},{wch:15}];
   XLSX.utils.book_append_sheet(wb, ws2, 'Bulgular');
 
-  // ── SAYFA 3: UYUMLULUK KANITLARI ───────────────────────────
-  const ws3_data = [
-    ['UYUMLULUK KANITLARI - TAMAMEN UYGULANIYORLAR'],
-    ['Sıra', 'Tedbir No', 'Ana Kategori', 'Alt Kategori', 'Tedbir Adı', 'Kritiklik', 'Danışman Uygulama Notu', 'BİGR Tedbir Açıklaması', 'Kapsanan Tedbir Sayısı', 'ISO 27001:2022']
-  ];
-  let uyumluSira = 1;
-  SORULAR_100
-    .filter(q => STATE.cevaplar[q.id]?.c === 'evet')
-    .forEach(q => {
-      const cv = STATE.cevaplar[q.id];
-      ws3_data.push([
-        uyumluSira++, q.tedbirNo, q.anaKat, q.altKat, q.tedbir,
-        q.kritiklik===3?'Yüksek':q.kritiklik===2?'Orta':'Düşük',
-        cv.obs || '', q.oneri || '',
-        q.kapsananSayi, lkp('iso1', q.iso1)
-      ]);
-    });
+  // Uyumluluk
+  const ws3_data = [['UYUMLULUK KANITLARI'],['Sıra','Tedbir No','Ana Kat','Alt Kat','Tedbir','Kritiklik','Danışman Notu','Öneri','Kapsanan','ISO 27001']];
+  SORULAR_100.filter(q=>STATE.cevaplar[q.id]?.c==='evet').forEach((q,i) => {
+    const cv=STATE.cevaplar[q.id];
+    ws3_data.push([i+1,q.tedbirNo,q.anaKat,q.altKat,q.tedbir,q.kritiklik===3?'Yüksek':q.kritiklik===2?'Orta':'Düşük',cv.obs||'',q.oneri||'',q.kapsananSayi,lkp('iso1',q.iso1)]);
+  });
   const ws3 = XLSX.utils.aoa_to_sheet(ws3_data);
-  ws3['!cols'] = [{wch:5},{wch:12},{wch:25},{wch:30},{wch:35},{wch:10},{wch:60},{wch:50},{wch:15},{wch:15}];
+  ws3['!cols'] = [{wch:5},{wch:12},{wch:25},{wch:25},{wch:35},{wch:10},{wch:60},{wch:50},{wch:12},{wch:15}];
   XLSX.utils.book_append_sheet(wb, ws3, 'Uyumluluk Kanıtları');
 
-  // ── SAYFA 4: 1296 TEDBİR TAM LİSTE ────────────────────────
-  const ws4_data = [
-    ['1296 TEDBİR TAM LİSTESİ - OTOMATİK MAPPING'],
-    ['#', 'Tedbir No', 'Ana Kategori', 'Alt Kategori', 'Tedbir Adı', 'Denetim Sorusu', 'Cevap', 'Uygulama Durumu', 'Kaynak (100. Soru)', 'Kritiklik', 'İlgili Mevzuat', 'ISO 27001:2022']
-  ];
-  SORULAR_1296.forEach((s, idx) => {
-    const cv      = STATE.cevaplar1296[s.i] || '';
-    const parentQ = SORULAR_100.find(q => q.id === s.p);
-    ws4_data.push([
-      idx+1, s.tn, s.ak, s.altk, s.ta, s.q,
-      cv, cevapLabel(cv) || 'Cevapsız',
-      parentQ ? `S${s.p}: ${parentQ.tedbir}` : `S${s.p}`,
-      s.k===3?'Yüksek':s.k===2?'Orta':'Düşük',
-      lkp('mev', s.mev), lkp('iso1', s.iso1)
-    ]);
+  // 1296 Tedbir
+  const ws4_data = [['1296 TEDBİR TAM LİSTESİ'],['#','Tedbir No','Ana Kat','Alt Kat','Tedbir Adı','Denetim Sorusu','Cevap','Uygulama Durumu','Kaynak','Kritiklik','Mevzuat','ISO 27001']];
+  SORULAR_1296.forEach((s,idx) => {
+    const cv=STATE.cevaplar1296[s.i]||'';
+    const pQ=SORULAR_100.find(q=>q.id===s.p);
+    ws4_data.push([idx+1,s.tn,s.ak,s.altk,s.ta,s.q,cv,cevapLabel(cv)||'Cevapsız',pQ?`S${s.p}: ${pQ.tedbir}`:`S${s.p}`,s.k===3?'Yüksek':s.k===2?'Orta':'Düşük',lkp('mev',s.mev),lkp('iso1',s.iso1)]);
   });
   const ws4 = XLSX.utils.aoa_to_sheet(ws4_data);
-  ws4['!cols'] = [{wch:5},{wch:12},{wch:25},{wch:30},{wch:35},{wch:60},{wch:8},{wch:25},{wch:50},{wch:10},{wch:50},{wch:15}];
+  ws4['!cols'] = [{wch:5},{wch:12},{wch:25},{wch:25},{wch:35},{wch:60},{wch:8},{wch:25},{wch:45},{wch:10},{wch:50},{wch:15}];
   XLSX.utils.book_append_sheet(wb, ws4, '1296 Tedbir Listesi');
 
-  // İndir
-  const dosyaAdi = `BG-Gap-Analizi-${new Date().toISOString().split('T')[0]}.xlsx`;
-  XLSX.writeFile(wb, dosyaAdi);
-  toast('✅ Excel raporu indirildi: ' + dosyaAdi, 'success');
+  XLSX.writeFile(wb, `BG-Gap-Analizi-${new Date().toISOString().split('T')[0]}.xlsx`);
+  toast('✅ Excel raporu indirildi', 'success');
 }
 
 // ══════════════════════════════════════════════════════════════
-// API KEY / RESET / JSON EXPORT
+// API KEY / RESET / EXPORT
 // ══════════════════════════════════════════════════════════════
 
 function showAPIKeyModal() {
@@ -1020,9 +912,9 @@ function clearAPIKey() {
 
 function resetAll() {
   if (!confirm('Tüm cevaplar ve bulgular silinecek. Emin misiniz?')) return;
-  STATE.cevaplar = {};
+  STATE.cevaplar     = {};
   STATE.cevaplar1296 = {};
-  STATE.page1296 = 0;
+  STATE.page1296     = 0;
   localStorage.removeItem(STORAGE_KEY);
   buildSidebar();
   renderQuestion();
@@ -1031,8 +923,8 @@ function resetAll() {
 }
 
 function exportData() {
-  const d = { tarih: new Date().toISOString(), uygulama: 'BG Gap Analizi v4', cevaplar: STATE.cevaplar, cevaplar1296: STATE.cevaplar1296 };
-  const b = new Blob([JSON.stringify(d, null, 2)], { type: 'application/json' });
+  const d = { tarih:new Date().toISOString(), uygulama:'BG Gap Analizi v4', cevaplar:STATE.cevaplar, cevaplar1296:STATE.cevaplar1296 };
+  const b = new Blob([JSON.stringify(d,null,2)], { type:'application/json' });
   const u = URL.createObjectURL(b);
   const a = document.createElement('a');
   a.href = u; a.download = `bg-gap-${new Date().toISOString().split('T')[0]}.json`;
@@ -1040,7 +932,7 @@ function exportData() {
   toast('✅ JSON yedek indirildi');
 }
 
-// ── INIT ───────────────────────────────────────────────────────
+// ── INIT ─────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
   load();
   buildSidebar();
