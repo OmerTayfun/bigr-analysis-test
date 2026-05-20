@@ -17,15 +17,16 @@
       <div class="logo-text">Bilgi Güvenliği Gap Analizi</div>
       <div class="logo-sub">BİGR & KVKK Uyumluluk Denetim Aracı</div>
     </div>
-    // Bu HTML yapısını uygulamanın üst paneline (Header) veya Ayarlar sekmesine ekleyebilirsin:
-`
-<div style="margin-bottom: 15px; display: flex; align-items: center; gap: 10px; background: var(--bg2); padding: 10px; border-radius: 6px; border: 1px solid var(--border);">
+   </div>
+</header>
+
+<div style="margin: 1rem 1.5rem; display: flex; align-items: center; gap: 10px; background: var(--bg2); padding: 12px; border-radius: 6px; border: 1px solid var(--border);">
   <span style="font-size: 12px; font-weight: 600; color: var(--text);">🏢 Analiz Edilen Firma:</span>
-  <input type="text" id="customer-name-input" value="${STATE.firmaAdi}" placeholder="Müşteri/Firma Adını Giriniz..." 
+  <input type="text" id="customer-name-input" placeholder="Müşteri / Firma Adını Giriniz..." 
     style="flex: 1; padding: 6px 12px; font-size: 12px; border-radius: 4px; border: 1px solid var(--border); background: var(--bg); color: var(--text);"
     oninput="STATE.firmaAdi = this.value; save();" />
 </div>
-`
+
   </div>
   <div class="header-stats">
     <div class="hstat"><div class="hstat-val" id="h-evet">0</div><div class="hstat-lbl">Uyumlu</div></div>
