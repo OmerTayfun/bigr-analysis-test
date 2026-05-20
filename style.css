@@ -247,10 +247,14 @@ body {
 
 /* 4 Kolon */
 .dk-body { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; }
+/* YENİ */
 .dk-kolon {
   padding: 14px 16px;
   border-right: 1px solid #d4af4a40;
   font-size: 12px; line-height: 1.6; color: #1a1a2e;
+  max-height: 320px;      /* ← ekle */
+  overflow-y: auto;       /* ← ekle */
+  scrollbar-width: thin;  /* ← ekle (Firefox için ince scrollbar) */
 }
 .dk-kolon:last-child { border-right: none; }
 .dk-kolon-baslik {
