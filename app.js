@@ -95,7 +95,13 @@ function switchTab(name) {
   if (name === 'tedbirler') { initTedbirFilters(); render1296(); }
   if (name === 'ozet')      renderOzet();
 }
-
+// app.js
+function updateProjeAdi(yeniIsim) {
+  STATE.projeAdi = yeniIsim;
+  STATE.tarih = new Date().toLocaleDateString();
+  save();
+  toast(`✅ Proje ismi "${yeniIsim}" olarak kaydedildi.`);
+}
 // ══════════════════════════════════════════════════════════════
 // SAYFA 1: SORULAR
 // ══════════════════════════════════════════════════════════════
