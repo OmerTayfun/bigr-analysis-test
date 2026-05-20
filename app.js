@@ -15,7 +15,8 @@ const STATE = {
   activePage: 'sorular',
   page1296: 0,
   aiNotes: {},     // Yapay zeka verilerini tutacağımız alan
-  riskCache: {}    // Aynı zafiyet maddelerini hafızada tutacak önbellek havuzumuz 🎯
+  riskCache: {},    // Aynı zafiyet maddelerini hafızada tutacak önbellek havuzumuz 🎯
+  firmaAdi: '' // 🏢 Analizi yapılan firma/müşteri adını tutacak alan
 };
 
 const CATEGORIES = [...new Set(SORULAR_100.map(s => s.anaKat))];
@@ -29,6 +30,7 @@ function save() {
       currentIdx:   STATE.currentIdx,
       activeFilter: STATE.activeFilter,
       activePage:   STATE.activePage
+      firmaAdi:     STATE.firmaAdi
     }));
   } catch(e) {}
 }
