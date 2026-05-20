@@ -603,70 +603,155 @@ function render1296() {
   document.getElementById('t-count').textContent = total.toLocaleString('tr-TR') + ' sonuç';
 
   // İstatistik kartları
-  const allCevaplar1296 = Object.values(STATE.cevaplar1296);
+  const allC = Object.values(STATE.cevaplar1296);
   const st = {
-    evet:  allCevaplar1296.filter(c => c==='evet').length,
-    kismi: allCevaplar1296.filter(c => c==='kismi').length,
-    hayir: allCevaplar1296.filter(c => c==='hayir').length,
-    bos:   SORULAR_1296.length - allCevaplar1296.length
+    evet:  allC.filter(c=>c==='evet').length,
+    kismi: allC.filter(c=>c==='kismi').length,
+    hayir: allC.filter(c=>c==='hayir').length,
+    bos:   SORULAR_1296.length - allC.length
   };
   document.getElementById('t-stats').innerHTML = `
     <div class="t-stats-kart"><div class="val" style="color:var(--green)">${st.evet}</div><div class="lbl">Uyumlu</div></div>
     <div class="t-stats-kart"><div class="val" style="color:var(--amber)">${st.kismi}</div><div class="lbl">Kısmen</div></div>
     <div class="t-stats-kart"><div class="val" style="color:var(--red)">${st.hayir}</div><div class="lbl">Uyumsuz</div></div>
     <div class="t-stats-kart"><div class="val" style="color:var(--gray)">${st.bos}</div><div class="lbl">Cevapsız</div></div>
-    <div class="t-stats-kart"><div class="val" style="color:var(--teal)">${SORULAR_1296.length - st.bos}</div><div class="lbl">Toplam Cevaplanan</div></div>`;
+    <div class="t-stats-kart"><div class="val" style="color:var(--teal)">${SORULAR_1296.length - st.bos}</div><div class="lbl">Cevaplanan</div></div>`;
 
-  // Tablo
-  let tbody = '';
   if (!slice.length) {
-    tbody = `<tr><td colspan="6" style="text-align:center;padding:2rem;color:var(--text2)">Sonuç bulunamadı</td></tr>`;
-  } else {
-    slice.forEach(s => {
-      const cv = STATE.cevaplar1296[s.i];
-      const cvCls = cv ? `tc-${cv}` : 'tc-bos';
-      const cvLbl = cv ? cevapLabel(cv) : '—';
-      // Hangi 100. sorudan geldiği
-      const parentQ = SORULAR_100.find(q => q.id === s.p);
-      tbody += `<tr>
-        <td class="t-tn">${s.tn}</td>
-        <td style="font-size:11px;color:var(--text2)">${shortCat(s.altk)}</td>
-        <td style="font-size:11px">${s.ta}</td>
-        <td style="font-size:11px;color:var(--text2)">${s.q}</td>
-        <td><span class="t-cevap-badge ${cvCls}">${cvLbl}</span></td>
-        <td class="t-source" title="${parentQ ? parentQ.soru.substring(0,80) : ''}">S${s.p}</td>
-      </tr>`;
-    });
+    document.getElementById('t-body').innerHTML = '';
+    document.getElementById('t-pagination').innerHTML = '';
+    document.querySelector('.t-tablo-wrap').innerHTML =
+      `<div style="padding:3rem;text-align:center;color:var(--text2)">Bu filtrelere uygun tedbir bulunamadı.</div>`;
+    return;
   }
-  document.getElementById('t-body').innerHTML = tbody;
+
+  // Satır renkleri
+  const rowStyle = {
+    evet:  { bg: 'rgba(16,185,129,0.04)',  border: 'rgba(16,185,129,0.25)',  left: '#10b981' },
+    kismi: { bg: 'rgba(245,158,11,0.04)',  border: 'rgba(245,158,11,0.2)',   left: '#f59e0b' },
+    hayir: { bg: 'rgba(239,68,68,0.05)',   border: 'rgba(239,68,68,0.2)',    left: '#ef4444' },
+    bos:   { bg: 'transparent',            border: 'rgba(255,255,255,0.06)', left: '#334155' }
+  };
+  const cevapRenk = {
+    evet:  { bg:'rgba(16,185,129,0.15)',  color:'#34d399',  label:'✅ Uyumlu' },
+    kismi: { bg:'rgba(245,158,11,0.15)', color:'#fbbf24',  label:'🟡 Kısmen' },
+    hayir: { bg:'rgba(239,68,68,0.15)',  color:'#f87171',  label:'❌ Uyumsuz' },
+    bos:   { bg:'rgba(100,116,139,0.15)',color:'#94a3b8',  label:'— Cevapsız' }
+  };
+  const kritikRenk = { 3:'#f87171', 2:'#fbbf24', 1:'#94a3b8' };
+  const kritikLabel = { 3:'🔴', 2:'🟡', 1:'⚪' };
+
+  // Kategori gruplarına ayır
+  const groups = {};
+  slice.forEach(s => {
+    if (!groups[s.ak]) groups[s.ak] = [];
+    groups[s.ak].push(s);
+  });
+
+  let html = `<div style="display:flex;flex-direction:column;gap:1.25rem">`;
+
+  Object.entries(groups).forEach(([anaKat, items]) => {
+    const catEvet  = items.filter(s => STATE.cevaplar1296[s.i]==='evet').length;
+    const catKismi = items.filter(s => STATE.cevaplar1296[s.i]==='kismi').length;
+    const catHayir = items.filter(s => STATE.cevaplar1296[s.i]==='hayir').length;
+    const catBos   = items.filter(s => !STATE.cevaplar1296[s.i]).length;
+    const catTotal = items.length;
+    const catSkor  = catTotal > catBos
+      ? Math.round(100*(catEvet + catKismi*0.5)/(catTotal - catBos)) : 0;
+    const skorRenk = catSkor >= 70 ? '#10b981' : catSkor >= 40 ? '#f59e0b' : catSkor > 0 ? '#ef4444' : '#475569';
+
+    html += `
+    <div style="background:var(--bg2);border:1px solid var(--border);border-radius:10px;overflow:hidden">
+
+      <!-- Kategori Başlığı -->
+      <div style="background:linear-gradient(135deg,var(--bg3),var(--bg2));padding:12px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
+        <div style="font-size:13px;font-weight:700;color:var(--text)">${shortCat(anaKat)}</div>
+        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+          <span style="font-size:11px;color:var(--green)">✅ ${catEvet}</span>
+          <span style="font-size:11px;color:var(--amber)">🟡 ${catKismi}</span>
+          <span style="font-size:11px;color:#f87171">❌ ${catHayir}</span>
+          <span style="font-size:11px;color:var(--gray)">— ${catBos}</span>
+          <span style="font-size:12px;font-weight:700;color:${skorRenk};background:rgba(0,0,0,0.2);padding:3px 10px;border-radius:12px">%${catSkor} Uyum</span>
+          <span style="font-size:11px;color:var(--text3)">${catTotal} tedbir</span>
+        </div>
+      </div>
+
+      <!-- Satırlar -->
+      <div style="display:flex;flex-direction:column">`;
+
+    items.forEach((s, idx) => {
+      const cv  = STATE.cevaplar1296[s.i] || 'bos';
+      const rs  = rowStyle[cv];
+      const cr  = cevapRenk[cv];
+      const parentQ = SORULAR_100.find(q => q.id === s.p);
+      const altKatKisa = s.altk.replace(/^\d+\.\d+\.\d+\.\s*/,'').replace(/^\d+\.\d+\.\s*/,'');
+
+      html += `
+      <div style="display:grid;grid-template-columns:90px 160px 180px 1fr 130px 50px;gap:0;border-bottom:${idx < items.length-1 ? '1px solid rgba(255,255,255,0.04)' : 'none'};background:${rs.bg};border-left:3px solid ${rs.left};transition:background .12s"
+           onmouseover="this.style.background='${cv==='bos'?'rgba(255,255,255,0.02)':rs.bg.replace('0.04','0.08').replace('0.05','0.09')}'"
+           onmouseout="this.style.background='${rs.bg}'">
+
+        <!-- Tedbir No -->
+        <div style="padding:10px 12px;display:flex;align-items:center">
+          <span style="font-size:10px;font-family:monospace;color:var(--teal);font-weight:600">${s.tn}</span>
+        </div>
+
+        <!-- Alt Kategori -->
+        <div style="padding:10px 8px;display:flex;align-items:center">
+          <span style="font-size:10px;color:var(--text3);line-height:1.35">${altKatKisa}</span>
+        </div>
+
+        <!-- Tedbir Adı -->
+        <div style="padding:10px 8px;display:flex;align-items:center">
+          <span style="font-size:11px;color:var(--text2);font-weight:500;line-height:1.4">${s.ta}</span>
+        </div>
+
+        <!-- Denetim Sorusu -->
+        <div style="padding:10px 12px;display:flex;align-items:center">
+          <span style="font-size:12px;color:var(--text);line-height:1.5">${s.q}</span>
+        </div>
+
+        <!-- Cevap -->
+        <div style="padding:10px 8px;display:flex;align-items:center;justify-content:center">
+          <span style="display:inline-block;background:${cr.bg};color:${cr.color};font-size:11px;font-weight:600;padding:4px 10px;border-radius:12px;text-align:center;white-space:nowrap">${cr.label}</span>
+        </div>
+
+        <!-- Kaynak -->
+        <div style="padding:10px 8px;display:flex;align-items:center;justify-content:center" title="${parentQ ? parentQ.tedbir : ''}">
+          <span style="font-size:10px;color:var(--teal);font-family:monospace;font-weight:600;background:var(--teal-soft);padding:3px 7px;border-radius:8px">S${s.p}</span>
+        </div>
+
+      </div>`;
+    });
+
+    html += `</div></div>`;
+  });
+
+  html += `</div>`;
+
+  // Tabloyu kaldır, yerine yeni yapıyı koy
+  const wrap = document.querySelector('.t-tablo-wrap');
+  if (wrap) wrap.innerHTML = html;
 
   // Pagination
   const totalPages = Math.ceil(total / PAGE_SIZE_1296);
   let pgHtml = '';
   if (totalPages > 1) {
-    const maxBtn = 7;
-    let pages = [];
-    if (totalPages <= maxBtn) {
-      pages = Array.from({length: totalPages}, (_, i) => i);
-    } else {
-      pages = [0];
-      if (page > 2) pages.push('...');
-      for (let i = Math.max(1, page-1); i <= Math.min(totalPages-2, page+1); i++) pages.push(i);
-      if (page < totalPages-3) pages.push('...');
-      pages.push(totalPages-1);
-    }
     if (page > 0) pgHtml += `<button class="pg-btn" onclick="goPage1296(${page-1})">← Önceki</button>`;
+    const maxBtn = 7;
+    let pages = totalPages <= maxBtn
+      ? Array.from({length:totalPages},(_,i)=>i)
+      : [0, ...(page>2?['...']:[]), ...Array.from({length:3},(_,i)=>Math.min(Math.max(page-1+i,1),totalPages-2)).filter((v,i,a)=>a.indexOf(v)===i), ...(page<totalPages-3?['...']:[]), totalPages-1];
     pages.forEach(p => {
-      if (p === '...') pgHtml += `<span style="padding:6px 4px;color:var(--text3)">…</span>`;
+      if (p==='...') pgHtml += `<span style="padding:6px 4px;color:var(--text3)">…</span>`;
       else pgHtml += `<button class="pg-btn ${p===page?'active':''}" onclick="goPage1296(${p})">${p+1}</button>`;
     });
     if (page < totalPages-1) pgHtml += `<button class="pg-btn" onclick="goPage1296(${page+1})">Sonraki →</button>`;
-    pgHtml += `<span style="font-size:12px;color:var(--text2);margin-left:8px">${start+1}–${Math.min(start+PAGE_SIZE_1296, total)} / ${total}</span>`;
+    pgHtml += `<span style="font-size:12px;color:var(--text2);margin-left:8px">${start+1}–${Math.min(start+PAGE_SIZE_1296,total)} / ${total}</span>`;
   }
   const pgEl = document.getElementById('t-pagination');
   pgEl.innerHTML = pgHtml;
-  pgEl.className = 't-pagination';
-  if (totalPages > 1) pgEl.style.display = 'flex';
+  pgEl.style.display = totalPages > 1 ? 'flex' : 'none';
 }
 
 function goPage1296(p) {
