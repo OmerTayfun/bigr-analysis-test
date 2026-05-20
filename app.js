@@ -44,6 +44,13 @@ function load() {
     STATE.currentIdx   = d.currentIdx   || 0;
     STATE.activeFilter = d.activeFilter || 'all';
     STATE.activePage   = d.activePage   || 'sorular';
+    STATE.firmaAdi     = d.firmaAdi     || ''; // 👈 Hafızadan çekme kuralı
+    
+    // Sayfa yüklendiğinde input kutusunun içini doldurma güvencesi
+    document.addEventListener('DOMContentLoaded', () => {
+      const input = document.getElementById('customer-name-input');
+      if (input) input.value = STATE.firmaAdi;
+    });
   } catch(e) {}
 }
 
