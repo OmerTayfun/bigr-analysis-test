@@ -502,7 +502,7 @@ function buildRiskKategorileriHTML(q, cv) {
           <span style="font-size:9px;background:rgba(255,255,255,0.08);color:#e2e8f0;padding:2px 6px;border-radius:4px;font-weight:600">Olasılık ${cat.olas}</span>
         </div>
       </div>
-      <div style="font-size:11px;color:#d1d5db;line-height:1.5">${cat.desc}</div>
+      <div style="font-size:11px;color:#1a1a2e;line-height:1.5;font-weight:500">${cat.desc}</div>
     </div>
   `).join('');
 }
