@@ -19,16 +19,30 @@
     </div>
   </div>
 
-  <div style="display: flex; align-items: center; gap: 8px; background: rgba(255, 255, 255, 0.03); border: 1px solid var(--border); padding: 6px 12px; border-radius: 6px; max-width: 320px; margin-left: auto;">
+  <div style="display: flex; align-items: center; gap: 6px; background: rgba(255, 255, 255, 0.03); border: 1px solid var(--border); padding: 4px 10px; border-radius: 6px; margin-left: 15px;">
     <span style="font-size: 11px; font-weight: 600; color: var(--text2); white-space: nowrap;">🏢 Firma:</span>
     <input type="text" id="customer-name-input" placeholder="Firma Adı Giriniz..." 
-      style="width: 160px; padding: 4px 8px; font-size: 11px; border-radius: 4px; border: 1px solid var(--border); background: var(--bg); color: var(--text); outline: none; transition: all 0.2s;"
+      style="width: 140px; padding: 4px 6px; font-size: 11px; border-radius: 4px; border: 1px solid var(--border); background: var(--bg); color: var(--text); outline: none; transition: all 0.2s;"
       oninput="STATE.firmaAdi = this.value; save();"
       onfocus="this.style.borderColor='var(--teal)'"
       onblur="this.style.borderColor='var(--border)'" />
   </div>
-</header>
+
+  <div class="header-stats" style="margin-left: auto; margin-right: auto;">
+    <div class="hstat"><div class="hstat-val" id="h-evet">0</div><div class="hstat-lbl">Uyumlu</div></div>
+    <div class="hstat"><div class="hstat-val" id="h-kismi">0</div><div class="hstat-lbl">Kısmen</div></div>
+    <div class="hstat"><div class="hstat-val" id="h-hayir">0</div><div class="hstat-lbl">Uyumsuz</div></div>
+    <div class="hstat"><div class="hstat-val" id="h-score">—</div><div class="hstat-lbl">Uyum %</div></div>
   </div>
+
+  <div class="header-btns">
+    <button class="btn btn-ghost" onclick="showAPIKeyModal()" title="Gemini API">🔑 API</button>
+    <button class="btn btn-ghost" onclick="exportExcel()" title="Excel Raporu İndir">📊 Excel</button>
+    <button class="btn btn-ghost" onclick="exportData()" title="JSON Yedek">💾 JSON</button>
+    <button class="btn btn-ghost" onclick="resetAll()">↺ Sıfırla</button>
+    <button class="btn btn-ghost" onclick="window.print()">🖨 Yazdır</button>
+  </div>
+</header>
   <div class="header-stats">
     <div class="hstat"><div class="hstat-val" id="h-evet">0</div><div class="hstat-lbl">Uyumlu</div></div>
     <div class="hstat"><div class="hstat-val" id="h-kismi">0</div><div class="hstat-lbl">Kısmen</div></div>
