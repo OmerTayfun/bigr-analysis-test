@@ -494,7 +494,7 @@ function buildRiskKategorileriHTML(q, cv) {
   ];
 
   return kategoriler.map(cat => `
-    <div style="margin-bottom:9px;padding:8px 10px;background:rgba(0,0,0,0.18);border-radius:6px;border-left:3px solid ${cat.color}">
+    <div style="margin-bottom:9px;padding:8px 10px;background:rgba(0,0,0,0.05);border-radius:6px;border-left:3px solid ${cat.color}">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
         <span style="font-size:10px;font-weight:700;color:${cat.color};letter-spacing:.5px">${cat.icon} ${cat.name}</span>
         <div style="display:flex;gap:4px">
