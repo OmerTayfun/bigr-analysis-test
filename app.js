@@ -498,8 +498,8 @@ function buildRiskKategorileriHTML(q, cv) {
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
         <span style="font-size:10px;font-weight:700;color:${cat.color};letter-spacing:.5px">${cat.icon} ${cat.name}</span>
         <div style="display:flex;gap:4px">
-          <span style="font-size:9px;background:rgba(255,255,255,0.08);color:#e2e8f0;padding:2px 6px;border-radius:4px;font-weight:600">Etki ${cat.etki}</span>
-          <span style="font-size:9px;background:rgba(255,255,255,0.08);color:#e2e8f0;padding:2px 6px;border-radius:4px;font-weight:600">Olasılık ${cat.olas}</span>
+<span style="font-size:9px;background:${cat.color};color:#fff;padding:2px 7px;border-radius:4px;font-weight:700;opacity:0.9">Etki ${cat.etki}</span>
+          <span style="font-size:9px;background:rgba(0,0,0,0.15);color:#374151;padding:2px 7px;border-radius:4px;font-weight:700;border:1px solid rgba(0,0,0,0.1)">Olasılık ${cat.olas}</span>
         </div>
       </div>
       <div style="font-size:11px;color:#1a1a2e;line-height:1.5;font-weight:500">${cat.desc}</div>
