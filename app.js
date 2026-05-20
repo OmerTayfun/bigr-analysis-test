@@ -408,7 +408,7 @@ function buildDanismanKart(q) {
     : (q.kritiklik === 3 ? 'Kısmi uygulama, tam güvence sağlamamakta; kontrol etkinliği yetersiz kalmaktadır.'
      : 'Sürecin olgunlaşması için ek adım atılması gerekmektedir.');
 
-  const hukukiRisk = `* ${q.tedbirNo} | ${cv.c === 'hayir' ? 'Olası Riskler: ' : 'Kısmi Risk: '}${q.kritiklik === 3 ? 'Yüksek' : q.kritiklik === 2 ? 'Orta' : 'Düşük'} Kritiklik (${q.kritiklik * (cv.c==='hayir'?4:3)} Puan)${mev ? `\n\n* Hukuki Yaptırım: ${mev}` : ''};
+  const hukukiRisk = `* ${q.tedbirNo} | ${cv.c === 'hayir' ? 'Olası Riskler: ' : 'Kısmi Risk: '}${q.kritiklik === 3 ? 'Yüksek' : q.kritiklik === 2 ? 'Orta' : 'Düşük'} Kritiklik (${q.kritiklik * (cv.c==='hayir'?4:3)} Puan)${mev ? `\n\n* Hukuki Yaptırım: ${mev}` : ''}`;
 
   // Mevzuat kolonunu oluştur
   let mevzuatHTML = '';
