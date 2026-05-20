@@ -721,49 +721,43 @@ function buildDanismanKart(q) {
   </div>
 
   <div class="dk-body">
-    <div class="dk-kolon">
-      <div class="dk-kolon-baslik"><span class="dk-kolon-baslik-icon">🔍</span> Tespitler</div>
-      <div class="dk-tespit-text">${tespitMetni}</div>
-    </div>
+  <div class="dk-kolon">
+    <div class="dk-kolon-baslik"><span class="dk-kolon-baslik-icon">🔍</span> Tespitler</div>
+    <div class="dk-tespit-text">${tespitMetni}</div>
+  </div>
 
-    <div class="dk-kolon">
-  <div class="dk-kolon-baslik"><span class="dk-kolon-baslik-icon">⚠️</span> Risk Analizi</div>
-  ${buildRiskKategorileriHTML(q, cv)}
-  <div style="margin-top:8px">
-    <button id="risk-ai-btn-${q.id}" onclick="aiRiskAnaliziUret(${q.id})"
-      style="background:linear-gradient(135deg,#6366f1,#8b5cf6);color:#fff;border:none;padding:5px 12px;border-radius:6px;cursor:pointer;font-size:10px;font-weight:600;width:100%">
-      ${STATE.riskAnalizi[q.id] ? '🔄 Yenile' : '🤖 AI Risk Analizi'}
-    </button>
-  </div>
-  <div id="risk-ai-box-${q.id}">
-    ${STATE.riskAnalizi[q.id] ? renderRiskAIBox(q.id) : ''}
-  </div>
-</div>
-      
-      <div class="dk-risk-item">
-        <span class="dk-risk-label kritiklik">Kritiklik (${q.kritiklik * 4} Puan)</span>
-        <div class="dk-risk-text">BİGR Rehberi Kritiklik Derecesi: <strong>${q.kritiklik === 3 ? 'Yüksek (3)' : q.kritiklik === 2 ? 'Orta (2)' : 'Düşük (1)'}</strong></div>
-      </div>
-      
-      <div class="dk-risk-item">
-        <span class="dk-risk-label hukuki">Hukuki Risk</span>
-        <div class="dk-risk-text" style="font-size:12px; line-height:1.5; color:var(--text); font-weight:500;">
-          ⚠️ ${cv.c === 'hayir' ? 'Yüksek Uyumsuzluk Riski: ' : 'Kısmi Uyumsuzluk Riski: '}
-          <div style="margin-top: 4px; font-weight: normal; color: var(--text2); white-space: pre-line;">${hukukiAks}</div>
-        </div>
+  <div class="dk-kolon">
+    <div class="dk-kolon-baslik"><span class="dk-kolon-baslik-icon">⚠️</span> Risk Analizi</div>
+    ${buildRiskKategorileriHTML(q, cv)}
+    <div style="margin-top:8px;padding:7px 10px;background:rgba(0,0,0,0.15);border-radius:6px">
+      <span class="dk-risk-label kritiklik">Kritiklik (${q.kritiklik * 4} Puan)</span>
+      <div class="dk-risk-text">BİGR Rehberi Kritiklik Derecesi: <strong>${q.kritiklik === 3 ? 'Yüksek (3)' : q.kritiklik === 2 ? 'Orta (2)' : 'Düşük (1)'}</strong></div>
+    </div>
+    <div style="margin-top:6px;padding:7px 10px;background:rgba(96,165,250,0.08);border-radius:6px;border-left:3px solid #60a5fa">
+      <span class="dk-risk-label hukuki">Hukuki Risk</span>
+      <div class="dk-risk-text" style="font-size:12px;line-height:1.5;color:var(--text);font-weight:500">
+        ⚠️ ${cv.c === 'hayir' ? 'Yüksek Uyumsuzluk Riski: ' : 'Kısmi Uyumsuzluk Riski: '}
+        <div style="margin-top:4px;font-weight:normal;color:var(--text2);white-space:pre-line">${hukukiAks}</div>
       </div>
     </div>
-
-    <div class="dk-kolon">
-      <div class="dk-kolon-baslik"><span class="dk-kolon-baslik-icon">⚖️</span> Mevzuat Uyumu</div>
-      ${mevzuatHTML}
+    <div style="margin-top:8px">
+      <button id="risk-ai-btn-${q.id}" onclick="aiRiskAnaliziUret(${q.id})"
+        style="background:linear-gradient(135deg,#6366f1,#8b5cf6);color:#fff;border:none;padding:5px 12px;border-radius:6px;cursor:pointer;font-size:10px;font-weight:600;width:100%">
+        ${STATE.riskAnalizi[q.id] ? '🔄 Yenile' : '🤖 AI Risk Analizi'}
+      </button>
     </div>
-
-    <div class="dk-kolon">
-      <div class="dk-kolon-baslik"><span class="dk-kolon-baslik-icon">💡</span> İyileştirme Önerileri</div>
-      ${oneriHTML}
+    <div id="risk-ai-box-${q.id}">
+      ${STATE.riskAnalizi[q.id] ? renderRiskAIBox(q.id) : ''}
     </div>
   </div>
+
+  <div class="dk-kolon">
+    <div class="dk-kolon-baslik"><span class="dk-kolon-baslik-icon">⚖️</span> Mevzuat Uyumu</div>
+    ${mevzuatHTML}
+  </div>
+
+  <div class="dk-kolon">
+    <div class="dk-kolon-baslik"><span class="dk-kolon-baslik-icon">💡</span>
 
   <div class="dk-footer">
     <span class="dk-footer-no">${q.tedbirNo} • S${q.id} / 100 • Kapsam: ${q.kapsananSayi} Tedbir</span>
