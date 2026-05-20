@@ -169,33 +169,35 @@ function renderQuestion() {
         </button>
       </div>
 
-      <!-- KISMEN PANELİ -->
-      <div class="kismi-panel ${sel==='kismi'?'visible':''}" id="kismi-panel">
-        <div class="kismi-panel-title">🟡 Danışman Gözlemi</div>
-        <div class="kismi-panel-desc">Müşteriden aldığınız bilgilere göre mevcut durumu kısaca açıklayın. Bu bilgiden otomatik bulgu metni üretilecektir.</div>
-        <textarea class="kismi-textarea" id="kismi-obs" placeholder="Örn: Yedekleme işlemi manuel olarak haftalık yapılıyor ancak geri yükleme testi hiç yapılmamış, sorumlu personel belirli değil..." rows="4">${obs}</textarea>
-        <div class="kismi-actions">
-          <button class="btn-ai-secondary" onclick="bulguSil()">Bulguyu Sil</button>
-          <button class="btn-ai" id="ai-gen-btn" onclick="bulguUret()" ${!obs.trim() ? 'disabled' : ''}>
-            🤖 Bulgu Üret
-          </button>
-        </div>
-        ${bulgu ? `
-        <div class="bulgu-onizleme" id="bulgu-preview">
-          <div class="bulgu-onizleme-title">
-            🤖 Üretilen Bulgu Önizlemesi
-            <button class="bulgu-onizleme-clear" onclick="bulguyuTemizle()">Temizle</button>
-          </div>
-          <div class="bulgu-onizleme-text">${bulgu}</div>
-        </div>` : '<div id="bulgu-preview"></div>'}
-      </div>
-
-      <!-- HAYIR PANELİ -->
-      <div class="hayir-panel ${sel==='hayir'?'visible':''}" id="hayir-panel">
-        <div class="hayir-panel-title">❌ Uyumsuzluk Tespiti</div>
-        <div class="hayir-panel-text">Bu kontrol için otomatik bulgu kartı raporlama sayfasında oluşturulacaktır. BİGR standardı gerekliliklerine göre bulgu ve öneri metni hazırlanmaktadır.</div>
-      </div>
-    </div>`;
+      ${sel ? `
+<div style="margin-top:1rem;padding:1.25rem;border-radius:10px;border:1px solid ${
+  sel==='evet' ? 'rgba(16,185,129,0.3)' :
+  sel==='kismi' ? 'rgba(245,158,11,0.3)' :
+  'rgba(239,68,68,0.3)'};background:${
+  sel==='evet' ? 'rgba(16,185,129,0.06)' :
+  sel==='kismi' ? 'rgba(245,158,11,0.06)' :
+  'rgba(239,68,68,0.06)'}">
+  <div style="font-size:12px;font-weight:600;margin-bottom:6px;color:${
+    sel==='evet'?'#10b981':sel==='kismi'?'#f59e0b':'#f87171'}">
+    ${sel==='evet'?'✅ Uygulama Notları':sel==='kismi'?'🟡 Danışman Gözlemi':'❌ Tespit Notları'}
+  </div>
+  <div style="font-size:12px;color:#94a3b8;margin-bottom:8px">
+    ${sel==='evet'
+      ? 'Kontrolün nasıl uygulandığını, kanıtları ve gözlemlerinizi yazın.'
+      : sel==='kismi'
+      ? 'Mevcut durumu açıklayın. Bu metinden otomatik bulgu üretilecektir.'
+      : 'Kontrolün neden uygulanmadığını, tespit edilen eksikliği yazın.'}
+  </div>
+  <textarea id="kismi-obs" style="width:100%;min-height:90px;padding:10px;background:var(--bg);border:1px solid rgba(255,255,255,0.1);border-radius:8px;color:var(--text);font-size:13px;line-height:1.6;resize:vertical;font-family:inherit" placeholder="Gözlem notlarınızı buraya yazın...">${obs}</textarea>
+  <div style="display:flex;gap:8px;margin-top:8px;justify-content:flex-end">
+    ${sel!=='evet' ? `<button class="btn-ai" id="ai-gen-btn" onclick="bulguUret()" ${!obs.trim()?'disabled':''}>🤖 Bulgu Üret</button>` : ''}
+  </div>
+  ${bulgu ? `
+  <div style="background:rgba(167,139,250,0.1);border:1px solid rgba(167,139,250,0.25);border-radius:8px;padding:1rem;margin-top:.75rem">
+    <div style="font-size:11px;font-weight:600;color:#a78bfa;margin-bottom:.4rem">🤖 Üretilen Bulgu</div>
+    <div style="font-size:12px;color:var(--text);line-height:1.6;white-space:pre-line">${bulgu}</div>
+  </div>` : '<div id="bulgu-preview"></div>'}
+</div>` : ''}
 
   // Textarea dinleyici
   const ta = document.getElementById('kismi-obs');
@@ -217,11 +219,8 @@ function setCevap(val) {
   const mevcut = STATE.cevaplar[q.id] || {};
 
   if (val === 'evet') {
-    STATE.cevaplar[q.id] = { c: 'evet', obs: '', bulgu: '' };
-    save(); updateStats(); buildSidebar(); renderQuestion();
-    setTimeout(() => navigate(1), 300);
-    return;
-  }
+    STATE.cevaplar[q.id] = { c: 'evet', obs: mevcut.obs || '', bulgu: '' };
+}
   if (val === 'hayir') {
     STATE.cevaplar[q.id] = { c: 'hayir', obs: mevcut.obs || '', bulgu: mevcut.bulgu || '' };
   }
