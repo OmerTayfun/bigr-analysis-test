@@ -379,7 +379,75 @@ function renderRapor() {
   bos.style.display = 'none';
   liste.innerHTML = sorular.map(q => buildDanismanKart(q)).join('');
 }
+function buildRiskKategorileriHTML(q, cv) {
+  const k = q.kritiklik;
+  const isHayir = cv.c === 'hayir';
+  const ak = (q.anaKat || '').toLowerCase();
+  const isKisiselVeri = ak.includes('kişisel');
 
+  const s = (hayirBase, kismiBase) =>
+    Math.min(10, isHayir ? hayirBase : kismiBase);
+
+  const kategoriler = [
+    {
+      icon: '⚡', name: 'STRATEJİK', color: '#f87171',
+      etki: s(k===3?9:k===2?7:5, k===3?7:k===2?5:3),
+      olas: s(k===3?8:k===2?7:5, k===3?6:k===2?4:3),
+      desc: isHayir
+        ? `${q.tedbir} alanındaki kontrol eksikliği kurumun güvenlik stratejisini zayıflatmakta, üst yönetimin bilinçli risk kararları almasını engellemektedir.`
+        : `${q.tedbir} alanındaki kısmi uygulama, stratejik güvenlik hedeflerinin tam karşılanamamasına yol açmaktadır.`
+    },
+    {
+      icon: '🔧', name: 'OPERASYONEL', color: '#fb923c',
+      etki: s(k===3?10:k===2?8:6, k===3?8:k===2?6:4),
+      olas: s(k===3?9:k===2?8:6, k===3?7:k===2?5:4),
+      desc: isHayir
+        ? `Tedbirin uygulanmaması operasyonel süreçlerin güvenlik açıklarına karşı korumasız kalmasına ve iş sürekliliğinin tehlikeye girmesine neden olmaktadır.`
+        : `Kısmi uygulama operasyonel etkinliği sınırlandırmakta; tam uyum sağlanana kadar süreçlerde güvenlik açığı devam etmektedir.`
+    },
+    {
+      icon: '💰', name: 'FİNANSAL', color: '#fbbf24',
+      etki: s(k===3?8:k===2?7:5, k===3?6:k===2?4:3),
+      olas: s(k===3?7:k===2?6:4, k===3?5:k===2?4:3),
+      desc: isKisiselVeri
+        ? `KVKK kapsamında idari para cezası ve tazminat riski doğmakta; veri ihlali durumunda mali yükümlülükler önemli ölçüde artabilmektedir.`
+        : isHayir
+        ? `Olası güvenlik ihlali sonrasında olay müdahale, sistem kurtarma ve tazminat maliyetleri kurumun bütçesini ciddi biçimde etkileyebilir.`
+        : `Eksikliğin giderilmemesi durumunda bütçelenmemiş güvenlik maliyetleri ve beklenmedik mali yükler gündeme gelebilir.`
+    },
+    {
+      icon: '⚖️', name: 'HUKUKİ', color: '#60a5fa',
+      etki: s(isKisiselVeri?10:k===3?8:k===2?7:5, isKisiselVeri?8:k===3?6:k===2?5:3),
+      olas: s(isKisiselVeri?9:k===3?7:k===2?6:4, isKisiselVeri?7:k===3?5:k===2?4:3),
+      desc: isKisiselVeri
+        ? `KVKK'nın 12. maddesi kapsamında teknik ve idari tedbirlerin alınmaması, Kişisel Verileri Koruma Kurulu'nun idari yaptırım uygulamasına zemin hazırlamaktadır.`
+        : `BİGR ${q.tedbirNo} numaralı tedbirin uygulanmaması ilgili mevzuat açısından uyumsuzluk riski doğurmakta ve denetim bulgusuna konu olabilmektedir.`
+    },
+    {
+      icon: '📣', name: 'İTİBAR', color: '#a78bfa',
+      etki: s(k===3?8:k===2?6:4, k===3?6:k===2?4:3),
+      olas: s(k===3?7:k===2?6:4, k===3?5:k===2?4:3),
+      desc: isKisiselVeri
+        ? `Kişisel veri ihlali durumunda kurumun kamuoyu nezdindeki güvenilirliği zedelenebilir; müşteri ve iş ortağı ilişkileri olumsuz etkilenebilir.`
+        : isHayir
+        ? `Güvenlik açığının kamuoyuna yansıması veya bir ihlal yaşanması halinde kurumun sektördeki itibarı ve paydaş güveni ciddi biçimde sarsılabilir.`
+        : `Eksikliğin devam etmesi durumunda yaşanabilecek güvenlik olayları kurumun itibarına kalıcı zarar verebilir.`
+    }
+  ];
+
+  return kategoriler.map(cat => `
+    <div style="margin-bottom:9px;padding:8px 10px;background:rgba(0,0,0,0.18);border-radius:6px;border-left:3px solid ${cat.color}">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
+        <span style="font-size:10px;font-weight:700;color:${cat.color};letter-spacing:.5px">${cat.icon} ${cat.name}</span>
+        <div style="display:flex;gap:4px">
+          <span style="font-size:9px;background:rgba(255,255,255,0.08);color:#e2e8f0;padding:2px 6px;border-radius:4px;font-weight:600">Etki ${cat.etki}</span>
+          <span style="font-size:9px;background:rgba(255,255,255,0.08);color:#e2e8f0;padding:2px 6px;border-radius:4px;font-weight:600">Olasılık ${cat.olas}</span>
+        </div>
+      </div>
+      <div style="font-size:11px;color:#d1d5db;line-height:1.5">${cat.desc}</div>
+    </div>
+  `).join('');
+}
 function buildDanismanKart(q) {
   const cv  = STATE.cevaplar[q.id];
   const rd  = riskDurumu(q, cv.c);
