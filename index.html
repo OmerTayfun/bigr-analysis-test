@@ -6,10 +6,10 @@
 <title>Bilgi Güvenliği Gap Analizi | BİGR & KVKK</title>
 <link rel="stylesheet" href="style.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 </head>
 <body>
 
-<!-- HEADER -->
 <header class="app-header">
   <div class="logo">
     <div class="logo-mark">🛡</div>
@@ -25,20 +25,26 @@
     <div class="hstat"><div class="hstat-val" id="h-score">—</div><div class="hstat-lbl">Uyum %</div></div>
   </div>
   <div class="header-btns">
-    <button class="btn btn-ghost" onclick="showAPIKeyModal()" title="Gemini API Anahtarı">🔑 API</button>
-    <button class="btn btn-ghost" onclick="exportData()" title="Verileri İndir">💾 İndir</button>
+    <button class="btn btn-ghost" onclick="showAPIKeyModal()" title="Gemini API">🔑 API</button>
+    <button class="btn btn-ghost" onclick="exportExcel()" title="Excel Raporu İndir">📊 Excel</button>
+    <button class="btn btn-ghost" onclick="exportData()" title="JSON Yedek">💾 JSON</button>
     <button class="btn btn-ghost" onclick="resetAll()">↺ Sıfırla</button>
     <button class="btn btn-ghost" onclick="window.print()">🖨 Yazdır</button>
   </div>
 </header>
 
-<!-- TABS -->
 <nav class="tabs">
   <div class="tab active" data-page="sorular" onclick="switchTab('sorular')">
     📋 Denetim Soruları <span class="tab-badge" id="badge-sorular">0/100</span>
   </div>
   <div class="tab" data-page="rapor" onclick="switchTab('rapor')">
-    📑 Danışmanlık Raporu <span class="tab-badge" id="badge-rapor">0 Bulgu</span>
+    📑 Bulgular <span class="tab-badge" id="badge-rapor">0</span>
+  </div>
+  <div class="tab" data-page="uyumlu" onclick="switchTab('uyumlu')">
+    ✅ Uyumluluk Kanıtları <span class="tab-badge" id="badge-uyumlu">0</span>
+  </div>
+  <div class="tab" data-page="tedbirler" onclick="switchTab('tedbirler')">
+    📋 1296 Tedbir <span class="tab-badge" id="badge-tedbirler">0/1296</span>
   </div>
   <div class="tab" data-page="ozet" onclick="switchTab('ozet')">
     📊 Yönetim Özeti
@@ -46,15 +52,10 @@
 </nav>
 <div class="progress-wrap"><div class="progress-fill" id="prog"></div></div>
 
-<!-- ════════════════════════════════════════════════════════ -->
 <!-- SAYFA 1: SORULAR -->
-<!-- ════════════════════════════════════════════════════════ -->
 <main class="page active" id="page-sorular">
   <div class="layout">
-    <!-- Sidebar -->
     <aside class="sidebar" id="sidebar"></aside>
-
-    <!-- Soru Alanı -->
     <div class="main-content">
       <div class="q-nav">
         <div class="q-nav-info" id="q-nav-info">Soru 1 / 100</div>
@@ -69,24 +70,20 @@
   </div>
 </main>
 
-<!-- ════════════════════════════════════════════════════════ -->
-<!-- SAYFA 2: DANIŞMANLIK RAPORU -->
-<!-- ════════════════════════════════════════════════════════ -->
+<!-- SAYFA 2: BULGULAR -->
 <main class="page" id="page-rapor">
   <div class="rapor-header-bar">
     <div>
       <h1 class="rapor-baslik">📑 Danışmanlık Görüşleri</h1>
       <p class="rapor-sub">Hayır ve Kısmen cevaplanan kontroller için otomatik oluşturulan bulgular</p>
     </div>
-    <div style="display:flex;gap:8px;align-items:center">
-      <select id="rapor-filter" onchange="renderRapor()" style="padding:8px 12px;background:var(--bg2);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:13px">
-        <option value="all">Tüm Bulgular</option>
-        <option value="hayir">Yalnızca Uyumsuz</option>
-        <option value="kismi">Yalnızca Kısmen</option>
-        <option value="cokriskli">Çok Riskli</option>
-        <option value="riskli">Riskli</option>
-      </select>
-    </div>
+    <select id="rapor-filter" onchange="renderRapor()" style="padding:8px 12px;background:var(--bg2);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:13px">
+      <option value="all">Tüm Bulgular</option>
+      <option value="hayir">Yalnızca Uyumsuz</option>
+      <option value="kismi">Yalnızca Kısmen</option>
+      <option value="cokriskli">Çok Riskli</option>
+      <option value="riskli">Riskli</option>
+    </select>
   </div>
   <div id="rapor-liste"></div>
   <div id="rapor-bos" style="display:none;text-align:center;padding:4rem;color:var(--text2)">
@@ -96,44 +93,95 @@
   </div>
 </main>
 
-<!-- ════════════════════════════════════════════════════════ -->
-<!-- SAYFA 3: YÖNETİM ÖZETİ -->
-<!-- ════════════════════════════════════════════════════════ -->
-<main class="page" id="page-ozet">
-  <div class="ozet-header">
-    <div class="ozet-logo-area">
-      <div class="ozet-baslik-kutu">
-        <div class="ozet-ana-baslik">BİLGİ GÜVENLİĞİ GAP ANALİZİ</div>
-        <div class="ozet-alt-baslik">Yönetim Özeti Raporu</div>
-        <div class="ozet-tarih" id="ozet-tarih"></div>
-      </div>
+<!-- SAYFA 3: UYUMLULUK KANITLARI -->
+<main class="page" id="page-uyumlu">
+  <div class="rapor-header-bar">
+    <div>
+      <h1 class="rapor-baslik">✅ Uyumluluk Kanıtları</h1>
+      <p class="rapor-sub">Evet olarak değerlendirilen kontroller ve danışman uygulama notları</p>
+    </div>
+    <div style="display:flex;gap:8px;align-items:center">
+      <select id="uyumlu-filter" onchange="renderUyumlu()" style="padding:8px 12px;background:var(--bg2);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:13px">
+        <option value="all">Tümü</option>
+        <option value="notlu">Notlu Olanlar</option>
+        <option value="notsuz">Notsuz Olanlar</option>
+      </select>
     </div>
   </div>
+  <div id="uyumlu-liste"></div>
+  <div id="uyumlu-bos" style="display:none;text-align:center;padding:4rem;color:var(--text2)">
+    <div style="font-size:3rem;margin-bottom:1rem">📋</div>
+    <div style="font-size:16px;font-weight:600">Henüz uyumlu kontrol yok</div>
+    <div style="font-size:13px;margin-top:.5rem">Evet cevabı verdiğiniz kontroller burada görünecek</div>
+  </div>
+</main>
 
-  <!-- Skor Kartları -->
+<!-- SAYFA 4: 1296 TEDBİR -->
+<main class="page" id="page-tedbirler">
+  <div class="rapor-header-bar">
+    <div>
+      <h1 class="rapor-baslik">📋 1296 Tedbir Tam Listesi</h1>
+      <p class="rapor-sub">100 sorudan otomatik üretilen 1296 tedbirin tüm cevapları</p>
+    </div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+      <select id="t-cat-filter" onchange="render1296()" style="padding:8px 12px;background:var(--bg2);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:13px">
+        <option value="all">Tüm Kategoriler</option>
+      </select>
+      <select id="t-cevap-filter" onchange="render1296()" style="padding:8px 12px;background:var(--bg2);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:13px">
+        <option value="all">Tüm Cevaplar</option>
+        <option value="evet">Uyumlu</option>
+        <option value="kismi">Kısmen</option>
+        <option value="hayir">Uyumsuz</option>
+        <option value="bos">Cevapsız</option>
+      </select>
+      <input type="text" id="t-search" placeholder="🔍 Tedbir ara..." onkeyup="render1296()" style="padding:8px 12px;background:var(--bg2);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:13px;min-width:180px">
+      <span id="t-count" style="font-size:12px;color:var(--text2)">0 sonuç</span>
+    </div>
+  </div>
+  <!-- Özet stat kartları -->
+  <div id="t-stats" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;margin-bottom:1.5rem"></div>
+  <!-- Tablo -->
+  <div class="t-tablo-wrap">
+    <table class="t-tablo">
+      <thead>
+        <tr>
+          <th style="width:90px">Tedbir No</th>
+          <th style="width:160px">Alt Kategori</th>
+          <th style="width:200px">Tedbir Adı</th>
+          <th>Denetim Sorusu</th>
+          <th style="width:120px">Cevap</th>
+          <th style="width:60px">Kaynak</th>
+        </tr>
+      </thead>
+      <tbody id="t-body"></tbody>
+    </table>
+  </div>
+  <!-- Pagination -->
+  <div id="t-pagination" style="display:flex;gap:8px;justify-content:center;margin-top:1.5rem;flex-wrap:wrap"></div>
+</main>
+
+<!-- SAYFA 5: YÖNETİM ÖZETİ -->
+<main class="page" id="page-ozet">
+  <div class="ozet-header">
+    <div class="ozet-ana-baslik">BİLGİ GÜVENLİĞİ GAP ANALİZİ</div>
+    <div class="ozet-alt-baslik">Yönetim Özeti Raporu</div>
+    <div class="ozet-tarih" id="ozet-tarih"></div>
+  </div>
   <div class="ozet-grid" id="ozet-grid"></div>
-
-  <!-- Grafikler -->
   <div class="two-col">
     <div class="chart-card">
-      <div class="chart-title">Uyum Dağılımı</div>
+      <div class="chart-title">Uyum Dağılımı (100 Kontrol)</div>
       <div style="position:relative;height:280px"><canvas id="chart-pie"></canvas></div>
     </div>
     <div class="chart-card">
       <div class="chart-title">Kategori Bazlı Uyum Oranı</div>
-      <div style="position:relative" id="chart-bar-wrap">
-        <canvas id="chart-bar"></canvas>
-      </div>
+      <div style="position:relative" id="chart-bar-wrap"><canvas id="chart-bar"></canvas></div>
     </div>
   </div>
-
-  <!-- Risk Matrisi -->
   <div class="chart-card" style="margin-bottom:1.5rem">
     <div class="chart-title">Risk Dağılım Matrisi</div>
     <div id="risk-matris"></div>
   </div>
-
-  <!-- Kritik Bulgular Özeti -->
   <div class="chart-card">
     <div class="chart-title">🔴 En Kritik Bulgular (İlk 10)</div>
     <div id="kritik-bulgular"></div>
@@ -144,8 +192,8 @@
 <div class="modal-overlay" id="api-modal">
   <div class="modal">
     <h3>🔑 Google Gemini API Anahtarı</h3>
-    <p>Kısmen cevaplarında danışman gözleminden profesyonel bulgu metni üretmek için Gemini API anahtarı gereklidir. Anahtar yalnızca tarayıcınızda saklanır.</p>
-    <p style="font-size:12px;color:var(--text3)">Ücretsiz anahtar: <a href="https://aistudio.google.com/apikey" target="_blank" style="color:var(--teal)">aistudio.google.com/apikey</a> → Create API Key. Kredi kartı gerekmez.</p>
+    <p>Gözlem notlarından profesyonel bulgu metni üretmek için Gemini API anahtarı gereklidir. Anahtar yalnızca tarayıcınızda saklanır.</p>
+    <p style="font-size:12px;color:var(--text3)">Ücretsiz anahtar: <a href="https://aistudio.google.com/apikey" target="_blank" style="color:var(--teal)">aistudio.google.com/apikey</a> — Kredi kartı gerekmez, günde 1500 istek.</p>
     <input type="password" id="api-key-input" class="modal-input" placeholder="AIzaSy...">
     <div class="modal-buttons">
       <button class="btn btn-ghost" onclick="clearAPIKey()">Sil</button>
@@ -156,7 +204,6 @@
 </div>
 
 <div class="toast" id="toast"></div>
-
 <script src="data.js"></script>
 <script src="app.js"></script>
 </body>
