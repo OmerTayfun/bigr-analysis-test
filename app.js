@@ -198,7 +198,7 @@ function renderQuestion() {
     <div style="font-size:12px;color:var(--text);line-height:1.6;white-space:pre-line">${bulgu}</div>
   </div>` : '<div id="bulgu-preview"></div>'}
 </div>` : ''}
-
+</div>`; 
   // Textarea dinleyici
   const ta = document.getElementById('kismi-obs');
   if (ta) {
