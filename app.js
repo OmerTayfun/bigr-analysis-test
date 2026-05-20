@@ -270,16 +270,25 @@ function renderQuestion() {
         <textarea id="kismi-obs"
           style="width:100%;min-height:85px;padding:9px;background:var(--bg);border:1px solid rgba(255,255,255,0.1);border-radius:7px;color:var(--text);font-size:13px;line-height:1.6;resize:vertical;font-family:inherit"
           placeholder="Gözlem notlarınızı buraya yazın...">${obs}</textarea>
+        
         <div style="display:flex;gap:7px;margin-top:7px;justify-content:flex-end">
-          ${sel !== 'evet' ? `<button class="btn-ai" id="ai-gen-btn" onclick="bulguUret()" ${!obs.trim() ? 'disabled' : ''}>🤖 Bulgu Üret</button>` : ''}
+          ${sel !== 'evet' ? `
+            <button class="btn-ai" id="ai-gen-btn" onclick="bulguUret()" ${!obs.trim() ? 'disabled' : ''}>🤖 Bulgu Üret</button>
+            <button class="btn-ai" style="background:#6366f1" id="ai-risk-btn" onclick="riskAnaliziUret()" ${!obs.trim() ? 'disabled' : ''}>📊 Risk Analizi</button>
+          ` : ''}
         </div>
+
+        <div id="risk-analysis-preview" style="background:rgba(99,102,241,0.1);border:1px solid rgba(99,102,241,0.25);border-radius:7px;padding:.9rem;margin-top:.6rem;display:${STATE.riskCache && STATE.riskCache[obs] ? 'block' : 'none'}">
+          <div style="font-size:11px;font-weight:600;color:#6366f1;margin-bottom:.35rem">📊 Yönetim İçin Risk Değerlendirmesi</div>
+          <div style="font-size:12px;color:var(--text);line-height:1.6;white-space:pre-line">${STATE.riskCache && STATE.riskCache[obs] ? STATE.riskCache[obs] : ''}</div>
+        </div>
+
         ${bulgu ? `
         <div style="background:rgba(167,139,250,0.1);border:1px solid rgba(167,139,250,0.25);border-radius:7px;padding:.9rem;margin-top:.6rem">
           <div style="font-size:11px;font-weight:600;color:#a78bfa;margin-bottom:.35rem">🤖 Üretilen Bulgu</div>
           <div style="font-size:12px;color:var(--text);line-height:1.6;white-space:pre-line">${bulgu}</div>
         </div>` : '<div id="bulgu-preview"></div>'}
       </div>` : ''}
-    </div>`;
 
   const ta = document.getElementById('kismi-obs');
   if (ta) {
@@ -1120,7 +1129,45 @@ function resetAll() {
   
   toast('✅ Tüm veriler sıfırlandı, 1. sorudan başlandı!');
 }
+// Risk Analizi Üretme Fonksiyonu
+async function riskAnaliziUret() {
+  const ta = document.getElementById('kismi-obs');
+  const obs = ta.value;
+  if (!obs.trim()) return;
 
+  const btn = document.getElementById('ai-risk-btn');
+  btn.innerText = "Analiz ediliyor...";
+  btn.disabled = true;
+
+  // Cache kontrolü
+  if (STATE.riskCache && STATE.riskCache[obs]) {
+      renderRiskResult(STATE.riskCache[obs]);
+      btn.innerText = "📊 Risk Analizi";
+      btn.disabled = false;
+      return;
+  }
+
+  const prompt = `Bulgu/Gözlem: "${obs}"
+  Bu durumu üst yönetimin anlayacağı bir dille; Finansal Risk, Operasyonel Risk, Stratejik Risk ve İtibar Riski başlıkları altında 4 madde halinde değerlendir. Her biri için 1-2 cümlelik kısa ve etkili bir açıklama yap.`;
+
+  try {
+    const result = await fetchGemini(prompt);
+    STATE.riskCache[obs] = result;
+    save();
+    renderRiskResult(result);
+  } catch (e) {
+    alert("Risk analizi üretilirken hata oluştu.");
+  } finally {
+    btn.innerText = "📊 Risk Analizi";
+    btn.disabled = false;
+  }
+}
+
+function renderRiskResult(text) {
+  const area = document.getElementById('risk-analysis-preview');
+  area.style.display = 'block';
+  area.querySelector('div:last-child').innerText = text;
+}
 function exportData() {
   const dataStr = JSON.stringify(STATE, null, 2);
   const blob = new Blob([dataStr], { type:'application/json' });
