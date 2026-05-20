@@ -13,10 +13,7 @@ const STATE = {
   currentIdx: 0,
   activeFilter: 'all',
   activePage: 'sorular',
-  page1296: 0,
-  aiNotes: {},     // Yapay zeka verilerini tutacağımız alan
-  riskCache: {},    // Aynı zafiyet maddelerini hafızada tutacak önbellek havuzumuz 🎯
-  firmaAdi: '' // 🏢 Analizi yapılan firma/müşteri adını tutacak alan
+  page1296: 0
 };
 
 const CATEGORIES = [...new Set(SORULAR_100.map(s => s.anaKat))];
@@ -29,11 +26,11 @@ function save() {
       cevaplar1296: STATE.cevaplar1296,
       currentIdx:   STATE.currentIdx,
       activeFilter: STATE.activeFilter,
-      activePage:   STATE.activePage,   // 👈 Buraya eksik olan virgül eklendi!
-      firmaAdi:     STATE.firmaAdi
+      activePage:   STATE.activePage
     }));
   } catch(e) {}
 }
+
 function load() {
   try {
     const r = localStorage.getItem(STORAGE_KEY);
@@ -44,13 +41,6 @@ function load() {
     STATE.currentIdx   = d.currentIdx   || 0;
     STATE.activeFilter = d.activeFilter || 'all';
     STATE.activePage   = d.activePage   || 'sorular';
-    STATE.firmaAdi     = d.firmaAdi     || ''; // 👈 Hafızadan çekme kuralı
-    
-    // Sayfa yüklendiğinde input kutusunun içini doldurma güvencesi
-    document.addEventListener('DOMContentLoaded', () => {
-      const input = document.getElementById('customer-name-input');
-      if (input) input.value = STATE.firmaAdi;
-    });
   } catch(e) {}
 }
 
@@ -622,21 +612,10 @@ function renderUyumlu() {
   bos.style.display = 'none';
 
   const notlu = sorular.filter(q => STATE.cevaplar[q.id]?.obs?.trim()).length;
-  // Üst Kontrol Paneli ve Toplu AI Analiz Butonu (Firma Adı Entegre Edilmiş Hali)
-  const firmaBaslik = STATE.firmaAdi ? `<span style="background:rgba(79,70,229,0.2); color:#a5b4fc; padding:2px 6px; border-radius:4px; font-weight:700;">${STATE.firmaAdi}</span>` : 'Kurum';
-
-  let html = `
-    <div style="background:var(--bg2); border:1px solid var(--border); padding:15px; border-radius:8px; margin-bottom:20px; display:flex; justify-content:space-between; align-items:center; gap:15px; flex-wrap:wrap;">
-      <div>
-        <h3 style="margin:0 0 5px 0; font-size:14px; color:var(--text);">🤖 ${firmaBaslik} — Gelişmiş Danışmanlık ve Risk Raporu</h3>
-        <p style="margin:0; font-size:12px; color:var(--text2);">Toplam <strong style="color:var(--danger)">${eksikler.length}</strong> adet aktif siber zafiyet/bulgu maddesi listeleniyor.</p>
-      </div>
-      <button id="btn-ai-all-1296" class="btn-primary" style="background:linear-gradient(135deg, #4f46e5, #7c3aed); border:none; display:flex; align-items:center; gap:6px;">
-        ⚡ Tüm Eksik Maddeleri Akıllı AI ile Analiz Et (Önbellek Korumalı)
-      </button>
-    </div>
-    <div style="display:flex; flex-direction:column; gap:25px;">
-  `;
+  let html = `<div style="font-size:13px;color:var(--text2);margin-bottom:1.25rem">
+    ${sorular.length} uyumlu kontrol &nbsp;•&nbsp; ${notlu} tanesi uygulama notu içeriyor
+    &nbsp;•&nbsp; ${sorular.reduce((s,q) => s+q.kapsananSayi, 0).toLocaleString('tr-TR')} tedbir kapsanıyor
+  </div>`;
 
   html += '<div style="display:flex;flex-direction:column;gap:1rem">';
 
@@ -731,242 +710,125 @@ function getFiltered1296() {
   });
 }
 
-function renderPage1296() {
-  const container = document.getElementById('page-1296-container');
-  if(!container) return;
-  container.innerHTML = '';
+function render1296() {
+  const filtered = getFiltered1296();
+  const total    = filtered.length;
+  const page     = STATE.page1296;
+  const start    = page * PAGE_SIZE_1296;
+  const slice    = filtered.slice(start, start + PAGE_SIZE_1296);
 
-  const eksikler = SORULAR_1296.filter(q => {
-    const cv = STATE.cevaplar1296[q.i];
-    return cv && (cv.c === 'hayir' || cv.c === 'kismi');
-  });
+  document.getElementById('t-count').textContent = total.toLocaleString('tr-TR') + ' sonuç';
 
-  if(eksikler.length === 0) {
-    container.innerHTML = '<div style="padding:40px; text-align:center; color:var(--text2);">Tam uyumsuz veya kısmi uyumlu madde bulunamadı. Raporlama için soru formunda "Hayır" veya "Kısmen" cevapları verilmelidir.</div>';
+  const allC = Object.values(STATE.cevaplar1296);
+  const st = {
+    evet:  allC.filter(c=>c==='evet').length,
+    kismi: allC.filter(c=>c==='kismi').length,
+    hayir: allC.filter(c=>c==='hayir').length,
+    bos:   SORULAR_1296.length - allC.length
+  };
+  document.getElementById('t-stats').innerHTML = `
+    <div class="t-stats-kart"><div class="val" style="color:var(--green)">${st.evet}</div><div class="lbl">Uyumlu</div></div>
+    <div class="t-stats-kart"><div class="val" style="color:var(--amber)">${st.kismi}</div><div class="lbl">Kısmen</div></div>
+    <div class="t-stats-kart"><div class="val" style="color:var(--red)">${st.hayir}</div><div class="lbl">Uyumsuz</div></div>
+    <div class="t-stats-kart"><div class="val" style="color:var(--gray)">${st.bos}</div><div class="lbl">Cevapsız</div></div>
+    <div class="t-stats-kart"><div class="val" style="color:var(--teal)">${SORULAR_1296.length - st.bos}</div><div class="lbl">Cevaplanan</div></div>`;
+
+  const wrap = document.querySelector('.t-tablo-wrap');
+
+  if (!slice.length) {
+    if (wrap) wrap.innerHTML = `<div style="padding:3rem;text-align:center;color:var(--text2)">Bu filtrelere uygun tedbir bulunamadı.</div>`;
+    document.getElementById('t-pagination').innerHTML = '';
     return;
   }
 
-  // Üst Kontrol Paneli ve Toplu AI Analiz Butonu
-  let html = `
-    <div style="background:var(--bg2); border:1px solid var(--border); padding:15px; border-radius:8px; margin-bottom:20px; display:flex; justify-content:between; align-items:center; gap:15px; flex-wrap:wrap;">
-      <div>
-        <h3 style="margin:0 0 5px 0; font-size:14px; color:var(--text);">🤖 Gelişmiş Danışmanlık ve Kurumsal Risk Raporu</h3>
-        <p style="margin:0; font-size:12px; color:var(--text2);">Toplam <strong style="color:var(--danger)">${eksikler.length}</strong> adet zafiyet/bulgu maddesi listeleniyor.</p>
-      </div>
-      <button id="btn-ai-all-1296" class="btn-primary" style="background:linear-gradient(135deg, #4f46e5, #7c3aed); border:none; display:flex; align-items:center; gap:6px;">
-        ⚡ Tüm Eksik Maddeleri Akıllı AI ile Analiz Et (Önbellek Korumalı)
-      </button>
-    </div>
-    <div style="display:flex; flex-direction:column; gap:25px;">
-  `;
+  const rowStyle = {
+    evet:  { bg:'rgba(16,185,129,0.04)', left:'#10b981' },
+    kismi: { bg:'rgba(245,158,11,0.04)', left:'#f59e0b' },
+    hayir: { bg:'rgba(239,68,68,0.05)',  left:'#ef4444' },
+    bos:   { bg:'transparent',           left:'#334155' }
+  };
+  const cevapRenk = {
+    evet:  { bg:'rgba(16,185,129,0.15)', color:'#34d399', label:'✅ Uyumlu'   },
+    kismi: { bg:'rgba(245,158,11,0.15)', color:'#fbbf24', label:'🟡 Kısmen'   },
+    hayir: { bg:'rgba(239,68,68,0.15)',  color:'#f87171', label:'❌ Uyumsuz'  },
+    bos:   { bg:'rgba(100,116,139,0.15)',color:'#94a3b8', label:'— Cevapsız' }
+  };
 
-  eksikler.forEach(q => {
-    const cv = STATE.cevaplar1296[q.i];
-    const etkiPuani = q.k * (cv.c === 'hayir' ? 4 : 3);
-    
-    // Varsayılan / Fallback Kurumsal Cümleler (AI çalıştırılmadıysa arayüzün boş kalmaması için güvence)
-    let rOperasyonel = cv.c === 'hayir' ? "Kritik iş süreçlerinde kesinti ve sistemlerin durması riski mevcuttur." : "Uygulamanın tam olmaması süreçte operasyonel gri alanlar yaratmaktadır.";
-    let rFinansal    = cv.c === 'hayir' ? "KVKK idari para cezaları ve uyumsuzluk yaptırımları riski yüksektir." : "Kısmi uyumsuzluk bütçe planlamalarında öngörülemeyen maliyetler üretebilir.";
-    let rItibar      = cv.c === 'hayir' ? "Olası veri ihlali durumunda marka değerinde ağır zedelenme riski." : "İç kontrol yetersizliği algısı paydaş güvenini sarsabilir.";
-    let rStratejik   = cv.c === 'hayir' ? "Kurumun siber olgunluk vizyonu ve regülatif uyum hedefleri engellenmektedir." : "Hedeflenen tam uyum vizyonunun gerisinde kalınmaktadır.";
+  const groups = {};
+  slice.forEach(s => { if (!groups[s.ak]) groups[s.ak]=[]; groups[s.ak].push(s); });
 
-    // Eğer bu soru için AI verisi üretilmişse nesneden çek
-    let isAI = false;
-    if (STATE.aiNotes && STATE.aiNotes[q.i] && typeof STATE.aiNotes[q.i] === 'object') {
-      const aiObj = STATE.aiNotes[q.i];
-      rOperasyonel = aiObj.operasyonel || rOperasyonel;
-      rFinansal    = aiObj.finansal || rFinansal;
-      rItibar      = aiObj.itibar || rItibar;
-      rStratejik   = aiObj.stratejik || rStratejik;
-      isAI = true;
-    }
+  let html = '<div style="display:flex;flex-direction:column;gap:1.25rem">';
 
-    const mevTxt = lkp('mev', q.mev) || 'İlgili yasal mevzuat maddesi tanımlanmamıştır.';
-    const iso1 = lkp('iso1', q.iso1);
-    const iso2 = lkp('iso2', q.iso2);
-    const iso3 = lkp('iso3', q.iso3);
+  Object.entries(groups).forEach(([anaKat, items]) => {
+    const cE = items.filter(s=>STATE.cevaplar1296[s.i]==='evet').length;
+    const cK = items.filter(s=>STATE.cevaplar1296[s.i]==='kismi').length;
+    const cH = items.filter(s=>STATE.cevaplar1296[s.i]==='hayir').length;
+    const cB = items.filter(s=>!STATE.cevaplar1296[s.i]).length;
+    const n  = items.length;
+    const skor = n > cB ? Math.round(100*(cE+cK*0.5)/(n-cB)) : 0;
+    const skorRenk = skor>=70?'#10b981':skor>=40?'#f59e0b':skor>0?'#ef4444':'#475569';
 
-    let standartlarHTML = '';
-    if(iso1) iso1.split('\n').filter(Boolean).forEach(v => standartlarHTML += `<span style="display:inline-block; background:rgba(99,102,241,0.1); color:#818cf8; font-size:10px; padding:2px 6px; border-radius:4px; margin:2px;">ISO 27001: ${v.trim()}</span>`);
-    if(iso2) iso2.split('\n').filter(Boolean).forEach(v => standartlarHTML += `<span style="display:inline-block; background:rgba(16,185,129,0.1); color:#34d399; font-size:10px; padding:2px 6px; border-radius:4px; margin:2px;">ISO 27701: ${v.trim()}</span>`);
-    if(iso3) iso3.split('\n').filter(Boolean).forEach(v => standartlarHTML += `<span style="display:inline-block; background:rgba(245,158,11,0.1); color:#fbbf24; font-size:10px; padding:2px 6px; border-radius:4px; margin:2px;">ISO 20000: ${v.trim()}</span>`);
-
-    let tespitMetni = cv.bulgu || (cv.c === 'hayir' 
-      ? `Yapılan saha incelemelerinde ve denetim mülakatlarında, "${q.ta}" kapsamındaki gerekliliklerin kurum bünyesinde uygulanmadığı tespit edilmiştir. İlgili alana ilişkin tanımlı bir süreç, yürütülen bir kontrol mekanizması veya somut bir çalışma bulunmamaktadır. Bu durum, Bilgi ve İletişim Güvenliği Rehberi'nin (BİGR) ilgili maddelerine doğrudan uyumsuzluk teşkil etmektedir.`
-      : `Denetim kapsamında ilgili tedbire ait süreçlerin kısmen işletildiği, ancak kurumsallaşma ve süreklilik boyutunda eksiklikler barındırdığı gözlemlenmiştir. Danışman Notu: ${cv.obs || 'Belirtilmedi'}`);
-
-    html += `
-      <div class="danisman-kart" style="background:var(--bg2); border:1px solid var(--border); border-radius:8px; padding:20px; box-shadow:0 4px 6px -1px rgba(0,0,0,0.1);">
-        <div style="display:flex; justify-content:between; align-items:start; border-bottom:1px solid var(--border); padding-bottom:12px; margin-bottom:15px; flex-wrap:wrap; gap:10px;">
-          <div>
-            <span style="font-size:10px; text-transform:uppercase; letter-spacing:1px; color:#a855f7; font-weight:700;">${q.ak}</span>
-            <h4 style="margin:2px 0; font-size:15px; color:var(--text);">${q.tn} — ${q.ta}</h4>
-          </div>
-          <div style="display:flex; gap:8px; align-items:center;">
-            <button class="btn-ai-single" data-id="${q.i}" style="background:linear-gradient(135deg, #6366f1, #a855f7); color:white; border:none; padding:5px 10px; border-radius:4px; font-size:11px; cursor:pointer; font-weight:600; display:flex; align-items:center; gap:4px;">
-              🤖 AI Risk Analizi
-            </button>
-            <span style="background:${cv.c==='hayir'?'rgba(239,68,68,0.15)':'rgba(245,158,11,0.15)'}; color:${cv.c==='hayir'?'#ef4444':'#f59e0b'}; font-size:11px; padding:3px 8px; border-radius:4px; font-weight:600;">
-              ${cv.c==='hayir'?'❌ Uygulanmıyor':'🟡 Kısmen Uygulanıyor'}
-            </span>
-          </div>
-        </div>
-
-        <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap:20px;">
-          <div style="background:rgba(255,255,255,0.01); border:1px solid var(--border); padding:12px; border-radius:6px;">
-            <h5 style="margin:0 0 8px 0; font-size:12px; color:var(--text); display:flex; align-items:center; gap:5px;"><span style="color:#3b82f6">🔍</span> Bulgular ve Tespitler</h5>
-            <p style="margin:0; font-size:11px; line-height:1.5; color:var(--text2); text-align:justify;">${tespitMetni}</p>
-          </div>
-
-          <div style="background:rgba(255,255,255,0.01); border:1px solid var(--border); padding:12px; border-radius:6px;">
-            <h5 style="margin:0 0 8px 0; font-size:12px; color:var(--text); display:flex; align-items:center; gap:5px;">
-              <span style="color:#ef4444">⚠️</span> Risk Etki Analizi 
-              ${isAI ? '<span style="background:rgba(168,85,247,0.2); color:#c084fc; font-size:9px; padding:1px 4px; border-radius:3px; margin-left:5px; font-weight:600;">Dinamik AI</span>' : ''}
-            </h5>
-            <div style="font-size:10px; color:var(--text2); margin-bottom:8px; background:rgba(255,255,255,0.02); padding:3px; border-radius:4px;">
-              Kritiklik: <strong>K${q.k}</strong> • Risk Skoru: <strong style="color:var(--danger)">${etkiPuani} Puan</strong>
-            </div>
-            
-            <div style="display:flex; flex-direction:column; gap:6px; font-size:11px;">
-              <div><strong style="color:#60a5fa">⚙️ Operasyonel:</strong> <span style="color:var(--text2)">${rOperasyonel}</span></div>
-              <div><strong style="color:#34d399">💰 Finansal:</strong> <span style="color:var(--text2)">${rFinansal}</span></div>
-              <div><strong style="color:#fbbf24">🎭 İtibar:</strong> <span style="color:var(--text2)">${rItibar}</span></div>
-              <div><strong style="color:#c084fc">🎯 Stratejik:</strong> <span style="color:var(--text2)">${rStratejik}</span></div>
-            </div>
-          </div>
-
-          <div style="background:rgba(255,255,255,0.01); border:1px solid var(--border); padding:12px; border-radius:6px;">
-            <h5 style="margin:0 0 8px 0; font-size:12px; color:var(--text); display:flex; align-items:center; gap:5px;"><span style="color:#10b981">⚖️</span> Regülasyon ve Uyum</h5>
-            <div style="font-size:11px; color:var(--text2); margin-bottom:8px; line-height:1.4;"><strong>Hukuki Dayanak:</strong><br>${mevTxt}</div>
-            <div style="margin-top:5px;">${standartlarHTML}</div>
-          </div>
-
-          <div style="background:rgba(255,255,255,0.01); border:1px solid var(--border); padding:12px; border-radius:6px;">
-            <h5 style="margin:0 0 8px 0; font-size:12px; color:var(--text); display:flex; align-items:center; gap:5px;"><span style="color:#fbbf24">💡</span> Aksiyon ve İyileştirme Önerisi</h5>
-            <p style="margin:0; font-size:11px; line-height:1.5; color:var(--text2); text-align:justify;">${q.o || 'Kontrol mekanizması kurumsal politikalar çerçevesinde tasarlanmalı ve işletilmelidir.'}</p>
-          </div>
+    html += `<div style="background:var(--bg2);border:1px solid var(--border);border-radius:10px;overflow:hidden">
+      <div style="background:linear-gradient(135deg,var(--bg3),var(--bg2));padding:12px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
+        <div style="font-size:13px;font-weight:700;color:var(--text)">${shortCat(anaKat)}</div>
+        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+          <span style="font-size:11px;color:var(--green)">✅ ${cE}</span>
+          <span style="font-size:11px;color:var(--amber)">🟡 ${cK}</span>
+          <span style="font-size:11px;color:#f87171">❌ ${cH}</span>
+          <span style="font-size:11px;color:var(--gray)">— ${cB}</span>
+          <span style="font-size:12px;font-weight:700;color:${skorRenk};background:rgba(0,0,0,0.2);padding:3px 10px;border-radius:12px">%${skor} Uyum</span>
+          <span style="font-size:11px;color:var(--text3)">${n} tedbir</span>
         </div>
       </div>
-    `;
+      <div style="display:flex;flex-direction:column">`;
+
+    items.forEach((s, idx) => {
+      const cv  = STATE.cevaplar1296[s.i] || 'bos';
+      const rs  = rowStyle[cv];
+      const cr  = cevapRenk[cv];
+      const parentQ    = SORULAR_100.find(q => q.id === s.p);
+      const altKatKisa = s.altk.replace(/^\d+\.\d+\.\d+\.\s*/,'').replace(/^\d+\.\d+\.\s*/,'');
+      const bgHover    = cv==='bos' ? 'rgba(255,255,255,0.02)' : rs.bg.replace('0.04','0.08').replace('0.05','0.09');
+
+      html += `<div style="display:grid;grid-template-columns:90px 160px 180px 1fr 130px 50px;gap:0;border-bottom:${idx<items.length-1?'1px solid rgba(255,255,255,0.04)':'none'};background:${rs.bg};border-left:3px solid ${rs.left}"
+        onmouseover="this.style.background='${bgHover}'"
+        onmouseout="this.style.background='${rs.bg}'">
+        <div style="padding:10px 12px;display:flex;align-items:center"><span style="font-size:10px;font-family:monospace;color:var(--teal);font-weight:600">${s.tn}</span></div>
+        <div style="padding:10px 8px;display:flex;align-items:center"><span style="font-size:10px;color:var(--text3);line-height:1.35">${altKatKisa}</span></div>
+        <div style="padding:10px 8px;display:flex;align-items:center"><span style="font-size:11px;color:var(--text2);font-weight:500;line-height:1.4">${s.ta}</span></div>
+        <div style="padding:10px 12px;display:flex;align-items:center"><span style="font-size:12px;color:var(--text);line-height:1.5">${s.q}</span></div>
+        <div style="padding:10px 8px;display:flex;align-items:center;justify-content:center">
+          <span style="display:inline-block;background:${cr.bg};color:${cr.color};font-size:11px;font-weight:600;padding:4px 10px;border-radius:12px;text-align:center;white-space:nowrap">${cr.label}</span>
+        </div>
+        <div style="padding:10px 8px;display:flex;align-items:center;justify-content:center" title="${parentQ ? parentQ.tedbir : ''}">
+          <span style="font-size:10px;color:var(--teal);font-family:monospace;font-weight:600;background:var(--teal-soft);padding:3px 7px;border-radius:8px">S${s.p}</span>
+        </div>
+      </div>`;
+    });
+
+    html += `</div></div>`;
   });
 
   html += '</div>';
-  container.innerHTML = html;
+  if (wrap) wrap.innerHTML = html;
 
-  // ── 3. TEKİL AI ANALİZ BUTONLARININ OLAY DİNLEYİCİSİ ──
-  container.querySelectorAll('.btn-ai-single').forEach(btn => {
-    btn.addEventListener('click', async () => {
-      const id = parseInt(btn.getAttribute('data-id'));
-      const q = SORULAR_1296.find(x => x.i === id);
-      const cv = STATE.cevaplar1296[id];
-      const cacheKey = `${q.tn}_${cv.c}`;
-
-      // Önbellek Kontrolü (Cache Hit) ⚡
-      if (STATE.riskCache[cacheKey]) {
-        STATE.aiNotes[id] = STATE.riskCache[cacheKey];
-        renderPage1296();
-        toast('⚡ Risk analizi mükerrer maddeden ötürü önbellekten getirildi.');
-        return;
-      }
-
-      const apiKey = localStorage.getItem(API_KEY_STOR);
-      if(!apiKey) { toast('❌ Ayarlar sekmesinden API anahtarı girin.'); return; }
-
-      btn.disabled = true; btn.innerText = '⏳ Analiz Ediliyor...';
-
-      const durumText = cv.c === 'hayir' ? 'Uygulanmıyor' : 'Kısmen Uygulanıyor';
-      const prompt = `Sen kıdemli bir Bilgi Güvenliği, GRC ve Kurumsal Siber Risk uzmanısın. BİGR denetiminde ${q.tn} nolu tedbirin (${q.ta}) "${durumText}" olduğu saptanmıştır. Soru: "${q.q}". Kategori: "${q.altk}". Üst yönetime sunulmak üzere kurumsal etki analizi yap ve bana giriş/gelişme metni olmadan, markdown kullanmadan sadece şu şablonda saf bir JSON döndür: {"operasyonel":"maksimum iki cümle","finansal":"maksimum iki cümle","itibar":"maksimum iki cümle","stratejik":"maksimum iki cümle"}`;
-
-      try {
-        const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            contents: [{ parts: [{ text: prompt }] }],
-            generationConfig: { responseMimeType: "application/json" }
-          })
-        });
-        const d = await res.json();
-        const txt = d?.candidates?.[0]?.content?.parts?.[0]?.text;
-        if(txt) {
-          const parsedJSON = JSON.parse(txt.trim());
-          STATE.aiNotes[id] = parsedJSON;
-          STATE.riskCache[cacheKey] = parsedJSON; // Hafızaya at 🎯
-          toast('🤖 AI Risk Analizi başarıyla üretildi.');
-        } else {
-          throw new Error();
-        }
-      } catch(e) {
-        toast('❌ API hatası veya JSON ayrıştırma hatası.');
-      } finally {
-        renderPage1296();
-      }
+  const totalPages = Math.ceil(total / PAGE_SIZE_1296);
+  let pgHtml = '';
+  if (totalPages > 1) {
+    if (page > 0) pgHtml += `<button class="pg-btn" onclick="goPage1296(${page-1})">← Önceki</button>`;
+    const pArr = totalPages <= 7
+      ? Array.from({length:totalPages},(_,i)=>i)
+      : [0,...(page>2?['...']:[]),...Array.from({length:3},(_,i)=>Math.min(Math.max(page-1+i,1),totalPages-2)).filter((v,i,a)=>a.indexOf(v)===i),...(page<totalPages-3?['...']:[]),totalPages-1];
+    pArr.forEach(p => {
+      if (p==='...') pgHtml += `<span style="padding:6px 4px;color:var(--text3)">…</span>`;
+      else pgHtml += `<button class="pg-btn ${p===page?'active':''}" onclick="goPage1296(${p})">${p+1}</button>`;
     });
-  });
-
-  // ── 4. TOPLU AI ANALİZ BUTONUNUN OLAY DİNLEYİCİSİ ──
-  const btnAll = document.getElementById('btn-ai-all-1296');
-  if(btnAll) {
-    btnAll.addEventListener('click', async () => {
-      const apiKey = localStorage.getItem(API_KEY_STOR);
-      if(!apiKey) { toast('❌ Önce ayarlardan API anahtarı girin.'); return; }
-
-      // Henüz AI analizi yapılmamış olan eksikleri filtrele
-      const analizEdilecekler = eksikler.filter(q => !STATE.aiNotes[q.i]);
-
-      if(analizEdilecekler.length === 0) {
-        toast('🤖 Analiz edilecek yeni bir bulgu maddesi kalmadı.');
-        return;
-      }
-
-      if(!confirm(`${analizEdilecekler.length} adet bulgu için toplu analiz başlatılacak. Aynı tedbire sahip mükerrer maddeler önbellekten kopyalanarak bütçeniz korunacaktır. Emin misiniz?`)) return;
-
-      btnAll.disabled = true; btnAll.innerText = '⏳ Toplu Analiz Yürütülüyor...';
-
-      for(let i = 0; i < analizEdilecekler.length; i++) {
-        const q = analizEdilecekler[i];
-        const cv = STATE.cevaplar1296[q.i];
-        const cacheKey = `${q.tn}_${cv.c}`;
-
-        // Döngü içi Önbellek Koruması (Deli gibi API harcamasını önler) ⚡
-        if (STATE.riskCache[cacheKey]) {
-          STATE.aiNotes[q.i] = STATE.riskCache[cacheKey];
-          console.log(`[Toplu İşlem - Cache Hit] ${q.tn} hafızadan kopyalandı.`);
-          continue;
-        }
-
-        const durumText = cv.c === 'hayir' ? 'Uygulanmıyor' : 'Kısmen Uygulanıyor';
-        const prompt = `Sen kıdemli GRC uzmanısın. BİGR tedbir no ${q.tn} (${q.ta}) kurumda "${durumText}" durumundadır. Bana markdown kullanmadan şu şablonda sadece saf JSON döndür: {"operasyonel":"","finansal":"","itibar":"","stratejik":""}`;
-
-        try {
-          const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              contents: [{ parts: [{ text: prompt }] }],
-              generationConfig: { responseMimeType: "application/json" }
-            })
-          });
-          const d = await res.json();
-          const txt = d?.candidates?.[0]?.content?.parts?.[0]?.text;
-          if(txt) {
-            const parsedJSON = JSON.parse(txt.trim());
-            STATE.aiNotes[q.i] = parsedJSON;
-            STATE.riskCache[cacheKey] = parsedJSON; // Sonraki adımlar için havuza kaydet
-          }
-        } catch(e) {
-          console.error(`Soru ${q.i} analiz hatası:`, e);
-        }
-
-        // Arayüzün donup kilitlenmemesi için her 3 kartta bir canlı güncelle
-        if(i % 3 === 0) renderPage1296();
-      }
-
-      btnAll.disabled = false;
-      renderPage1296();
-      toast('✅ Tüm rapor maddelerinin risk analizleri başarıyla tamamlandı!');
-    });
+    if (page < totalPages-1) pgHtml += `<button class="pg-btn" onclick="goPage1296(${page+1})">Sonraki →</button>`;
+    pgHtml += `<span style="font-size:12px;color:var(--text2);margin-left:8px">${start+1}–${Math.min(start+PAGE_SIZE_1296,total)} / ${total}</span>`;
   }
+  const pgEl = document.getElementById('t-pagination');
+  pgEl.innerHTML = pgHtml;
+  pgEl.style.display = totalPages > 1 ? 'flex' : 'none';
 }
 
 function goPage1296(p) {
@@ -1186,31 +1048,15 @@ function clearAPIKey() {
 }
 
 function resetAll() {
-  if (!confirm('Tüm cevaplar, bulgular ve yapay zeka analizleri silinecek. Emin misiniz?')) return;
-  
+  if (!confirm('Tüm cevaplar ve bulgular silinecek. Emin misiniz?')) return;
   STATE.cevaplar     = {};
   STATE.cevaplar1296 = {};
-  STATE.currentIdx   = 0;
   STATE.page1296     = 0;
-  STATE.activePage   = 'sorular';
-  STATE.activeFilter = 'all';
-  STATE.aiNotes      = {};
-  STATE.riskCache    = {};
-  STATE.firmaAdi     = ''; // 🏢 Firma adını da sıfırlıyoruz
-  
   localStorage.removeItem(STORAGE_KEY);
-  save(); 
-
   buildSidebar();
-  switchTab('sorular');
   renderQuestion();
   updateStats();
-  
-  // Eğer arayüzde input varsa onu da temizleyelim
-  const input = document.getElementById('customer-name-input');
-  if(input) input.value = '';
-  
-  toast('✅ Tüm veriler ve firma adı sıfırlandı!');
+  toast('✅ Sıfırlandı');
 }
 
 function exportData() {
