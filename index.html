@@ -34,8 +34,7 @@
     <button class="btn btn-ghost" onclick="exportExcel()" title="Excel Raporu İndir">📊 Excel</button>
     <button class="btn btn-ghost" onclick="exportData()" title="JSON Yedek">💾 JSON</button>
     <div class="header-actions">
-  <button onclick="exportData()">💾 İndir (JSON)</button>
-  <button onclick="document.getElementById('file-upload').click()">📂 Yükle (JSON)</button>
+    <button class="btn btn-ghost" onclick="document.getElementById('file-upload').click()">📂 Yükle (JSON)</button>
   <input type="file" id="file-upload" style="display:none" accept=".json" onchange="importData(event)">
 </div>
     <button class="btn btn-ghost" onclick="resetAll()">↺ Sıfırla</button>
