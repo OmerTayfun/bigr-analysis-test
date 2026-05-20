@@ -408,14 +408,14 @@ function buildDanismanKart(q) {
     : (q.kritiklik === 3 ? 'Kısmi uygulama, tam güvence sağlamamakta; kontrol etkinliği yetersiz kalmaktadır.'
      : 'Sürecin olgunlaşması için ek adım atılması gerekmektedir.');
 
-  const hukukiRisk = `* ${q.tedbirNo} | ${cv.c === 'hayir' ? 'Olası Riskler: ' : 'Kısmi Risk: '}${q.kritiklik === 3 ? 'Yüksek' : q.kritiklik === 2 ? 'Orta' : 'Düşük'} Kritiklik (${q.kritiklik * (cv.c==='hayir'?4:3)} Puan)${mev ? `\n\n* Hukuki Yaptırım: ${mev.length > 200 ? mev.substring(0, 200) + '...' : mev}` : ''}`;
+  const hukukiRisk = `* ${q.tedbirNo} | ${cv.c === 'hayir' ? 'Olası Riskler: ' : 'Kısmi Risk: '}${q.kritiklik === 3 ? 'Yüksek' : q.kritiklik === 2 ? 'Orta' : 'Düşük'} Kritiklik (${q.kritiklik * (cv.c==='hayir'?4:3)} Puan)${mev ? `\n\n* Hukuki Yaptırım: ${mev}` : ''};
 
   // Mevzuat kolonunu oluştur
   let mevzuatHTML = '';
   if (mev) {
     mevzuatHTML += `<div class="dk-mev-item">
       <div class="dk-mev-baslik">📜 İlgili Mevzuat</div>
-      <div class="dk-mev-text">${mev.length > 300 ? mev.substring(0, 300) + '...' : mev}</div>
+      <div class="dk-mev-text">${mev}</div>
     </div>`;
   }
   if (iso1 || iso2 || iso3) {
