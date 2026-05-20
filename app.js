@@ -1077,13 +1077,13 @@ function resetAll() {
 }
 
 function exportData() {
-  const d = { tarih:new Date().toISOString(), uygulama:'BG Gap Analizi v4', cevaplar:STATE.cevaplar, cevaplar1296:STATE.cevaplar1296 };
-  const b = new Blob([JSON.stringify(d,null,2)], { type:'application/json' });
-  const u = URL.createObjectURL(b);
+  const dataStr = JSON.stringify(STATE, null, 2);
+  const blob = new Blob([dataStr], { type:'application/json' });
+  const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
-  a.href = u; a.download = `bg-gap-${new Date().toISOString().split('T')[0]}.json`;
-  a.click(); URL.revokeObjectURL(u);
-  toast('✅ JSON yedek indirildi');
+  a.href = url;
+  a.download = `${STATE.projeAdi.replace(/\s+/g, '_')}_GapAnalizi.json`;
+  a.click();
 }
 
 // ── INIT ─────────────────────────────────────────────────────
