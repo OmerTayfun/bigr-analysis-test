@@ -233,17 +233,16 @@ function renderQuestion() {
 function setCevap(val) {
   const q = SORULAR_100[STATE.currentIdx];
   const mevcut = STATE.cevaplar[q.id] || {};
+  const oncekiCevap = mevcut.c || null;
+
+  // Cevap değiştiyse not ve bulguyu sıfırla
+  const obsTemizle = oncekiCevap && oncekiCevap !== val;
+
   STATE.cevaplar[q.id] = {
     c: val,
-    obs: mevcut.obs || '',
-    bulgu: val === 'evet' ? '' : (mevcut.bulgu || '')
+    obs:   obsTemizle ? '' : (mevcut.obs || ''),
+    bulgu: obsTemizle ? '' : (val === 'evet' ? '' : (mevcut.bulgu || ''))
   };
-  propagate1296(q, val);
-  save();
-  updateStats();
-  buildSidebar();
-  renderQuestion();
-}
 
 function bulguUret() {
   const q = SORULAR_100[STATE.currentIdx];
@@ -439,6 +438,94 @@ function renderUyumlu() {
     if (filter === 'notsuz') return !cv.obs || !cv.obs.trim();
     return true;
   });
+
+  const liste = document.getElementById('uyumlu-liste');
+  const bos   = document.getElementById('uyumlu-bos');
+
+  if (!sorular.length) {
+    liste.innerHTML = '';
+    bos.style.display = 'block';
+    return;
+  }
+  bos.style.display = 'none';
+
+  const notlu = sorular.filter(q => STATE.cevaplar[q.id]?.obs?.trim()).length;
+  let html = `<div style="font-size:13px;color:var(--text2);margin-bottom:1.25rem">
+    ${sorular.length} uyumlu kontrol &nbsp;•&nbsp; ${notlu} tanesi uygulama notu içeriyor
+    &nbsp;•&nbsp; ${sorular.reduce((s,q) => s+q.kapsananSayi, 0).toLocaleString('tr-TR')} tedbir kapsanıyor
+  </div>`;
+
+  html += '<div style="display:flex;flex-direction:column;gap:1rem">';
+
+  sorular.forEach(q => {
+    const cv   = STATE.cevaplar[q.id];
+    const obs  = (cv.obs || '').trim();
+    const iso1 = lkp('iso1', q.iso1);
+    const iso2 = lkp('iso2', q.iso2);
+    const iso3 = lkp('iso3', q.iso3);
+    const mev  = lkp('mev', q.mev);
+    const kritikRenk = q.kritiklik===3 ? '#f87171' : q.kritiklik===2 ? '#fbbf24' : '#94a3b8';
+    const kritikLabel = q.kritiklik===3 ? '🔴 Yüksek' : q.kritiklik===2 ? '🟡 Orta' : '⚪ Düşük';
+
+    // ISO rozetleri
+    let isoHTML = '';
+    if (iso1) iso1.split('\n').filter(Boolean).forEach(v => {
+      isoHTML += `<span style="display:inline-flex;align-items:center;background:#0d1521;border:1px solid rgba(16,185,129,0.3);border-radius:4px;padding:2px 7px;font-size:10px;color:#34d399;font-weight:600;font-family:monospace;margin:2px 2px 0 0">ISO 27001:2022 ${v.trim()}</span>`;
+    });
+    if (iso2) iso2.split('\n').filter(Boolean).forEach(v => {
+      isoHTML += `<span style="display:inline-flex;align-items:center;background:#0d1521;border:1px solid rgba(16,185,129,0.2);border-radius:4px;padding:2px 7px;font-size:10px;color:#6ee7b7;font-weight:600;font-family:monospace;margin:2px 2px 0 0">ISO 27701 ${v.trim()}</span>`;
+    });
+
+    html += `
+    <div style="background:var(--bg2);border:1px solid rgba(16,185,129,0.2);border-radius:10px;overflow:hidden;border-left:4px solid var(--green)">
+
+      <!-- Kart Header -->
+      <div style="background:linear-gradient(135deg,rgba(16,185,129,0.08),rgba(16,185,129,0.02));padding:12px 18px;border-bottom:1px solid rgba(16,185,129,0.12);display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap">
+        <div>
+          <div style="font-size:10px;color:#34d399;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:3px">✅ Uyumlu Kontrol</div>
+          <div style="font-size:14px;font-weight:700;color:var(--text)">${q.tedbir}</div>
+        </div>
+        <div style="display:flex;gap:8px;align-items:center;flex-shrink:0">
+          <span style="font-size:11px;color:${kritikRenk};background:rgba(0,0,0,0.2);padding:4px 10px;border-radius:12px;font-weight:600">${kritikLabel} Kritiklik</span>
+          <span style="font-size:10px;color:#34d399;background:rgba(16,185,129,0.1);padding:4px 10px;border-radius:12px;font-weight:600;font-family:monospace">${q.tedbirNo}</span>
+        </div>
+      </div>
+
+      <!-- Kart Gövdesi -->
+      <div style="display:grid;grid-template-columns:${obs ? '1fr 1fr' : '1fr'};gap:0">
+
+        <!-- Sol: Referanslar + Meta -->
+        <div style="padding:14px 18px;${obs ? 'border-right:1px solid rgba(16,185,129,0.1)' : ''}">
+          <div style="font-size:10px;font-weight:600;color:#34d399;text-transform:uppercase;letter-spacing:.6px;margin-bottom:8px">📋 Kapsam & Referanslar</div>
+          <div style="font-size:12px;color:var(--text2);margin-bottom:8px">${shortCat(q.altKat)}</div>
+          ${isoHTML ? `<div style="margin-bottom:8px">${isoHTML}</div>` : ''}
+          ${mev ? `<div style="font-size:11px;color:var(--text3);margin-top:6px;line-height:1.5;padding:7px 10px;background:var(--bg3);border-radius:6px">${mev}</div>` : ''}
+          <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap">
+            <span style="font-size:11px;color:#34d399">📊 ${q.kapsananSayi} tedbiri kapsıyor</span>
+          </div>
+        </div>
+
+        <!-- Sağ: Uygulama Notu (varsa) -->
+        ${obs ? `
+        <div style="padding:14px 18px;background:rgba(16,185,129,0.03)">
+          <div style="font-size:10px;font-weight:600;color:#34d399;text-transform:uppercase;letter-spacing:.6px;margin-bottom:8px">📝 Danışman Uygulama Notu</div>
+          <div style="font-size:13px;color:var(--text);line-height:1.65;white-space:pre-line">${obs}</div>
+        </div>` : ''}
+
+      </div>
+
+      <!-- Footer -->
+      <div style="background:rgba(16,185,129,0.04);border-top:1px solid rgba(16,185,129,0.1);padding:7px 18px;display:flex;align-items:center;justify-content:space-between">
+        <span style="font-size:10px;color:var(--text3);font-family:monospace">${q.tedbirNo} • S${q.id}/100</span>
+        <span style="font-size:11px;color:#34d399;font-weight:600">✅ Tamamen Uygulanıyor</span>
+      </div>
+
+    </div>`;
+  });
+
+  html += '</div>';
+  liste.innerHTML = html;
+}
 
   const liste = document.getElementById('uyumlu-liste');
   const bos   = document.getElementById('uyumlu-bos');
