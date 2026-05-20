@@ -616,10 +616,21 @@ function renderUyumlu() {
   bos.style.display = 'none';
 
   const notlu = sorular.filter(q => STATE.cevaplar[q.id]?.obs?.trim()).length;
-  let html = `<div style="font-size:13px;color:var(--text2);margin-bottom:1.25rem">
-    ${sorular.length} uyumlu kontrol &nbsp;•&nbsp; ${notlu} tanesi uygulama notu içeriyor
-    &nbsp;•&nbsp; ${sorular.reduce((s,q) => s+q.kapsananSayi, 0).toLocaleString('tr-TR')} tedbir kapsanıyor
-  </div>`;
+  // Üst Kontrol Paneli ve Toplu AI Analiz Butonu (Firma Adı Entegre Edilmiş Hali)
+  const firmaBaslik = STATE.firmaAdi ? `<span style="background:rgba(79,70,229,0.2); color:#a5b4fc; padding:2px 6px; border-radius:4px; font-weight:700;">${STATE.firmaAdi}</span>` : 'Kurum';
+
+  let html = `
+    <div style="background:var(--bg2); border:1px solid var(--border); padding:15px; border-radius:8px; margin-bottom:20px; display:flex; justify-content:space-between; align-items:center; gap:15px; flex-wrap:wrap;">
+      <div>
+        <h3 style="margin:0 0 5px 0; font-size:14px; color:var(--text);">🤖 ${firmaBaslik} — Gelişmiş Danışmanlık ve Risk Raporu</h3>
+        <p style="margin:0; font-size:12px; color:var(--text2);">Toplam <strong style="color:var(--danger)">${eksikler.length}</strong> adet aktif siber zafiyet/bulgu maddesi listeleniyor.</p>
+      </div>
+      <button id="btn-ai-all-1296" class="btn-primary" style="background:linear-gradient(135deg, #4f46e5, #7c3aed); border:none; display:flex; align-items:center; gap:6px;">
+        ⚡ Tüm Eksik Maddeleri Akıllı AI ile Analiz Et (Önbellek Korumalı)
+      </button>
+    </div>
+    <div style="display:flex; flex-direction:column; gap:25px;">
+  `;
 
   html += '<div style="display:flex;flex-direction:column;gap:1rem">';
 
