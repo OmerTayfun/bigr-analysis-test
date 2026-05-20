@@ -7,12 +7,12 @@ const API_KEY_STOR = 'bg_gemini_key';
 const PUAN = { evet: 1, kismi: 0.5, hayir: 0 };
 const PAGE_SIZE_1296 = 50;
 
+// STATE nesnesine riskCache ekleyelim
 const STATE = {
-  projeAdi: "Yeni Proje",     // Yeni eklendi
-  tarih: "",                 // Yeni eklendi
+  projeAdi: "Yeni Proje",
   cevaplar: {},
   cevaplar1296: {},
-  riskCache: {},             // Yeni eklendi (Cache mekanizması için)
+  riskCache: {}, // <-- BURASI: Tüm risk analizleri burada saklanacak
   currentIdx: 0,
   activeFilter: 'all',
   activePage: 'sorular',
@@ -22,20 +22,17 @@ const STATE = {
 const CATEGORIES = [...new Set(SORULAR_100.map(s => s.anaKat))];
 
 // ── STORAGE ──────────────────────────────────────────────────
+// save fonksiyonunu güncelleyelim
 function save() {
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(STATE));
-  } catch(e) { console.error("Kaydetme hatası:", e); }
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(STATE));
 }
 
+// load fonksiyonunu güncelleyelim
 function load() {
-  try {
-    const r = localStorage.getItem(STORAGE_KEY);
-    if (!r) return;
-    const d = JSON.parse(r);
-    // Mevcut state'i koruyarak yeni verileri üzerine yazıyoruz
-    Object.assign(STATE, d); 
-  } catch(e) { console.error("Yükleme hatası:", e); }
+  const r = localStorage.getItem(STORAGE_KEY);
+  if (!r) return;
+  const d = JSON.parse(r);
+  Object.assign(STATE, d); // Tüm nesneyi olduğu gibi aktarır
 }
 
 
@@ -97,6 +94,26 @@ function switchTab(name) {
 }
 // app.js
 
+async function generateRiskAnalysis(bulguMetni) {
+  // 1. Cache kontrolü: Bu bulgu daha önce analiz edildi mi?
+  if (STATE.riskCache[bulguMetni]) {
+    return STATE.riskCache[bulguMetni];
+  }
+
+  // 2. API çağrısı
+  const prompt = `Bulgu: "${bulguMetni}"
+  Bu bulguyu üst yönetim için risk perspektifiyle değerlendir.
+  Finansal Risk, Operasyonel Risk, Stratejik Risk ve İtibar Riski başlıklarını kullan.
+  Her biri için yönetimin anlayacağı, net ve kısa birer cümle ile açıklama yap.`;
+
+  const result = await fetchGemini(prompt); // Mevcut fetchGemini fonksiyonunuzu kullanır
+
+  // 3. Sonucu cache'e kaydet ve projeyi diske kaydet
+  STATE.riskCache[bulguMetni] = result;
+  save(); 
+  
+  return result;
+}
 function importData(event) {
   const file = event.target.files[0];
   if (!file) return;
