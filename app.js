@@ -414,12 +414,14 @@ Türkçe, 3-4 cümle, resmi denetim üslubunda bulgu metni yaz. Sadece metni yaz
 // ── updateStats ───────────────────────────────────────────────
 function updateStats() {
   const all    = Object.values(STATE.cevaplar);
-  const evet   = all.filter(v => v.c === 'evet').length;
-  const kismi  = all.filter(v => v.c === 'kismi').length;
-  const hayir  = all.filter(v => v.c === 'hayir').length;
-  const total  = evet + kismi + hayir;
-  const kapsam = all.filter(v => v.c === 'kapsam').length;
-  const skor   = total > 0 ? Math.round(100*(evet + kismi*0.5)/total) : null;
+  // YENİ
+const evet   = all.filter(v => v.c === 'evet').length;
+const kismi  = all.filter(v => v.c === 'kismi').length;
+const hayir  = all.filter(v => v.c === 'hayir').length;
+const kapsam = all.filter(v => v.c === 'kapsam').length;
+const total  = evet + kismi + hayir + kapsam;  // sayaca dahil
+const skorBaz = evet + kismi + hayir;           // puana dahil değil
+const skor   = skorBaz > 0 ? Math.round(100*(evet + kismi*0.5)/skorBaz) : null;
   const c1296  = Object.keys(STATE.cevaplar1296).length;
 
   document.getElementById('h-evet').textContent   = evet;
