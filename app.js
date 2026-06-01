@@ -1185,8 +1185,7 @@ Kurallar:
 
 async function tumKismenleriBulguUret() {
   const apiKey = localStorage.getItem(API_KEY_STOR);
-  const kismenler = SORULAR_1296.filter(s => STATE.cevaplar1296[s.i] === 'kismi' || STATE.cevaplar1296[s.i] === 'hayir');
-  
+const kismenler = SORULAR_1296.filter(s => STATE.cevaplar1296[s.i] === 'kismi');  
   if (!kismenler.length) { toast('Kısmen veya Hayır cevaplı tedbir yok', 'error'); return; }
 
   const btn = document.getElementById('btn-toplu-bulgu');
