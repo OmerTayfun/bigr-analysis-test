@@ -33,8 +33,8 @@ function save() {
       currentIdx:   STATE.currentIdx,
       activeFilter: STATE.activeFilter,
       activePage:   STATE.activePage,
-      riskAnalizi: STATE.riskAnalizi,
-      page1296:     STATE.page1296
+      page1296:     STATE.page1296,
+      riskAnalizi:  STATE.riskAnalizi
     };
     localStorage.setItem(STORAGE_KEY, JSON.stringify(toSave));
   } catch(e) { console.warn('Save hatası:', e); }
@@ -53,8 +53,8 @@ function load() {
     STATE.currentIdx  = d.currentIdx  || 0;
     STATE.activeFilter= d.activeFilter|| 'all';
     STATE.activePage  = d.activePage  || 'sorular';
-    STATE.riskAnalizi = d.riskAnalizi || {};
     STATE.page1296    = d.page1296    || 0;
+    STATE.riskAnalizi = d.riskAnalizi || {};
   } catch(e) { console.warn('Load hatası:', e); }
 }
 
@@ -494,18 +494,23 @@ function buildRiskKategorileriHTML(q, cv) {
   ];
 
   return kategoriler.map(cat => `
-    <div style="margin-bottom:9px;padding:8px 10px;background:rgba(0,0,0,0.05);border-radius:6px;border-left:3px solid ${cat.color}">
+    <div style="margin-bottom:9px;padding:8px 10px;background:rgba(0,0,0,0.18);border-radius:6px;border-left:3px solid ${cat.color}">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
         <span style="font-size:10px;font-weight:700;color:${cat.color};letter-spacing:.5px">${cat.icon} ${cat.name}</span>
         <div style="display:flex;gap:4px">
-          <span style="font-size:9px;background:${cat.color};color:#fff;padding:2px 7px;border-radius:4px;font-weight:700">Etki ${cat.etki}</span>
-          <span style="font-size:9px;background:rgba(0,0,0,0.1);color:#374151;padding:2px 7px;border-radius:4px;font-weight:700;border:1px solid rgba(0,0,0,0.1)">Olasılık ${cat.olas}</span>
+          <span style="font-size:9px;background:rgba(255,255,255,0.08);color:#e2e8f0;padding:2px 6px;border-radius:4px;font-weight:600">Etki ${cat.etki}</span>
+          <span style="font-size:9px;background:rgba(255,255,255,0.08);color:#e2e8f0;padding:2px 6px;border-radius:4px;font-weight:600">Olasılık ${cat.olas}</span>
         </div>
       </div>
-      <div style="font-size:11px;color:#1e293b;line-height:1.55;font-weight:500">${cat.desc}</div>
+      <div style="font-size:11px;color:#d1d5db;line-height:1.5">${cat.desc}</div>
     </div>
   `).join('');
 }
+
+// ══════════════════════════════════════════════════════════════
+// AI RİSK ANALİZİ
+// ══════════════════════════════════════════════════════════════
+
 async function aiRiskAnaliziUret(qId) {
   const q  = SORULAR_100.find(s => s.id === qId);
   const cv = STATE.cevaplar[qId];
@@ -612,9 +617,9 @@ function renderRiskAIBox(qId) {
 
   kategoriler.forEach(kat => {
     const icerik = parsed[kat.key] || text; // parse edilemezse ham metin
-    html += `<div style="margin-bottom:7px;padding:7px 10px;background:rgba(0,0,0,0.05);border-radius:5px;border-left:3px solid ${kat.color}">
+    html += `<div style="margin-bottom:7px;padding:7px 10px;background:rgba(0,0,0,0.2);border-radius:5px;border-left:3px solid ${kat.color}">
       <div style="font-size:10px;font-weight:700;color:${kat.color};margin-bottom:3px">${kat.icon} ${kat.key}</div>
-      <div style="font-size:11px;color:#1e293b;line-height:1.55;font-weight:500">${icerik}</div>
+      <div style="font-size:11px;color:#d1d5db;line-height:1.5">${icerik}</div>
     </div>`;
   });
 
@@ -630,6 +635,7 @@ function clearRiskAnalizi(qId) {
   const btn = document.getElementById(`risk-ai-btn-${qId}`);
   if (btn) btn.innerHTML = '🤖 AI Risk Analizi';
 }
+
 function buildDanismanKart(q) {
   const cv  = STATE.cevaplar[q.id];
   const rd  = riskDurumu(q, cv.c);
@@ -692,7 +698,7 @@ function buildDanismanKart(q) {
   }
 
   // ── ÖNERİ KOLONU (4. KOLON) ─────────────────────────────────────
-  const oneriLines = (q.oneri || '').split(/\n|•|-/).map(s => s.trim()).filter(s => s.length > 15);
+  const oneriLines = (q.oneri || '').split(/\n/).map(s => s.trim()).filter(s => s.length > 10);
   let oneriHTML = '';
   if (oneriLines.length > 0) {
     oneriLines.slice(0, 6).forEach((line, i) => {
@@ -729,15 +735,15 @@ function buildDanismanKart(q) {
   <div class="dk-kolon">
     <div class="dk-kolon-baslik"><span class="dk-kolon-baslik-icon">⚠️</span> Risk Analizi</div>
     ${buildRiskKategorileriHTML(q, cv)}
-    <div style="margin-top:8px;padding:7px 10px;background:rgba(0,0,0,0.05);border-radius:6px;border:1px solid rgba(0,0,0,0.08)">
+    <div style="margin-top:8px;padding:7px 10px;background:rgba(0,0,0,0.15);border-radius:6px">
       <span class="dk-risk-label kritiklik">Kritiklik (${q.kritiklik * 4} Puan)</span>
       <div class="dk-risk-text">BİGR Rehberi Kritiklik Derecesi: <strong>${q.kritiklik === 3 ? 'Yüksek (3)' : q.kritiklik === 2 ? 'Orta (2)' : 'Düşük (1)'}</strong></div>
     </div>
     <div style="margin-top:6px;padding:7px 10px;background:rgba(96,165,250,0.08);border-radius:6px;border-left:3px solid #60a5fa">
       <span class="dk-risk-label hukuki">Hukuki Risk</span>
-      <div class="dk-risk-text" style="font-size:12px;line-height:1.5;color:#dc2626;font-weight:700">
-        ⚠️ ${cv.c === 'hayir' ? 'Yüksek Uyumsuzluk Riski:' : 'Kısmi Uyumsuzluk Riski:'}
-        <div style="margin-top:4px;font-weight:500;color:#1e3a5f;white-space:pre-line;font-size:11px">${hukukiAks}</div>
+      <div class="dk-risk-text" style="font-size:12px;line-height:1.5;color:var(--text);font-weight:500">
+        ⚠️ ${cv.c === 'hayir' ? 'Yüksek Uyumsuzluk Riski: ' : 'Kısmi Uyumsuzluk Riski: '}
+        <div style="margin-top:4px;font-weight:normal;color:var(--text2);white-space:pre-line">${hukukiAks}</div>
       </div>
     </div>
     <div style="margin-top:8px">
@@ -757,7 +763,11 @@ function buildDanismanKart(q) {
   </div>
 
   <div class="dk-kolon">
-    <div class="dk-kolon-baslik"><span class="dk-kolon-baslik-icon">💡</span>
+    <div class="dk-kolon-baslik"><span class="dk-kolon-baslik-icon">💡</span> İyileştirme Önerileri</div>
+    ${oneriHTML}
+  </div>
+
+  </div>
 
   <div class="dk-footer">
     <span class="dk-footer-no">${q.tedbirNo} • S${q.id} / 100 • Kapsam: ${q.kapsananSayi} Tedbir</span>
@@ -1230,18 +1240,35 @@ function clearAPIKey() {
 }
 
 function resetAll() {
-  if (!confirm('Tüm cevaplar ve bulgular silinecek. Emin misiniz?')) return;
+  if (!confirm('Tüm cevaplar, bulgular ve yapay zeka analizleri silinecek. Emin misiniz?')) return;
+  
+  // Tüm durum (state) verilerini fabrikasyon ayarlarına döndürüyoruz
   STATE.cevaplar     = {};
   STATE.cevaplar1296 = {};
-  STATE.page1296     = 0;
-  STATE.projeAdi     = 'Yeni Proje';                              // ← ekle
-  const projeInput = document.getElementById('proje-adi-input');
-  if (projeInput) projeInput.value = '';                          // ← ekle
+  STATE.currentIdx   = 0;         // 🎯 1. sorudan başlamasını sağlıyoruz
+  STATE.page1296     = 0;         // Sayfa 2'deki listeleme sayfasını sıfırlıyoruz
+  STATE.activePage   = 'sorular'; // Kullanıcıyı doğrudan Soru Formu sekmesine yönlendiriyoruz
+  STATE.activeFilter = 'all';     // Filtreleri temizliyoruz
+  
+  // Yeni eklediğimiz yapay zeka havuzları varsa onları da temizleyelim
+  if (STATE.aiNotes) STATE.aiNotes = {};
+  if (STATE.riskCache) STATE.riskCache = {};
+  STATE.riskAnalizi = {};
+  STATE.projeAdi = 'Yeni Proje';
+  const pi = document.getElementById('proje-adi-input');
+  if (pi) pi.value = '';
+
+  // LocalStorage'ı tamamen temizleyip yeni temiz durumu kaydediyoruz
   localStorage.removeItem(STORAGE_KEY);
+  save(); 
+
+  // Arayüzü (UI) güncel durumla yeniden çiziyoruz
   buildSidebar();
+  switchTab('sorular'); // Sekme geçişini tetikleyerek UI'ı tazeleyelim
   renderQuestion();
   updateStats();
-  toast('✅ Sıfırlandı');
+  
+  toast('✅ Tüm veriler sıfırlandı, 1. sorudan başlandı!');
 }
 // Risk Analizi Üretme Fonksiyonu
 
