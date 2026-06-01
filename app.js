@@ -1226,7 +1226,7 @@ async function tumKismenleriBulguUret() {
   );
   if (!kismenler.length) { toast('Kısmen veya Hayır cevaplı tedbir yok', 'error'); return; }
 
-  const bekleyenler = kismenler.filter(s => !STATE.bulgu1296[s.i]);
+  const bekleyenler = kismenler.filter(s => !STATE.bulgu1296[s.i] || STATE.bulgu1296[s.i].kaynak === 'sablon');
   const toplam = bekleyenler.length;
   if (toplam === 0) { toast('Tüm bulgular zaten üretilmiş ✅', 'success'); return; }
 
