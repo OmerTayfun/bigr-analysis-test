@@ -610,10 +610,10 @@ function renderRiskAIBox(qId) {
 
   // Metni kategorilere böl
   const kategoriler = [
-    { key: 'STRATEJİK RİSK',  icon: '⚡', color: '#f87171' },
-    { key: 'OPERASYONELRİSK', icon: '🔧', color: '#fb923c' },
-    { key: 'FİNANSAL RİSK',   icon: '💰', color: '#fbbf24' },
-    { key: 'İTİBAR RİSKİ',    icon: '📣', color: '#a78bfa' }
+    { key: 'STRATEJİK RİSK',   icon: '⚡', color: '#f87171' },
+    { key: 'OPERASYONEL RİSK',  icon: '🔧', color: '#fb923c' },
+    { key: 'FİNANSAL RİSK',    icon: '💰', color: '#fbbf24' },
+    { key: 'İTİBAR RİSKİ',     icon: '📣', color: '#a78bfa' }
   ];
 
   let html = `<div style="margin-top:10px;border-top:1px solid rgba(0,0,0,0.1);padding-top:10px">
@@ -627,7 +627,6 @@ function renderRiskAIBox(qId) {
   let current = null;
   let currentText = [];
   const parsed = {};
-
   lines.forEach(line => {
     const match = kategoriler.find(k => line.toUpperCase().includes(k.key));
     if (match) {
@@ -639,7 +638,6 @@ function renderRiskAIBox(qId) {
     }
   });
   if (current && currentText.length) parsed[current] = currentText.join(' ').trim();
-
   kategoriler.forEach(kat => {
     const icerik = parsed[kat.key] || text; // parse edilemezse ham metin
     html += `<div style="margin-bottom:7px;padding:8px 10px;background:rgba(0,0,0,0.04);border-radius:6px;border-left:3px solid ${kat.color}">
