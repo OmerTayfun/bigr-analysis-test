@@ -882,40 +882,43 @@ function renderUyumlu() {
   });
 
   html += '</div>';
-  if (kapsamDisillar.length > 0) {
-  html += `<div style="margin-top:2rem">
-    <div style="font-size:13px;font-weight:700;color:#94a3b8;margin-bottom:1rem;padding-bottom:8px;border-bottom:1px solid rgba(148,163,184,0.2)">
-      ⬜ Kapsam Dışı Kontroller — ${kapsamDisillar.length} adet
-    </div>
-    <div style="display:flex;flex-direction:column;gap:0.75rem">`;
 
-  kapsamDisillar.forEach(q => {
+  const kapsamDisillar = SORULAR_100.filter(q => {
     const cv = STATE.cevaplar[q.id];
-    const obs = (cv.obs || '').trim();
-    html += `
-    <div style="background:var(--bg2);border:1px solid rgba(148,163,184,0.2);border-radius:10px;overflow:hidden;border-left:4px solid #94a3b8">
-      <div style="padding:12px 18px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap">
-        <div>
-          <div style="font-size:10px;color:#94a3b8;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:3px">⬜ Kapsam Dışı</div>
-          <div style="font-size:14px;font-weight:700;color:var(--text)">${q.tedbir}</div>
-          <div style="font-size:11px;color:var(--text2);margin-top:3px">${q.altKat}</div>
-        </div>
-        <span style="font-size:10px;color:#94a3b8;background:rgba(148,163,184,0.1);padding:4px 10px;border-radius:12px;font-weight:600;font-family:monospace">${q.tedbirNo}</span>
-      </div>
-      ${obs ? `
-      <div style="padding:10px 18px 14px;border-top:1px solid rgba(148,163,184,0.1)">
-        <div style="font-size:10px;font-weight:600;color:#94a3b8;margin-bottom:5px">📝 Kapsam Dışı Gerekçesi</div>
-        <div style="font-size:13px;color:var(--text2);line-height:1.6">${obs}</div>
-      </div>` : ''}
-    </div>`;
+    return cv && cv.c === 'kapsam';
   });
 
-  html += `</div></div>`;
-}
-  const kapsamDisillar = SORULAR_100.filter(q => {
-  const cv = STATE.cevaplar[q.id];
-  return cv && cv.c === 'kapsam';
-});
+  if (kapsamDisillar.length > 0) {
+    html += `<div style="margin-top:2rem">
+      <div style="font-size:13px;font-weight:700;color:#94a3b8;margin-bottom:1rem;padding-bottom:8px;border-bottom:1px solid rgba(148,163,184,0.2)">
+        ⬜ Kapsam Dışı Kontroller — ${kapsamDisillar.length} adet
+      </div>
+      <div style="display:flex;flex-direction:column;gap:0.75rem">`;
+
+    kapsamDisillar.forEach(q => {
+      const cv = STATE.cevaplar[q.id];
+      const obs = (cv.obs || '').trim();
+      html += `
+      <div style="background:var(--bg2);border:1px solid rgba(148,163,184,0.2);border-radius:10px;overflow:hidden;border-left:4px solid #94a3b8">
+        <div style="padding:12px 18px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap">
+          <div>
+            <div style="font-size:10px;color:#94a3b8;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:3px">⬜ Kapsam Dışı</div>
+            <div style="font-size:14px;font-weight:700;color:var(--text)">${q.tedbir}</div>
+            <div style="font-size:11px;color:var(--text2);margin-top:3px">${q.altKat}</div>
+          </div>
+          <span style="font-size:10px;color:#94a3b8;background:rgba(148,163,184,0.1);padding:4px 10px;border-radius:12px;font-weight:600;font-family:monospace">${q.tedbirNo}</span>
+        </div>
+        ${obs ? `
+        <div style="padding:10px 18px 14px;border-top:1px solid rgba(148,163,184,0.1)">
+          <div style="font-size:10px;font-weight:600;color:#94a3b8;margin-bottom:5px">📝 Kapsam Dışı Gerekçesi</div>
+          <div style="font-size:13px;color:var(--text2);line-height:1.6">${obs}</div>
+        </div>` : ''}
+      </div>`;
+    });
+
+    html += `</div></div>`;
+  }
+
   liste.innerHTML = html;
 }
 
