@@ -676,9 +676,16 @@ function buildDanismanKart(q) {
   let mevzuatHTML = '';
   if (mev) {
     mevzuatHTML += `<div class="dk-mev-item">
-      <div class="dk-mev-baslik">📜 İlgili Mevzuat</div>
-      <div class="dk-mev-text">${mev}</div>
-    </div>`;
+  <div class="dk-mev-baslik">📜 İlgili Mevzuat</div>
+  <div class="dk-mev-text">
+    ${mev.split('\n').filter(s => s.trim()).map(s => 
+      `<div style="display:flex;gap:6px;margin-bottom:5px">
+        <span style="color:#92400e;font-weight:700;flex-shrink:0">•</span>
+        <span>${s.trim()}</span>
+      </div>`
+    ).join('')}
+  </div>
+</div>`;
   }
   if (iso1 || iso2 || iso3) {
     mevzuatHTML += `<div class="dk-mev-item"><div class="dk-mev-baslik">🏷 Standart Referanslar</div><div>`;
