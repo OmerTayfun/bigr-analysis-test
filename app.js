@@ -9,7 +9,7 @@ const PAGE_SIZE_1296 = 50;
 
 // STATE nesnesine riskCache ekleyelim
 const STATE = {
-  projeAdi: "Yeni Proje",F
+  projeAdi: "Yeni Proje",
   cevaplar: {},
   cevaplar1296: {},
   riskCache: {},
