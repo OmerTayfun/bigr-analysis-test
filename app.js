@@ -1524,8 +1524,7 @@ function showAPIKeyModal() {
 function saveAPIKey() {
   const k = document.getElementById('api-key-input').value.trim();
   if (!k) { toast('Boş olamaz', 'error'); return; }
-  if (!k.startsWith('AIza') || k.length < 30) { toast('Geçersiz anahtar (AIza... ile başlamalı)', 'error'); return; }
-  localStorage.setItem(API_KEY_STOR, k);
+  if (k.length < 10) { toast('Geçersiz anahtar', 'error'); return; }  localStorage.setItem(API_KEY_STOR, k);
   closeAPIModal();
   toast('✅ API anahtarı kaydedildi', 'success');
 }
