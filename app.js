@@ -494,15 +494,15 @@ function buildRiskKategorileriHTML(q, cv) {
   ];
 
   return kategoriler.map(cat => `
-    <div style="margin-bottom:9px;padding:8px 10px;background:rgba(0,0,0,0.05);border-radius:6px;border-left:3px solid ${cat.color}">
+    <div style="margin-bottom:9px;padding:8px 10px;background:rgba(0,0,0,0.18);border-radius:6px;border-left:3px solid ${cat.color}">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
         <span style="font-size:10px;font-weight:700;color:${cat.color};letter-spacing:.5px">${cat.icon} ${cat.name}</span>
         <div style="display:flex;gap:4px">
-<span style="font-size:9px;background:${cat.color};color:#fff;padding:2px 7px;border-radius:4px;font-weight:700;opacity:0.9">Etki ${cat.etki}</span>
-          <span style="font-size:9px;background:rgba(0,0,0,0.15);color:#374151;padding:2px 7px;border-radius:4px;font-weight:700;border:1px solid rgba(0,0,0,0.1)">Olasılık ${cat.olas}</span>
+          <span style="font-size:9px;background:rgba(255,255,255,0.08);color:#e2e8f0;padding:2px 6px;border-radius:4px;font-weight:600">Etki ${cat.etki}</span>
+          <span style="font-size:9px;background:rgba(255,255,255,0.08);color:#e2e8f0;padding:2px 6px;border-radius:4px;font-weight:600">Olasılık ${cat.olas}</span>
         </div>
       </div>
-      <div style="font-size:11px;color:#1a1a2e;line-height:1.5;font-weight:500">${cat.desc}</div>
+      <div style="font-size:11px;color:#d1d5db;line-height:1.5">${cat.desc}</div>
     </div>
   `).join('');
 }
@@ -698,7 +698,7 @@ function buildDanismanKart(q) {
   }
 
   // ── ÖNERİ KOLONU (4. KOLON) ─────────────────────────────────────
-const oneriLines = (q.oneri || '').split(/\n/).map(s => s.trim()).filter(s => s.length > 10);
+  const oneriLines = (q.oneri || '').split(/\n/).map(s => s.trim()).filter(s => s.length > 10);
   let oneriHTML = '';
   if (oneriLines.length > 0) {
     oneriLines.slice(0, 6).forEach((line, i) => {
@@ -741,10 +741,10 @@ const oneriLines = (q.oneri || '').split(/\n/).map(s => s.trim()).filter(s => s.
     </div>
     <div style="margin-top:6px;padding:7px 10px;background:rgba(96,165,250,0.08);border-radius:6px;border-left:3px solid #60a5fa">
       <span class="dk-risk-label hukuki">Hukuki Risk</span>
-      <div class="dk-risk-text" style="font-size:12px;line-height:1.5;color:#dc2626;font-weight:700">
-  ⚠️ ${cv.c === 'hayir' ? 'Yüksek Uyumsuzluk Riski:' : 'Kısmi Uyumsuzluk Riski:'}
-  <div style="margin-top:4px;font-weight:500;color:#1e3a5f;white-space:pre-line;font-size:11px">${hukukiAks}</div>
-</div>
+      <div class="dk-risk-text" style="font-size:12px;line-height:1.5;color:var(--text);font-weight:500">
+        ⚠️ ${cv.c === 'hayir' ? 'Yüksek Uyumsuzluk Riski: ' : 'Kısmi Uyumsuzluk Riski: '}
+        <div style="margin-top:4px;font-weight:normal;color:var(--text2);white-space:pre-line">${hukukiAks}</div>
+      </div>
     </div>
     <div style="margin-top:8px">
       <button id="risk-ai-btn-${q.id}" onclick="aiRiskAnaliziUret(${q.id})"
