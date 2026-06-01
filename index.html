@@ -134,6 +134,10 @@
       <p class="rapor-sub">100 sorudan otomatik üretilen 1296 tedbirin tüm cevapları</p>
     </div>
     <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+      <button id="btn-toplu-bulgu" class="btn btn-ghost" onclick="tumKismenleriBulguUret()" style="background:linear-gradient(135deg,#6366f1,#8b5cf6);color:#fff;border:none">
+        🤖 Toplu Bulgu Üret
+      </button>
+      <button class="btn btn-ghost" onclick="bulgu1296Temizle()" style="font-size:11px">🗑 Bulgular</button>
       <select id="t-cat-filter" onchange="render1296()" style="padding:8px 12px;background:var(--bg2);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:13px">
         <option value="all">Tüm Kategoriler</option>
       </select>
