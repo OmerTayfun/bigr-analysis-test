@@ -616,10 +616,10 @@ function renderRiskAIBox(qId) {
     { key: 'İTİBAR RİSKİ',    icon: '📣', color: '#a78bfa' }
   ];
 
-  let html = `<div style="margin-top:10px;border-top:1px solid rgba(255,255,255,0.1);padding-top:10px">
+  let html = `<div style="margin-top:10px;border-top:1px solid rgba(0,0,0,0.1);padding-top:10px">
     <div style="font-size:9px;font-weight:700;color:#6366f1;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">
       🤖 AI Risk Değerlendirmesi
-      <button onclick="clearRiskAnalizi(${qId})" style="background:none;border:none;color:#64748b;cursor:pointer;font-size:9px;margin-left:8px;text-decoration:underline">Sil</button>
+      <button onclick="clearRiskAnalizi(${qId})" style="background:none;border:none;color:#94a3b8;cursor:pointer;font-size:9px;margin-left:8px;text-decoration:underline">Sil</button>
     </div>`;
 
   // Satırları parse et
@@ -642,9 +642,11 @@ function renderRiskAIBox(qId) {
 
   kategoriler.forEach(kat => {
     const icerik = parsed[kat.key] || text; // parse edilemezse ham metin
-    html += `<div style="margin-bottom:7px;padding:7px 10px;background:rgba(0,0,0,0.2);border-radius:5px;border-left:3px solid ${kat.color}">
-      <div style="font-size:10px;font-weight:700;color:${kat.color};margin-bottom:3px">${kat.icon} ${kat.key}</div>
-      <div style="font-size:11px;color:#d1d5db;line-height:1.5">${icerik}</div>
+    html += `<div style="margin-bottom:7px;padding:8px 10px;background:rgba(0,0,0,0.04);border-radius:6px;border-left:3px solid ${kat.color}">
+      <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">
+        <span style="font-size:10px;font-weight:700;color:${kat.color}">${kat.icon} ${kat.key}</span>
+      </div>
+      <div style="font-size:11px;color:#1e293b;line-height:1.6;font-weight:500">${icerik}</div>
     </div>`;
   });
 
@@ -769,7 +771,7 @@ const oneriLines = (q.oneri || '').split(/\n/).map(s => s.trim()).filter(s => s.
     <div class="dk-kolon-baslik" style="margin-bottom:0"><span class="dk-kolon-baslik-icon">⚠️</span> Risk Analizi</div>
     <span style="background:#92400e;color:#fef3c7;font-size:9px;font-weight:700;padding:3px 8px;border-radius:4px">KRİTİKLİK (${q.kritiklik * 4} PUAN)</span>
   </div>
-    ${buildRiskKategorileriHTML(q, cv)}
+    ${STATE.riskAnalizi[q.id] ? "" : buildRiskKategorileriHTML(q, cv)}
     
     <div style="margin-top:6px;padding:7px 10px;background:rgba(96,165,250,0.08);border-radius:6px;border-left:3px solid #60a5fa">
       <span class="dk-risk-label hukuki">Hukuki Risk</span>
