@@ -1210,7 +1210,7 @@ async function tumKismenleriBulguUret() {
       await tekBulguUret(s.i);
       if (STATE.bulgu1296[s.i]?.kaynak === 'ai') aiSayac++;
       else sablonSayac++;
-      await new Promise(r => setTimeout(r, 2000));
+      await new Promise(r => setTimeout(r, 3000));
     } else {
       STATE.bulgu1296[s.i] = { metin: sablonBulgu1296(s, parentQ), kaynak: 'sablon' };
       sablonSayac++;
