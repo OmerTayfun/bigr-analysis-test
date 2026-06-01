@@ -1011,7 +1011,7 @@ function render1296() {
         : cv === 'hayir'
         ? `❌ Yapılan incelemede <strong>${s.ta}</strong> kapsamındaki gereklilikler kurumda uygulanmamaktadır. ${altKatKisa} alanında tanımlı bir süreç veya kontrol mekanizması bulunmamaktadır. Bu durum BİGR rehberinin ${s.tn} numaralı tedbir maddesine doğrudan aykırılık teşkil etmektedir.`
         : cv === 'kismi'
-        ? `🟡 <strong>${s.ta}</strong> kapsamında kısmi uygulama tespit edilmiştir.${parentQ?.obs ? ' ' + parentQ.obs + '.' : ''} Bu tedbirin tam olarak uygulanması için: ${s.q}`
+        ? `🟡 <strong>${s.ta}</strong> kapsamında kısmi uygulama tespit edilmiştir.${parentQ?.obs ? ' ' + parentQ.obs + '.' : ''} Söz konusu tedbirin eksiksiz uygulanabilmesi için gerekli süreç ve kontrol mekanizmalarının oluşturulması gerekmektedir.`
         : '';
 
       html += `<div style="border-bottom:${idx<items.length-1?'1px solid rgba(255,255,255,0.04)':'none'}">
