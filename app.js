@@ -1258,8 +1258,8 @@ async function tumKismenleriBulguUret() {
   const BATCH_SIZE = 5;
 
   const kismenler = SORULAR_1296.filter(s =>
-    STATE.cevaplar1296[s.i] === 'kismi' || STATE.cevaplar1296[s.i] === 'hayir'
-  );
+  STATE.cevaplar1296[s.i] === 'kismi'
+);
   if (!kismenler.length) { toast('Kısmen veya Hayır cevaplı tedbir yok', 'error'); return; }
 
   const bekleyenler = kismenler.filter(s =>
