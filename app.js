@@ -734,7 +734,10 @@ const oneriLines = (q.oneri || '').split(/\n/).map(s => s.trim()).filter(s => s.
 
   <div class="dk-kolon">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
   <div class="dk-kolon-baslik" style="margin-bottom:0"><span class="dk-kolon-baslik-icon">⚠️</span> Risk Analizi</div>
+  <span style="background:#92400e;color:#fef3c7;font-size:9px;font-weight:700;padding:3px 8px;border-radius:4px">KRİTİKLİK (${q.kritiklik * 4} PUAN)</span>
+</div>
   <span style="background:#92400e;color:#fef3c7;font-size:9px;font-weight:700;padding:3px 8px;border-radius:4px">KRİTİKLİK (${q.kritiklik * 4} PUAN)</span>
 </div>
     ${buildRiskKategorileriHTML(q, cv)}
