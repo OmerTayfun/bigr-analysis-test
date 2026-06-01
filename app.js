@@ -1130,7 +1130,7 @@ function sablonBulgu1296(s, parentQ) {
   return '';
 }
 
-// Tek tedbir için AI bulgu üret (bireysel kullanım)
+// Tek tedbir için AI bulgu üret
 async function tekBulguUret(tedbirIdx) {
   const s = SORULAR_1296.find(x => x.i === tedbirIdx);
   if (!s) return;
@@ -1143,8 +1143,7 @@ async function tekBulguUret(tedbirIdx) {
     STATE.bulgu1296[s.i] = { metin: sablonBulgu1296(s, parentQ), kaynak: 'sablon' };
     save(); render1296(); return;
   }
-
-  const sonuc = await batchBulguUret([s], apiKey);
+  await batchBulguUret([s], apiKey);
   save(); render1296();
 }
 
@@ -1152,32 +1151,18 @@ async function tekBulguUret(tedbirIdx) {
 async function batchBulguUret(tedbirListesi, apiKey) {
   if (!tedbirListesi.length) return;
 
-  // Her tedbir için bağlamı hazırla
   const items = tedbirListesi.map((s, idx) => {
     const parentQ = SORULAR_100.find(q => q.id === s.p);
     const cv = STATE.cevaplar1296[s.i];
     const obs = parentQ?.obs || '';
     const oneri = (parentQ?.oneri || '').substring(0, 150);
-    return `[${idx + 1}]
-Tedbir: ${s.ta} (${s.tn})
-Soru: ${s.q}
-Durum: ${cv === 'kismi' ? 'Kısmen uygulanıyor' : 'Uygulanmıyor'}${obs ? '\nGözlem: ' + obs : ''}${oneri ? '\nÖneri: ' + oneri : ''}`;
+    return '[' + (idx + 1) + ']\nTedbir: ' + s.ta + ' (' + s.tn + ')\nSoru: ' + s.q + '\nDurum: ' + (cv === 'kismi' ? 'Kısmen uygulanıyor' : 'Uygulanmıyor') + (obs ? '\nGözlem: ' + obs : '') + (oneri ? '\nÖneri: ' + oneri : '');
   });
 
-  const prompt = `Sen kıdemli bir BİGR baş denetçisisin. Aşağıdaki ${tedbirListesi.length} tedbir için ayrı ayrı denetim bulgusu yaz.
-
-${items.join('\n\n')}
-
-Her tedbir için tam olarak şu formatı kullan:
-[1] Bulgu metni buraya. İkinci cümle buraya.
-[2] Bulgu metni buraya. İkinci cümle buraya.
-...
-
-Kurallar:
-- Her bulgu tam olarak 2 cümle
-- Her biri tedbire özgü, farklı ve spesifik olsun
-- Resmi denetim üslubu, tekrar eden kalıplar kullanma
-- Sadece numaralı bulguları yaz, başka açıklama ekleme`;
+  const aralik = "\n\n";
+  const prompt = "Sen kıdemli bir BİGR baş denetçisisin. Aşağıdaki " + tedbirListesi.length + " tedbir için ayrı ayrı denetim bulgusu yaz.\n\n" +
+    items.join(aralik) +
+    "\n\nHer tedbir için tam olarak şu formatı kullan:\n[1] Bulgu metni buraya. İkinci cümle buraya.\n[2] Bulgu metni buraya. İkinci cümle buraya.\n\nKurallar:\n- Her bulgu tam olarak 2 cümle\n- Her biri tedbire özgü, farklı ve spesifik olsun\n- Resmi denetim üslubu, tekrar eden kalıplar kullanma\n- Sadece numaralı bulguları yaz, başka açıklama ekleme";
 
   try {
     const resp = await fetch(
@@ -1193,25 +1178,25 @@ Kurallar:
     const data = await resp.json();
     const text = data.candidates?.[0]?.content?.parts?.map(p => p.text).join('') || '';
 
-    // Parse: [1] metin [2] metin ...
     tedbirListesi.forEach((s, idx) => {
       const num = idx + 1;
-      const regex = new RegExp(`\[${num}\]\s*([\s\S]*?)(?=\[${num + 1}\]|$)`);
+      const next = idx + 2;
+      const regex = new RegExp('\[' + num + '\]\s*([\s\S]*?)(?=\[' + next + '\]|$)');
       const match = text.match(regex);
       if (match && match[1].trim()) {
         STATE.bulgu1296[s.i] = { metin: match[1].trim(), kaynak: 'ai' };
-      } else {
-        // Parse edilemezse şablon
+      } else if (!STATE.bulgu1296[s.i]) {
         const parentQ = SORULAR_100.find(q => q.id === s.p);
         STATE.bulgu1296[s.i] = { metin: sablonBulgu1296(s, parentQ), kaynak: 'sablon' };
       }
     });
     return true;
   } catch(e) {
-    // Hata durumunda hepsine şablon
     tedbirListesi.forEach(s => {
-      const parentQ = SORULAR_100.find(q => q.id === s.p);
-      STATE.bulgu1296[s.i] = { metin: sablonBulgu1296(s, parentQ), kaynak: 'sablon' };
+      if (!STATE.bulgu1296[s.i]) {
+        const parentQ = SORULAR_100.find(q => q.id === s.p);
+        STATE.bulgu1296[s.i] = { metin: sablonBulgu1296(s, parentQ), kaynak: 'sablon' };
+      }
     });
     return false;
   }
@@ -1219,16 +1204,18 @@ Kurallar:
 
 async function tumKismenleriBulguUret() {
   const apiKey = localStorage.getItem(API_KEY_STOR);
-  const BATCH_SIZE = 5; // 5'li gruplar - rate limit dostu
+  const BATCH_SIZE = 5;
 
   const kismenler = SORULAR_1296.filter(s =>
     STATE.cevaplar1296[s.i] === 'kismi' || STATE.cevaplar1296[s.i] === 'hayir'
   );
   if (!kismenler.length) { toast('Kısmen veya Hayır cevaplı tedbir yok', 'error'); return; }
 
-  const bekleyenler = kismenler.filter(s => !STATE.bulgu1296[s.i] || STATE.bulgu1296[s.i].kaynak === 'sablon');
+  const bekleyenler = kismenler.filter(s =>
+    !STATE.bulgu1296[s.i] || STATE.bulgu1296[s.i].kaynak === 'sablon'
+  );
   const toplam = bekleyenler.length;
-  if (toplam === 0) { toast('Tüm bulgular zaten üretilmiş ✅', 'success'); return; }
+  if (toplam === 0) { toast('Tüm AI bulgular zaten üretilmiş ✅', 'success'); return; }
 
   const btn = document.getElementById('btn-toplu-bulgu');
   let tamamlanan = 0, aiSayac = 0, sablonSayac = 0;
@@ -1240,11 +1227,12 @@ async function tumKismenleriBulguUret() {
   if (btn) { btn.disabled = true; guncelle(); }
 
   if (!apiKey) {
-    // API yoksa tüm bekleyenlere şablon yaz
     bekleyenler.forEach(s => {
-      const parentQ = SORULAR_100.find(q => q.id === s.p);
-      STATE.bulgu1296[s.i] = { metin: sablonBulgu1296(s, parentQ), kaynak: 'sablon' };
-      sablonSayac++;
+      if (!STATE.bulgu1296[s.i]) {
+        const parentQ = SORULAR_100.find(q => q.id === s.p);
+        STATE.bulgu1296[s.i] = { metin: sablonBulgu1296(s, parentQ), kaynak: 'sablon' };
+        sablonSayac++;
+      }
     });
     save(); render1296();
     if (btn) { btn.disabled = false; btn.textContent = '🤖 Toplu Bulgu Üret'; }
@@ -1252,7 +1240,6 @@ async function tumKismenleriBulguUret() {
     return;
   }
 
-  // Batch işleme - 5'li gruplar
   for (let i = 0; i < bekleyenler.length; i += BATCH_SIZE) {
     const grup = bekleyenler.slice(i, i + BATCH_SIZE);
     const oncekiAi = Object.values(STATE.bulgu1296).filter(b => b.kaynak === 'ai').length;
@@ -1262,12 +1249,10 @@ async function tumKismenleriBulguUret() {
     const yeniAi = Object.values(STATE.bulgu1296).filter(b => b.kaynak === 'ai').length;
     aiSayac += yeniAi - oncekiAi;
     sablonSayac += grup.length - (yeniAi - oncekiAi);
-
     tamamlanan += grup.length;
     guncelle();
     save();
 
-    // Gruplar arası bekleme - rate limit için
     if (i + BATCH_SIZE < bekleyenler.length) {
       await new Promise(r => setTimeout(r, 3000));
     }
