@@ -12,11 +12,12 @@ const STATE = {
   projeAdi: "Yeni Proje",
   cevaplar: {},
   cevaplar1296: {},
-  riskCache: {}, // <-- BURASI: Tüm risk analizleri burada saklanacak
+  riskCache: {},
   currentIdx: 0,
   activeFilter: 'all',
   activePage: 'sorular',
   riskAnalizi: {},
+  bulgu1296: {},   // {tedbir_i: {metin, kaynak}} — hibrit cache
   page1296: 0
 };
 
@@ -34,7 +35,8 @@ function save() {
       activeFilter: STATE.activeFilter,
       activePage:   STATE.activePage,
       page1296:     STATE.page1296,
-      riskAnalizi:  STATE.riskAnalizi
+      riskAnalizi:  STATE.riskAnalizi,
+      bulgu1296:   STATE.bulgu1296
     };
     localStorage.setItem(STORAGE_KEY, JSON.stringify(toSave));
   } catch(e) { console.warn('Save hatası:', e); }
@@ -55,6 +57,7 @@ function load() {
     STATE.activePage  = d.activePage  || 'sorular';
     STATE.page1296    = d.page1296    || 0;
     STATE.riskAnalizi = d.riskAnalizi || {};
+    STATE.bulgu1296  = d.bulgu1296  || {};
   } catch(e) { console.warn('Load hatası:', e); }
 }
 
@@ -1043,13 +1046,20 @@ function render1296() {
       const altKatKisa = s.altk.replace(/^\d+\.\d+\.\d+\.\s*/,'').replace(/^\d+\.\d+\.\s*/,'');
       const bgHover    = cv==='bos' ? 'rgba(255,255,255,0.02)' : rs.bg.replace('0.04','0.08').replace('0.05','0.09');
 
+      // Cache'den oku, yoksa şablon üret
+      const cached1296 = STATE.bulgu1296[s.i];
+      const sablonKismi = `🟡 <strong>${s.ta}</strong> kapsamında kısmi uygulama tespit edilmiştir.${parentQ?.obs ? ' ' + parentQ.obs + '.' : ''} Söz konusu tedbirin eksiksiz uygulanabilmesi için gerekli süreç ve kontrol mekanizmalarının oluşturulması gerekmektedir.`;
+      const sablonHayir = `❌ Yapılan incelemede <strong>${s.ta}</strong> kapsamındaki gereklilikler kurumda uygulanmamaktadır. ${altKatKisa} alanında tanımlı bir süreç veya kontrol mekanizması bulunmamaktadır. Bu durum BİGR rehberinin ${s.tn} numaralı tedbir maddesine doğrudan aykırılık teşkil etmektedir.`;
+
       const bulguMetni = cv === 'evet'
         ? `✅ <strong>${s.ta}</strong> tedbiri kurumda uygulanmaktadır.`
-        : cv === 'hayir'
-        ? `❌ Yapılan incelemede <strong>${s.ta}</strong> kapsamındaki gereklilikler kurumda uygulanmamaktadır. ${altKatKisa} alanında tanımlı bir süreç veya kontrol mekanizması bulunmamaktadır. Bu durum BİGR rehberinin ${s.tn} numaralı tedbir maddesine doğrudan aykırılık teşkil etmektedir.`
-        : cv === 'kismi'
-        ? `🟡 <strong>${s.ta}</strong> kapsamında kısmi uygulama tespit edilmiştir.${parentQ?.obs ? ' ' + parentQ.obs + '.' : ''} Söz konusu tedbirin eksiksiz uygulanabilmesi için gerekli süreç ve kontrol mekanizmalarının oluşturulması gerekmektedir.`
+        : cached1296
+        ? (cached1296.kaynak === 'ai' ? `🤖 ${cached1296.metin}` : cached1296.metin)
+        : cv === 'hayir' ? sablonHayir
+        : cv === 'kismi' ? sablonKismi
         : '';
+
+      const bulguKaynak = cached1296?.kaynak || (cv === 'kismi' || cv === 'hayir' ? 'sablon' : '');
 
       html += `<div style="border-bottom:${idx<items.length-1?'1px solid rgba(255,255,255,0.04)':'none'}">
         <div style="display:grid;grid-template-columns:90px 160px 180px 1fr 130px 50px;gap:0;background:${rs.bg};border-left:3px solid ${rs.left};cursor:${cv!=='bos'?'pointer':'default'}"
@@ -1069,6 +1079,10 @@ function render1296() {
         </div>
         ${cv !== 'bos' ? `
         <div id="b1296-${s.i}" style="display:none;padding:10px 16px 12px 16px;background:rgba(255,255,255,0.03);border-left:3px solid ${rs.left}">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+            ${bulguKaynak === 'ai' ? '<span style="font-size:9px;background:rgba(99,102,241,0.15);color:#818cf8;padding:2px 7px;border-radius:4px;font-weight:600">🤖 AI Bulgu</span>' : bulguKaynak === 'sablon' ? '<span style="font-size:9px;background:rgba(148,163,184,0.15);color:#94a3b8;padding:2px 7px;border-radius:4px;font-weight:600">📋 Şablon</span>' : ''}
+            ${(cv === 'kismi' || cv === 'hayir') && !cached1296 ? '<span style="font-size:9px;color:#6366f1;cursor:pointer;text-decoration:underline" onclick="event.stopPropagation();tekBulguUret(${s.i})">🤖 AI ile yenile</span>' : ''}
+          </div>
           <div style="font-size:11px;color:#cbd5e1;line-height:1.75">${bulguMetni}</div>
         </div>` : ''}
       </div>`;
@@ -1097,6 +1111,108 @@ function render1296() {
   const pgEl = document.getElementById('t-pagination');
   pgEl.innerHTML = pgHtml;
   pgEl.style.display = totalPages > 1 ? 'flex' : 'none';
+}
+
+
+// ══════════════════════════════════════════════════════════════
+// 1296 HİBRİT BULGU SİSTEMİ
+// ══════════════════════════════════════════════════════════════
+
+function sablonBulgu1296(s, parentQ) {
+  const cv = STATE.cevaplar1296[s.i];
+  const altKatKisa = s.altk.replace(/^\d+\.\d+\.\d+\.\s*/,'').replace(/^\d+\.\d+\.\s*/,'');
+  if (cv === 'kismi') {
+    return `${s.ta} kapsamında kısmi uygulama tespit edilmiştir.${parentQ?.obs ? ' ' + parentQ.obs + '.' : ''} Söz konusu tedbirin eksiksiz uygulanabilmesi için gerekli süreç ve kontrol mekanizmalarının oluşturulması gerekmektedir.`;
+  }
+  if (cv === 'hayir') {
+    return `Yapılan incelemede ${s.ta} kapsamındaki gereklilikler kurumda uygulanmamaktadır. ${altKatKisa} alanında tanımlı bir süreç veya kontrol mekanizması bulunmamaktadır. Bu durum BİGR rehberinin ${s.tn} numaralı tedbir maddesine doğrudan aykırılık teşkil etmektedir.`;
+  }
+  return '';
+}
+
+async function tekBulguUret(tedbirIdx) {
+  const s = SORULAR_1296.find(x => x.i === tedbirIdx);
+  if (!s) return;
+  const parentQ = SORULAR_100.find(q => q.id === s.p);
+  const cv = STATE.cevaplar1296[s.i];
+  if (!cv || cv === 'evet' || cv === 'bos') return;
+
+  const apiKey = localStorage.getItem(API_KEY_STOR);
+  if (!apiKey) {
+    // API yoksa şablon kullan
+    STATE.bulgu1296[s.i] = { metin: sablonBulgu1296(s, parentQ), kaynak: 'sablon' };
+    save();
+    render1296();
+    return;
+  }
+
+  const obs = parentQ?.obs || '';
+  const prompt = `BİGR denetim bulgusu yaz. 2 cümle, resmi üslup, Türkçe.
+Tedbir: ${s.ta} (${s.tn})
+Durum: ${cv === 'kismi' ? 'Kısmen uygulanıyor' : 'Uygulanmıyor'}
+${obs ? 'Gözlem: ' + obs : ''}
+Sadece bulgu metnini yaz.`;
+
+  try {
+    const resp = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent?key=${encodeURIComponent(apiKey)}`,
+      { method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ contents:[{parts:[{text:prompt}]}], generationConfig:{temperature:0.3,maxOutputTokens:200} }) }
+    );
+    if (!resp.ok) throw new Error(`${resp.status}`);
+    const data = await resp.json();
+    const text = data.candidates?.[0]?.content?.parts?.map(p=>p.text).join('') || '';
+    if (text.trim()) {
+      STATE.bulgu1296[s.i] = { metin: text.trim(), kaynak: 'ai' };
+    } else {
+      throw new Error('boş');
+    }
+  } catch(e) {
+    STATE.bulgu1296[s.i] = { metin: sablonBulgu1296(s, parentQ), kaynak: 'sablon' };
+  }
+  save();
+  render1296();
+}
+
+async function tumKismenleriBulguUret() {
+  const apiKey = localStorage.getItem(API_KEY_STOR);
+  const kismenler = SORULAR_1296.filter(s => STATE.cevaplar1296[s.i] === 'kismi' || STATE.cevaplar1296[s.i] === 'hayir');
+  
+  if (!kismenler.length) { toast('Kısmen veya Hayır cevaplı tedbir yok', 'error'); return; }
+
+  const btn = document.getElementById('btn-toplu-bulgu');
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ Üretiliyor...'; }
+
+  let aiSayac = 0, sablonSayac = 0;
+  
+  for (const s of kismenler) {
+    if (STATE.bulgu1296[s.i]) continue; // cache'de varsa atla
+    const parentQ = SORULAR_100.find(q => q.id === s.p);
+    
+    if (apiKey) {
+      await tekBulguUret(s.i);
+      if (STATE.bulgu1296[s.i]?.kaynak === 'ai') aiSayac++;
+      else sablonSayac++;
+      await new Promise(r => setTimeout(r, 200)); // rate limit
+    } else {
+      STATE.bulgu1296[s.i] = { metin: sablonBulgu1296(s, parentQ), kaynak: 'sablon' };
+      sablonSayac++;
+    }
+  }
+
+  save();
+  render1296();
+  
+  if (btn) { btn.disabled = false; btn.textContent = '🤖 Toplu Bulgu Üret'; }
+  toast(`✅ ${aiSayac} AI + ${sablonSayac} şablon bulgu üretildi`, 'success');
+}
+
+function bulgu1296Temizle() {
+  if (!confirm('Tüm 1296 tedbir bulgularını temizlemek istiyor musunuz?')) return;
+  STATE.bulgu1296 = {};
+  save();
+  render1296();
+  toast('✅ 1296 bulgular temizlendi');
 }
 
 function goPage1296(p) {
@@ -1330,6 +1446,7 @@ function resetAll() {
   if (STATE.aiNotes) STATE.aiNotes = {};
   if (STATE.riskCache) STATE.riskCache = {};
   STATE.riskAnalizi = {};
+  STATE.bulgu1296  = {};
   STATE.projeAdi = 'Yeni Proje';
   const pi = document.getElementById('proje-adi-input');
   if (pi) pi.value = '';
