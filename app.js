@@ -810,6 +810,7 @@ function renderUyumlu() {
     if (!cv || cv.c !== 'evet') return false;
     if (filter === 'notlu')  return cv.obs && cv.obs.trim();
     if (filter === 'notsuz') return !cv.obs || !cv.obs.trim();
+    if (filter === 'kapsam') return false; // kapsam dışı ayrı gösterilecek
     return true;
   });
 
