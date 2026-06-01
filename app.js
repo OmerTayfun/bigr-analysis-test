@@ -80,12 +80,13 @@ function lkp(type, id) {
 }
 
 function cevapLabel(c) {
-  return { evet:'Tamamen Uygulanıyor', kismi:'Kısmen Uygulanıyor', hayir:'Uygulanmıyor' }[c] || '—';
+  return { evet:'Tamamen Uygulanıyor', kismi:'Kısmen Uygulanıyor', hayir:'Uygulanmıyor', kapsam:'Kapsam Dışı' }[c] || '—';
 }
 
 function riskDurumu(q, cevap) {
   const k = q.kritiklik;
   if (cevap === 'evet') return null;
+  if (cevap === 'kapsam') return null;
   if (cevap === 'hayir') {
     if (k===3) return { label:'Çok Riskli', cls:'dk-risk-cok-riskli', skor:12 };
     if (k===2) return { label:'Riskli',     cls:'dk-risk-riskli',     skor:8  };
@@ -239,14 +240,16 @@ function renderQuestion() {
   if (mev)  refsHTML += `<div class="ref-mev"><span class="ref-label">Mevzuat</span><span class="ref-mev-text">${mev}</span></div>`;
   refsHTML += '</div>';
 
-  const borderColor = sel==='evet' ? 'rgba(16,185,129,0.3)' : sel==='kismi' ? 'rgba(245,158,11,0.3)' : 'rgba(239,68,68,0.3)';
-  const bgColor     = sel==='evet' ? 'rgba(16,185,129,0.06)' : sel==='kismi' ? 'rgba(245,158,11,0.06)' : 'rgba(239,68,68,0.06)';
-  const panelColor  = sel==='evet' ? '#10b981' : sel==='kismi' ? '#f59e0b' : '#f87171';
+  const borderColor = sel==='evet' ? 'rgba(16,185,129,0.3)' : sel==='kismi' ? 'rgba(245,158,11,0.3)' : sel==='kapsam' ? 'rgba(148,163,184,0.3)' : 'rgba(239,68,68,0.3)';
+  const bgColor     = sel==='evet' ? 'rgba(16,185,129,0.06)' : sel==='kismi' ? 'rgba(245,158,11,0.06)' : sel==='kapsam' ? 'rgba(148,163,184,0.06)' : 'rgba(239,68,68,0.06)';
+  const panelColor  = sel==='evet' ? '#10b981' : sel==='kismi' ? '#f59e0b' : sel==='kapsam' ? '#94a3b8' : '#f87171';
   const panelTitle  = sel==='evet'  ? '✅ Uygulama Notları'
                     : sel==='kismi' ? '🟡 Danışman Gözlemi'
+                    : sel==='kapsam'? '⬜ Kapsam Dışı Notu'
                     : '❌ Tespit Notları';
   const panelDesc   = sel==='evet'  ? 'Kontrolün nasıl uygulandığını, kanıtları ve gözlemlerinizi yazın.'
                     : sel==='kismi' ? 'Mevcut durumu açıklayın. Bu metinden otomatik bulgu üretilecektir.'
+                    : sel==='kapsam'? 'Bu kontrolün neden kapsam dışı olduğunu açıklayın.'
                     : 'Kontrolün neden uygulanmadığını, tespit edilen eksikliği yazın.';
 
   document.getElementById('q-area').innerHTML = `
@@ -274,6 +277,11 @@ function renderQuestion() {
           <span class="ans-label">Hayır</span>
           <span class="ans-desc">Uygulanmıyor</span>
         </button>
+        <button class="ans ${sel==='kapsam' ? 'sel-kapsam' : ''}" onclick="setCevap('kapsam')">
+          <span class="ans-icon">⬜</span>
+          <span class="ans-label">Kapsam Dışı</span>
+          <span class="ans-desc">Bu kontrol geçerli değil</span>
+        </button>
       </div>
       ${sel ? `
       <div style="margin-top:1rem;padding:1.25rem;border-radius:10px;border:1px solid ${borderColor};background:${bgColor}">
@@ -283,7 +291,7 @@ function renderQuestion() {
           style="width:100%;min-height:85px;padding:9px;background:var(--bg);border:1px solid rgba(255,255,255,0.1);border-radius:7px;color:var(--text);font-size:13px;line-height:1.6;resize:vertical;font-family:inherit"
           placeholder="Gözlem notlarınızı buraya yazın...">${obs}</textarea>
         <div style="display:flex;gap:7px;margin-top:7px;justify-content:flex-end">
-          ${sel !== 'evet' ? `<button class="btn-ai" id="ai-gen-btn" onclick="bulguUret()" ${!obs.trim() ? 'disabled' : ''}>🤖 Bulgu Üret</button>` : ''}
+          ${(sel !== 'evet' && sel !== 'kapsam') ? `<button class="btn-ai" id="ai-gen-btn" onclick="bulguUret()" ${!obs.trim() ? 'disabled' : ''}>🤖 Bulgu Üret</button>` : ''}
         </div>
         ${bulgu ? `
         <div style="background:rgba(167,139,250,0.1);border:1px solid rgba(167,139,250,0.25);border-radius:7px;padding:.9rem;margin-top:.6rem">
@@ -396,6 +404,7 @@ function updateStats() {
   const kismi  = all.filter(v => v.c === 'kismi').length;
   const hayir  = all.filter(v => v.c === 'hayir').length;
   const total  = evet + kismi + hayir;
+  const kapsam = all.filter(v => v.c === 'kapsam').length;
   const skor   = total > 0 ? Math.round(100*(evet + kismi*0.5)/total) : null;
   const c1296  = Object.keys(STATE.cevaplar1296).length;
 
@@ -418,7 +427,7 @@ function renderRapor() {
   const filter = document.getElementById('rapor-filter')?.value || 'all';
   let sorular = SORULAR_100.filter(q => {
     const cv = STATE.cevaplar[q.id];
-    if (!cv || cv.c === 'evet') return false;
+    if (!cv || cv.c === 'evet' || cv.c === 'kapsam') return false;
     if (filter === 'hayir')     return cv.c === 'hayir';
     if (filter === 'kismi')     return cv.c === 'kismi';
     if (filter === 'cokriskli') return riskDurumu(q, cv.c)?.label === 'Çok Riskli';
@@ -920,15 +929,17 @@ function render1296() {
 
   const allC = Object.values(STATE.cevaplar1296);
   const st = {
-    evet:  allC.filter(c=>c==='evet').length,
-    kismi: allC.filter(c=>c==='kismi').length,
-    hayir: allC.filter(c=>c==='hayir').length,
-    bos:   SORULAR_1296.length - allC.length
+    evet:   allC.filter(c=>c==='evet').length,
+    kismi:  allC.filter(c=>c==='kismi').length,
+    hayir:  allC.filter(c=>c==='hayir').length,
+    kapsam: allC.filter(c=>c==='kapsam').length,
+    bos:    SORULAR_1296.length - allC.length
   };
   document.getElementById('t-stats').innerHTML = `
     <div class="t-stats-kart"><div class="val" style="color:var(--green)">${st.evet}</div><div class="lbl">Uyumlu</div></div>
     <div class="t-stats-kart"><div class="val" style="color:var(--amber)">${st.kismi}</div><div class="lbl">Kısmen</div></div>
     <div class="t-stats-kart"><div class="val" style="color:var(--red)">${st.hayir}</div><div class="lbl">Uyumsuz</div></div>
+    <div class="t-stats-kart"><div class="val" style="color:var(--gray)">${st.kapsam}</div><div class="lbl">Kapsam Dışı</div></div>
     <div class="t-stats-kart"><div class="val" style="color:var(--gray)">${st.bos}</div><div class="lbl">Cevapsız</div></div>
     <div class="t-stats-kart"><div class="val" style="color:var(--teal)">${SORULAR_1296.length - st.bos}</div><div class="lbl">Cevaplanan</div></div>`;
 
@@ -941,16 +952,18 @@ function render1296() {
   }
 
   const rowStyle = {
-    evet:  { bg:'rgba(16,185,129,0.04)', left:'#10b981' },
-    kismi: { bg:'rgba(245,158,11,0.04)', left:'#f59e0b' },
-    hayir: { bg:'rgba(239,68,68,0.05)',  left:'#ef4444' },
-    bos:   { bg:'transparent',           left:'#334155' }
+    evet:   { bg:'rgba(16,185,129,0.04)', left:'#10b981' },
+    kismi:  { bg:'rgba(245,158,11,0.04)', left:'#f59e0b' },
+    hayir:  { bg:'rgba(239,68,68,0.05)',  left:'#ef4444' },
+    kapsam: { bg:'rgba(148,163,184,0.04)',left:'#94a3b8' },
+    bos:    { bg:'transparent',           left:'#334155' }
   };
   const cevapRenk = {
-    evet:  { bg:'rgba(16,185,129,0.15)', color:'#34d399', label:'✅ Uyumlu'   },
-    kismi: { bg:'rgba(245,158,11,0.15)', color:'#fbbf24', label:'🟡 Kısmen'   },
-    hayir: { bg:'rgba(239,68,68,0.15)',  color:'#f87171', label:'❌ Uyumsuz'  },
-    bos:   { bg:'rgba(100,116,139,0.15)',color:'#94a3b8', label:'— Cevapsız' }
+    evet:   { bg:'rgba(16,185,129,0.15)', color:'#34d399', label:'✅ Uyumlu'      },
+    kismi:  { bg:'rgba(245,158,11,0.15)', color:'#fbbf24', label:'🟡 Kısmen'      },
+    hayir:  { bg:'rgba(239,68,68,0.15)',  color:'#f87171', label:'❌ Uyumsuz'     },
+    kapsam: { bg:'rgba(148,163,184,0.15)',color:'#94a3b8', label:'⬜ Kapsam Dışı' },
+    bos:    { bg:'rgba(100,116,139,0.15)',color:'#94a3b8', label:'— Cevapsız'    }
   };
 
   const groups = {};
@@ -989,19 +1002,34 @@ function render1296() {
       const altKatKisa = s.altk.replace(/^\d+\.\d+\.\d+\.\s*/,'').replace(/^\d+\.\d+\.\s*/,'');
       const bgHover    = cv==='bos' ? 'rgba(255,255,255,0.02)' : rs.bg.replace('0.04','0.08').replace('0.05','0.09');
 
-      html += `<div style="display:grid;grid-template-columns:90px 160px 180px 1fr 130px 50px;gap:0;border-bottom:${idx<items.length-1?'1px solid rgba(255,255,255,0.04)':'none'};background:${rs.bg};border-left:3px solid ${rs.left}"
-        onmouseover="this.style.background='${bgHover}'"
-        onmouseout="this.style.background='${rs.bg}'">
-        <div style="padding:10px 12px;display:flex;align-items:center"><span style="font-size:10px;font-family:monospace;color:var(--teal);font-weight:600">${s.tn}</span></div>
-        <div style="padding:10px 8px;display:flex;align-items:center"><span style="font-size:10px;color:var(--text3);line-height:1.35">${altKatKisa}</span></div>
-        <div style="padding:10px 8px;display:flex;align-items:center"><span style="font-size:11px;color:var(--text2);font-weight:500;line-height:1.4">${s.ta}</span></div>
-        <div style="padding:10px 12px;display:flex;align-items:center"><span style="font-size:12px;color:var(--text);line-height:1.5">${s.q}</span></div>
-        <div style="padding:10px 8px;display:flex;align-items:center;justify-content:center">
-          <span style="display:inline-block;background:${cr.bg};color:${cr.color};font-size:11px;font-weight:600;padding:4px 10px;border-radius:12px;text-align:center;white-space:nowrap">${cr.label}</span>
+      const bulguMetni = cv === 'evet'
+        ? `✅ <strong>${s.ta}</strong> tedbiri kurumda uygulanmaktadır.`
+        : cv === 'hayir'
+        ? `❌ Yapılan incelemede <strong>${s.ta}</strong> kapsamındaki gereklilikler kurumda uygulanmamaktadır. ${altKatKisa} alanında tanımlı bir süreç veya kontrol mekanizması bulunmamaktadır. Bu durum BİGR rehberinin ${s.tn} numaralı tedbir maddesine doğrudan aykırılık teşkil etmektedir.`
+        : cv === 'kismi'
+        ? `🟡 <strong>${s.ta}</strong> kapsamında kısmi uygulama tespit edilmiştir.${parentQ?.obs ? ' ' + parentQ.obs + '.' : ''} Bu tedbirin tam olarak uygulanması için: ${s.q}`
+        : '';
+
+      html += `<div style="border-bottom:${idx<items.length-1?'1px solid rgba(255,255,255,0.04)':'none'}">
+        <div style="display:grid;grid-template-columns:90px 160px 180px 1fr 130px 50px;gap:0;background:${rs.bg};border-left:3px solid ${rs.left};cursor:${cv!=='bos'?'pointer':'default'}"
+          onmouseover="this.style.background='${bgHover}'"
+          onmouseout="this.style.background='${rs.bg}'"
+          ${cv !== 'bos' ? `onclick="const b=document.getElementById('b1296-${s.i}');if(b){b.style.display=b.style.display==='block'?'none':'block'}"` : ''}>
+          <div style="padding:10px 12px;display:flex;align-items:center"><span style="font-size:10px;font-family:monospace;color:var(--teal);font-weight:600">${s.tn}</span></div>
+          <div style="padding:10px 8px;display:flex;align-items:center"><span style="font-size:10px;color:var(--text3);line-height:1.35">${altKatKisa}</span></div>
+          <div style="padding:10px 8px;display:flex;align-items:center"><span style="font-size:11px;color:var(--text2);font-weight:500;line-height:1.4">${s.ta}</span></div>
+          <div style="padding:10px 12px;display:flex;align-items:center"><span style="font-size:12px;color:var(--text);line-height:1.5">${s.q}</span></div>
+          <div style="padding:10px 8px;display:flex;align-items:center;justify-content:center">
+            <span style="display:inline-block;background:${cr.bg};color:${cr.color};font-size:11px;font-weight:600;padding:4px 10px;border-radius:12px;text-align:center;white-space:nowrap">${cr.label}</span>
+          </div>
+          <div style="padding:10px 8px;display:flex;align-items:center;justify-content:center" title="${parentQ ? parentQ.tedbir : ''}">
+            <span style="font-size:10px;color:var(--teal);font-family:monospace;font-weight:600;background:var(--teal-soft);padding:3px 7px;border-radius:8px">S${s.p}</span>
+          </div>
         </div>
-        <div style="padding:10px 8px;display:flex;align-items:center;justify-content:center" title="${parentQ ? parentQ.tedbir : ''}">
-          <span style="font-size:10px;color:var(--teal);font-family:monospace;font-weight:600;background:var(--teal-soft);padding:3px 7px;border-radius:8px">S${s.p}</span>
-        </div>
+        ${cv !== 'bos' ? `
+        <div id="b1296-${s.i}" style="display:none;padding:10px 16px 12px 16px;background:rgba(255,255,255,0.03);border-left:3px solid ${rs.left}">
+          <div style="font-size:11px;color:#cbd5e1;line-height:1.75">${bulguMetni}</div>
+        </div>` : ''}
       </div>`;
     });
 
