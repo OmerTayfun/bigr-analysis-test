@@ -499,7 +499,7 @@ function buildRiskKategorileriHTML(q, cv) {
         : `Eksikliğin giderilmemesi durumunda bütçelenmemiş güvenlik maliyetleri ve beklenmedik mali yükler gündeme gelebilir.`
     },
     {
-      icon: '⚖️', name: 'HUKUKİ', color: '#60a5fa',
+      icon: '⚖️', name: 'MEVZUAT', color: '#60a5fa',
       etki: s(isKisiselVeri?10:k===3?8:k===2?7:5, isKisiselVeri?8:k===3?6:k===2?5:3),
       olas: s(isKisiselVeri?9:k===3?7:k===2?6:4, isKisiselVeri?7:k===3?5:k===2?4:3),
       desc: isKisiselVeri
