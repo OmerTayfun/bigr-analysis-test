@@ -320,9 +320,13 @@ function setCevap(val) {
   const oncekiCevap = mevcut.c || null;
   const obsTemizle  = oncekiCevap && oncekiCevap !== val;
 
+  const otomatikNot = val === 'kapsam'
+    ? `${q.tedbir} kontrolü kurumun mevcut yapısı ve faaliyet kapsamı itibarıyla bu denetim döneminde kapsam dışında değerlendirilmiştir.`
+    : '';
+
   STATE.cevaplar[q.id] = {
     c:     val,
-    obs:   obsTemizle ? '' : (mevcut.obs   || ''),
+    obs:   obsTemizle ? otomatikNot : (mevcut.obs || otomatikNot),
     bulgu: obsTemizle ? '' : (val === 'evet' ? '' : (mevcut.bulgu || ''))
   };
 
