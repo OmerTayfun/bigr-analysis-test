@@ -1147,11 +1147,20 @@ async function tekBulguUret(tedbirIdx) {
   }
 
   const obs = parentQ?.obs || '';
-  const prompt = `BİGR denetim bulgusu yaz. 2 cümle, resmi üslup, Türkçe.
-Tedbir: ${s.ta} (${s.tn})
-Durum: ${cv === 'kismi' ? 'Kısmen uygulanıyor' : 'Uygulanmıyor'}
-${obs ? 'Gözlem: ' + obs : ''}
-Sadece bulgu metnini yaz.`;
+  const parentOneri = (parentQ?.oneri || '').substring(0, 200);
+
+  const prompt = `Sen kıdemli bir BİGR baş denetçisisin. Aşağıdaki tedbire özgü denetim bulgusu yaz.
+
+TEDBİR: ${s.ta} (${s.tn})
+DENETİM SORUSU: ${s.q}
+UYGULAMA DURUMU: ${cv === 'kismi' ? 'Kısmen uygulanıyor' : 'Uygulanmıyor'}${obs ? '\nDANIŞMAN GÖZLEMI: ' + obs : ''}${parentOneri ? '\nBİGR ÖNERİSİ: ' + parentOneri : ''}
+
+Kurallar:
+- Tam olarak 2 cümle yaz
+- Resmi denetim üslubu kullan
+- Bu tedbire özgü, spesifik bir bulgu olsun
+- Genel kalıplar ve tekrar eden ifadeler kullanma
+- Sadece bulgu metnini yaz, başlık veya açıklama ekleme`;
 
   try {
     const resp = await fetch(
