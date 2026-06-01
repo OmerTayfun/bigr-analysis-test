@@ -205,6 +205,16 @@ function navigate(dir) {
   const list = filteredList();
   const pos  = list.findIndex(s => s === SORULAR_100[STATE.currentIdx]);
   const np   = pos + dir;
+
+  // İleri giderken cevap kontrolü
+  if (dir === 1) {
+    const mevcutQ = SORULAR_100[STATE.currentIdx];
+    if (!STATE.cevaplar[mevcutQ.id]) {
+      toast('⚠️ Lütfen önce bu soruyu yanıtlayın', 'error');
+      return;
+    }
+  }
+
   if (np >= 0 && np < list.length) {
     STATE.currentIdx = SORULAR_100.indexOf(list[np]);
     renderQuestion();
