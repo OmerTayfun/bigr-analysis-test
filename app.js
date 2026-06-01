@@ -698,7 +698,7 @@ function buildDanismanKart(q) {
   }
 
   // ── ÖNERİ KOLONU (4. KOLON) ─────────────────────────────────────
-  const oneriLines = (q.oneri || '').split(/\n|•|-/).map(s => s.trim()).filter(s => s.length > 15);
+const oneriLines = (q.oneri || '').split(/\n/).map(s => s.trim()).filter(s => s.length > 10);
   let oneriHTML = '';
   if (oneriLines.length > 0) {
     oneriLines.slice(0, 6).forEach((line, i) => {
