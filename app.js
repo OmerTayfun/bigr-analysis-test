@@ -741,10 +741,10 @@ function buildDanismanKart(q) {
     </div>
     <div style="margin-top:6px;padding:7px 10px;background:rgba(96,165,250,0.08);border-radius:6px;border-left:3px solid #60a5fa">
       <span class="dk-risk-label hukuki">Hukuki Risk</span>
-      <div class="dk-risk-text" style="font-size:12px;line-height:1.5;color:var(--text);font-weight:500">
-        ⚠️ ${cv.c === 'hayir' ? 'Yüksek Uyumsuzluk Riski: ' : 'Kısmi Uyumsuzluk Riski: '}
-        <div style="margin-top:4px;font-weight:normal;color:var(--text2);white-space:pre-line">${hukukiAks}</div>
-      </div>
+      <div class="dk-risk-text" style="font-size:12px;line-height:1.5;color:#dc2626;font-weight:700">
+  ⚠️ ${cv.c === 'hayir' ? 'Yüksek Uyumsuzluk Riski:' : 'Kısmi Uyumsuzluk Riski:'}
+  <div style="margin-top:4px;font-weight:500;color:#1e3a5f;white-space:pre-line;font-size:11px">${hukukiAks}</div>
+</div>
     </div>
     <div style="margin-top:8px">
       <button id="risk-ai-btn-${q.id}" onclick="aiRiskAnaliziUret(${q.id})"
