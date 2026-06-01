@@ -9,7 +9,7 @@ const PAGE_SIZE_1296 = 50;
 
 // STATE nesnesine riskCache ekleyelim
 const STATE = {
-  projeAdi: "Yeni Proje",
+  projeAdi: "Yeni Proje",F
   cevaplar: {},
   cevaplar1296: {},
   riskCache: {},
@@ -1190,23 +1190,34 @@ async function tumKismenleriBulguUret() {
   if (!kismenler.length) { toast('Kısmen veya Hayır cevaplı tedbir yok', 'error'); return; }
 
   const btn = document.getElementById('btn-toplu-bulgu');
-  if (btn) { btn.disabled = true; btn.textContent = '⏳ Üretiliyor...'; }
+  const bekleyenler = kismenler.filter(s => !STATE.bulgu1296[s.i]);
+  const toplam = bekleyenler.length;
 
-  let aiSayac = 0, sablonSayac = 0;
-  
-  for (const s of kismenler) {
-    if (STATE.bulgu1296[s.i]) continue; // cache'de varsa atla
+  if (toplam === 0) { toast('Tüm bulgular zaten üretilmiş', 'success'); return; }
+
+  let aiSayac = 0, sablonSayac = 0, tamamlanan = 0;
+
+  const guncelle = () => {
+    if (btn) btn.textContent = `⏳ ${tamamlanan}/${toplam} üretiliyor...`;
+  };
+
+  if (btn) { btn.disabled = true; guncelle(); }
+
+  for (const s of bekleyenler) {
     const parentQ = SORULAR_100.find(q => q.id === s.p);
-    
+
     if (apiKey) {
       await tekBulguUret(s.i);
       if (STATE.bulgu1296[s.i]?.kaynak === 'ai') aiSayac++;
       else sablonSayac++;
-      await new Promise(r => setTimeout(r, 200)); // rate limit
+      await new Promise(r => setTimeout(r, 200));
     } else {
       STATE.bulgu1296[s.i] = { metin: sablonBulgu1296(s, parentQ), kaynak: 'sablon' };
       sablonSayac++;
     }
+
+    tamamlanan++;
+    guncelle();
   }
 
   save();
