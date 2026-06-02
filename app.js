@@ -1446,372 +1446,395 @@ function exportExcel() {
   const tarih = new Date().toLocaleDateString('tr-TR');
   const firmaAdi = STATE.projeAdi || 'Kurum Adı';
   const all = Object.values(STATE.cevaplar);
-  const evet = all.filter(v => v.c === 'evet').length;
+  const evet  = all.filter(v => v.c === 'evet').length;
   const kismi = all.filter(v => v.c === 'kismi').length;
   const hayir = all.filter(v => v.c === 'hayir').length;
-  const kapsam = all.filter(v => v.c === 'kapsam').length;
-  const total = evet + kismi + hayir + kapsam;
+  const kapsam= all.filter(v => v.c === 'kapsam').length;
   const skorBaz = evet + kismi + hayir;
-  const skor = skorBaz > 0 ? Math.round(100 * (evet + kismi * 0.5) / skorBaz) : 0;
+  const skor = skorBaz > 0 ? Math.round(100*(evet+kismi*0.5)/skorBaz) : 0;
 
-  // ── RENK PALETİ ──────────────────────────────────────────
-  const RENK = {
-    baslik:    { fgColor: { rgb: 'D4AF4A' } },  // altın sarısı
-    koyu:      { fgColor: { rgb: '0F1C2E' } },  // koyu lacivert
-    orta:      { fgColor: { rgb: '1A2D44' } },  // orta lacivert
-    acik:      { fgColor: { rgb: 'EFF3F8' } },  // açık gri
-    beyaz:     { fgColor: { rgb: 'FFFFFF' } },
-    yesil:     { fgColor: { rgb: '10B981' } },
-    yesilaçik: { fgColor: { rgb: 'D1FAE5' } },
-    sari:      { fgColor: { rgb: 'F59E0B' } },
-    sariaçik:  { fgColor: { rgb: 'FEF3C7' } },
-    kirmizi:   { fgColor: { rgb: 'EF4444' } },
-    kirmiziAçik:{ fgColor:{ rgb: 'FEE2E2' } },
-    morAçik:   { fgColor: { rgb: 'EDE9FE' } },
-    griAçik:   { fgColor: { rgb: 'F1F5F9' } },
-  };
-
-  const FONT = {
-    baslik:    { name: 'Calibri', sz: 20, bold: true, color: { rgb: 'D4AF4A' } },
-    altbaslik: { name: 'Calibri', sz: 12, bold: true, color: { rgb: 'FFFFFF' } },
-    beyaz:     { name: 'Calibri', sz: 11, bold: true, color: { rgb: 'FFFFFF' } },
-    koyu:      { name: 'Calibri', sz: 11, bold: true, color: { rgb: '0F1C2E' } },
-    normal:    { name: 'Calibri', sz: 10, color: { rgb: '1E293B' } },
-    kucuk:     { name: 'Calibri', sz: 9, color: { rgb: '64748B' } },
-    yesil:     { name: 'Calibri', sz: 10, bold: true, color: { rgb: '065F46' } },
-    sari:      { name: 'Calibri', sz: 10, bold: true, color: { rgb: '92400E' } },
-    kirmizi:   { name: 'Calibri', sz: 10, bold: true, color: { rgb: '991B1B' } },
-    altın:     { name: 'Calibri', sz: 11, bold: true, color: { rgb: 'D4AF4A' } },
-  };
-
-  const BORDER = {
-    ince: {
-      top:    { style: 'thin', color: { rgb: 'CBD5E1' } },
-      bottom: { style: 'thin', color: { rgb: 'CBD5E1' } },
-      left:   { style: 'thin', color: { rgb: 'CBD5E1' } },
-      right:  { style: 'thin', color: { rgb: 'CBD5E1' } },
-    },
-    orta: {
-      top:    { style: 'medium', color: { rgb: 'D4AF4A' } },
-      bottom: { style: 'medium', color: { rgb: 'D4AF4A' } },
-      left:   { style: 'medium', color: { rgb: 'D4AF4A' } },
-      right:  { style: 'medium', color: { rgb: 'D4AF4A' } },
-    }
-  };
-
-  const hizaOrta = { horizontal: 'center', vertical: 'center', wrapText: true };
-  const hizaSol  = { horizontal: 'left',   vertical: 'center', wrapText: true };
-
-  // Hücre yardımcısı
-  function hucre(v, font, fill, alignment, border) {
+  // ── YARDIMCI FONKSİYONLAR ──────────────────────────────
+  function C(v, font, bgRGB, align, border) {
     const c = { v, t: typeof v === 'number' ? 'n' : 's' };
     const s = {};
-    if (font)      s.font = font;
-    if (fill)      s.fill = { patternType: 'solid', ...fill };
-    if (alignment) s.alignment = alignment;
-    if (border)    s.border = border;
+    if (font)   s.font = font;
+    if (bgRGB)  s.fill = { patternType: 'solid', fgColor: { rgb: bgRGB } };
+    if (align)  s.alignment = align;
+    if (border) s.border = border;
     if (Object.keys(s).length) c.s = s;
     return c;
   }
+  const BOŞ = (bg) => C('', null, bg, null, null);
+  const ORTA = { horizontal: 'center', vertical: 'center', wrapText: true };
+  const SOL  = { horizontal: 'left',   vertical: 'center', wrapText: true };
+  const SAĞ  = { horizontal: 'right',  vertical: 'center', wrapText: true };
 
-  function bos(fill) {
-    return hucre('', null, fill, null, null);
+  // Border tanımları
+  const B_İNCE = {
+    top:    { style:'thin',   color:{rgb:'CBD5E1'} },
+    bottom: { style:'thin',   color:{rgb:'CBD5E1'} },
+    left:   { style:'thin',   color:{rgb:'CBD5E1'} },
+    right:  { style:'thin',   color:{rgb:'CBD5E1'} }
+  };
+  const B_ALTIN = {
+    top:    { style:'medium', color:{rgb:'D4AF4A'} },
+    bottom: { style:'medium', color:{rgb:'D4AF4A'} },
+    left:   { style:'medium', color:{rgb:'D4AF4A'} },
+    right:  { style:'medium', color:{rgb:'D4AF4A'} }
+  };
+  const B_KOYU = {
+    top:    { style:'medium', color:{rgb:'1A3A5C'} },
+    bottom: { style:'medium', color:{rgb:'1A3A5C'} },
+    left:   { style:'medium', color:{rgb:'1A3A5C'} },
+    right:  { style:'medium', color:{rgb:'1A3A5C'} }
+  };
+  const B_YESIL = {
+    top:    { style:'medium', color:{rgb:'059669'} },
+    bottom: { style:'medium', color:{rgb:'059669'} },
+    left:   { style:'medium', color:{rgb:'059669'} },
+    right:  { style:'medium', color:{rgb:'059669'} }
+  };
+
+  // Renk sabitleri
+  const KOY = '0D1B2E'; // en koyu lacivert
+  const LAC = '1A2D44'; // lacivert
+  const ORT = '243B55'; // orta lacivert
+  const ACK = 'EFF4FB'; // açık mavi-gri
+  const BYZ = 'FFFFFF';
+  const ALT = 'D4AF4A'; // altın
+  const AL2 = 'F5E49C'; // açık altın
+  const YSL = '059669'; // koyu yeşil
+  const YSA = 'D1FAE5'; // açık yeşil
+  const SAR = 'D97706'; // koyu sarı
+  const SAA = 'FEF3C7'; // açık sarı
+  const KIR = 'DC2626'; // koyu kırmızı
+  const KIA = 'FEE2E2'; // açık kırmızı
+  const MOR = '7C3AED'; // mor
+  const MOA = 'EDE9FE'; // açık mor
+  const GRI = '64748B'; // gri
+  const GRA = 'F1F5F9'; // açık gri
+
+  // Font tanımları
+  const F = {
+    baslik:   { name:'Calibri', sz:22, bold:true,  color:{rgb:ALT} },
+    altbaslik:{ name:'Calibri', sz:12, bold:true,  color:{rgb:BYZ} },
+    beyazB:   { name:'Calibri', sz:11, bold:true,  color:{rgb:BYZ} },
+    altinB:   { name:'Calibri', sz:11, bold:true,  color:{rgb:ALT} },
+    koyuB:    { name:'Calibri', sz:11, bold:true,  color:{rgb:KOY} },
+    normal:   { name:'Calibri', sz:10,              color:{rgb:'1E293B'} },
+    kucuk:    { name:'Calibri', sz:9,               color:{rgb:GRI} },
+    yesilB:   { name:'Calibri', sz:10, bold:true,  color:{rgb:YSL} },
+    sariB:    { name:'Calibri', sz:10, bold:true,  color:{rgb:SAR} },
+    kirmizB:  { name:'Calibri', sz:10, bold:true,  color:{rgb:KIR} },
+    morB:     { name:'Calibri', sz:10, bold:true,  color:{rgb:MOR} },
+    griN:     { name:'Calibri', sz:10,              color:{rgb:GRI} },
+    mono:     { name:'Courier New', sz:9, bold:true,color:{rgb:'1E293B'} },
+  };
+
+  function set(ws, col, row, cell) {
+    ws[XLSX.utils.encode_cell({ c: col, r: row })] = cell;
+  }
+  function satir(ws, row, cols, cells) {
+    cols.forEach((col, i) => { if(cells[i]) set(ws, col, row, cells[i]); });
+  }
+  function blokDoldur(ws, r, c1, c2, bg) {
+    for (let c = c1; c <= c2; c++) set(ws, c, r, BOŞ(bg));
   }
 
   // ══════════════════════════════════════════════════════════
-  // SAYFA 1: YÖNETİM ÖZETİ
+  // SAYFA 1 — YÖNETİM ÖZETİ
   // ══════════════════════════════════════════════════════════
-  const ws1 = {};
-  let r = 0;
+  const ws1 = {}; let R = 0;
+  const S1 = (c,r,cell) => set(ws1,c,r,cell);
+  const NCOL = 8; // toplam sütun
 
-  const s1set = (col, row, cell) => {
-    const addr = XLSX.utils.encode_cell({ c: col, r: row });
-    ws1[addr] = cell;
-  };
+  // ── Başlık bandı (3 satır, tam genişlik)
+  S1(0,R, C('BİLGİ GÜVENLİĞİ GAP ANALİZİ', F.baslik, KOY, ORTA, B_ALTIN));
+  blokDoldur(ws1, R, 1, NCOL-1, KOY); R++;
 
-  // Başlık alanı (A1:G3)
-  s1set(0, r, hucre('BİLGİ GÜVENLİĞİ GAP ANALİZİ', FONT.baslik, RENK.koyu, hizaOrta, BORDER.orta));
-  for (let c = 1; c <= 6; c++) s1set(c, r, bos(RENK.koyu));
-  r++;
-  s1set(0, r, hucre(firmaAdi + ' — Uyumluluk Değerlendirme Raporu', FONT.altbaslik, RENK.koyu, hizaOrta, null));
-  for (let c = 1; c <= 6; c++) s1set(c, r, bos(RENK.koyu));
-  r++;
-  s1set(0, r, hucre(tarih + ' tarihi itibarıyla hazırlanmıştır.', { name: 'Calibri', sz: 10, italic: true, color: { rgb: 'D4AF4A' } }, RENK.koyu, hizaOrta, null));
-  for (let c = 1; c <= 6; c++) s1set(c, r, bos(RENK.koyu));
-  r += 2;
+  S1(0,R, C(firmaAdi.toUpperCase() + ' — UYUMLULUK DEĞERLENDİRME RAPORU', F.altbaslik, LAC, ORTA, null));
+  blokDoldur(ws1, R, 1, NCOL-1, LAC); R++;
 
-  // Uyum skoru kartı
-  const skorRenk = skor >= 70 ? RENK.yesilaçik : skor >= 40 ? RENK.sariaçik : RENK.kirmiziAçik;
-  const skorFont = skor >= 70 ? { name:'Calibri',sz:28,bold:true,color:{rgb:'065F46'} } :
-                   skor >= 40 ? { name:'Calibri',sz:28,bold:true,color:{rgb:'92400E'} } :
-                                { name:'Calibri',sz:28,bold:true,color:{rgb:'991B1B'} };
-  s1set(0, r, hucre('GENEL UYUM SKORU', { name:'Calibri',sz:11,bold:true,color:{rgb:'1E293B'} }, RENK.acik, hizaOrta, BORDER.ince));
-  s1set(1, r, bos(RENK.acik));
-  s1set(2, r, hucre(skor + '%', skorFont, skorRenk, hizaOrta, BORDER.orta));
-  s1set(3, r, bos(skorRenk));
-  s1set(4, r, hucre(total + '/100 Kontrol Yanıtlandı', FONT.normal, RENK.acik, hizaOrta, BORDER.ince));
-  s1set(5, r, bos(RENK.acik));
-  s1set(6, r, bos(RENK.acik));
-  r++;
-  s1set(0, r, hucre('Değerlendirme Tarihi: ' + tarih, FONT.kucuk, RENK.acik, hizaOrta, BORDER.ince));
-  s1set(1, r, bos(RENK.acik));
-  s1set(2, r, bos(skorRenk));
-  s1set(3, r, bos(skorRenk));
-  s1set(4, r, bos(RENK.acik)); s1set(5, r, bos(RENK.acik)); s1set(6, r, bos(RENK.acik));
-  r += 2;
+  S1(0,R, C('Rapor Tarihi: ' + tarih + '   |   BİGR & KVKK Kapsamı   |   ' + (evet+kismi+hayir+kapsam) + '/100 Kontrol', { name:'Calibri',sz:10,italic:true,color:{rgb:AL2} }, ORT, ORTA, null));
+  blokDoldur(ws1, R, 1, NCOL-1, ORT); R += 2;
 
-  // Özet sayılar
-  const ozetKartlar = [
-    { baslik: '✅ Uyumlu', deger: evet, alt: evet+' kontrol', fill: RENK.yesilaçik, font: FONT.yesil },
-    { baslik: '🟡 Kısmen', deger: kismi, alt: kismi+' kontrol', fill: RENK.sariaçik, font: FONT.sari },
-    { baslik: '❌ Uyumsuz', deger: hayir, alt: hayir+' kontrol', fill: RENK.kirmiziAçik, font: FONT.kirmizi },
-    { baslik: '⬜ Kapsam Dışı', deger: kapsam, alt: kapsam+' kontrol', fill: RENK.griAçik, font: FONT.normal },
-    { baslik: '📋 Toplam Bulgu', deger: kismi+hayir, alt: 'Hayır+Kısmen', fill: RENK.morAçik, font: { name:'Calibri',sz:10,bold:true,color:{rgb:'5B21B6'} } },
+  // ── Uyum skoru büyük kart
+  const skBg = skor>=70 ? YSA : skor>=40 ? SAA : KIA;
+  const skFg = skor>=70 ? YSL : skor>=40 ? SAR : KIR;
+  const skLabel = skor>=70 ? '✅  UYUMLU SEVİYE' : skor>=40 ? '⚠️  GELİŞTİRİLEBİLİR' : '❌  KRİTİK SEVİYE';
+
+  // Sol: skor kutusu (4 sütun)
+  S1(0,R, C('GENEL UYUM SKORU', {name:'Calibri',sz:11,bold:true,color:{rgb:'475569'}}, ACK, ORTA, B_KOYU));
+  blokDoldur(ws1, R, 1, 3, ACK);
+  // Sağ: durum etiketi (4 sütun)
+  S1(4,R, C(skLabel, {name:'Calibri',sz:12,bold:true,color:{rgb:skFg}}, skBg, ORTA, B_KOYU));
+  blokDoldur(ws1, R, 5, NCOL-1, skBg); R++;
+
+  S1(0,R, C(skor+'%', {name:'Calibri',sz:36,bold:true,color:{rgb:skFg}}, skBg, ORTA, B_KOYU));
+  blokDoldur(ws1, R, 1, 3, skBg);
+  S1(4,R, C(skorBaz+'/100 kontrol yanıtlandı', {name:'Calibri',sz:13,bold:true,color:{rgb:skFg}}, skBg, ORTA, B_KOYU));
+  blokDoldur(ws1, R, 5, NCOL-1, skBg); R++;
+
+  S1(0,R, C('Ağırlıklı ortalama (Evet=1, Kısmen=0.5)', {name:'Calibri',sz:9,italic:true,color:{rgb:GRI}}, ACK, ORTA, B_KOYU));
+  blokDoldur(ws1, R, 1, 3, ACK);
+  S1(4,R, C('Firma: ' + firmaAdi, {name:'Calibri',sz:10,color:{rgb:'475569'}}, skBg, ORTA, B_KOYU));
+  blokDoldur(ws1, R, 5, NCOL-1, skBg); R += 2;
+
+  // ── 5 metrik kart (tek satır)
+  const kartlar = [
+    { lbl:'✅ UYUMLU',       val:evet,      alt:evet+' kontrol',    bg:YSA, fg:YSL, bg2:YSA },
+    { lbl:'🟡 KISMİ',        val:kismi,     alt:kismi+' kontrol',   bg:SAA, fg:SAR, bg2:SAA },
+    { lbl:'❌ UYUMSUZ',      val:hayir,     alt:hayir+' kontrol',   bg:KIA, fg:KIR, bg2:KIA },
+    { lbl:'⬜ KAPSAM DIŞI',  val:kapsam,    alt:kapsam+' kontrol',  bg:GRA, fg:GRI, bg2:GRA },
+    { lbl:'📋 TOPLAM BULGU', val:kismi+hayir, alt:'Hayır + Kısmen', bg:MOA, fg:MOR, bg2:MOA },
   ];
 
-  // Özet kartları 2 sütun olarak yay
-  ozetKartlar.forEach((k, i) => {
-    const col = (i % 3) * 2;
-    if (i % 3 === 0 && i > 0) r += 3;
-    if (i === 0 || i === 3) {
-      // Başlık satırı
-    }
-    s1set(col, r, hucre(k.baslik, { name:'Calibri',sz:10,bold:true,color:{rgb:'1E293B'} }, k.fill, hizaOrta, BORDER.ince));
-    s1set(col+1, r, bos(k.fill));
-  });
-  r++;
-  ozetKartlar.forEach((k, i) => {
-    const col = (i % 3) * 2;
-    s1set(col, r, hucre(k.deger, { name:'Calibri',sz:24,bold:true,color:k.font.color }, k.fill, hizaOrta, BORDER.ince));
-    s1set(col+1, r, bos(k.fill));
-  });
-  r++;
-  ozetKartlar.forEach((k, i) => {
-    const col = (i % 3) * 2;
-    s1set(col, r, hucre(k.alt, { name:'Calibri',sz:9,color:{rgb:'64748B'} }, k.fill, hizaOrta, BORDER.ince));
-    s1set(col+1, r, bos(k.fill));
-  });
-  r += 2;
+  // 5 kart × 8 sütun = ~1.6 sütun per kart — 2'şer sütun kullanalım
+  // Başlık satırı
+  const kartCols = [0,2,4,6,8]; // 10 sütun olacak
+  kartlar.forEach((k,i) => {
+    const c = i * 2;
+    S1(c,R, C(k.lbl, {name:'Calibri',sz:10,bold:true,color:{rgb:k.fg}}, k.bg, ORTA, B_İNCE));
+    S1(c+1,R, BOŞ(k.bg));
+  }); R++;
+  kartlar.forEach((k,i) => {
+    const c = i * 2;
+    S1(c,R, C(k.val, {name:'Calibri',sz:28,bold:true,color:{rgb:k.fg}}, k.bg2, ORTA, B_İNCE));
+    S1(c+1,R, BOŞ(k.bg2));
+  }); R++;
+  kartlar.forEach((k,i) => {
+    const c = i * 2;
+    S1(c,R, C(k.alt, {name:'Calibri',sz:9,color:{rgb:GRI}}, k.bg, ORTA, B_İNCE));
+    S1(c+1,R, BOŞ(k.bg));
+  }); R += 2;
 
-  // Kategori tablosu başlığı
-  const katCols = ['KATEGORİ', 'UYUMLU', 'KISMİ', 'UYUMSUZ', 'TOP.', 'UYUM %', 'DURUM'];
-  const katColFonts = [FONT.beyaz, FONT.beyaz, FONT.beyaz, FONT.beyaz, FONT.beyaz, FONT.beyaz, FONT.beyaz];
-  katCols.forEach((h, i) => {
-    s1set(i, r, hucre(h, katColFonts[i], RENK.koyu, hizaOrta, BORDER.ince));
-  });
-  r++;
+  // ── Kategori tablosu
+  S1(0,R, C('KATEGORİ ANALİZİ', F.altbaslik, LAC, SOL, null));
+  blokDoldur(ws1, R, 1, 9, LAC); R++;
+
+  const katHdr = ['KATEGORİ','UYUMLU','KISMİ','UYUMSUZ','KAPSAM DIŞI','TOPLAM','UYUM %','DURUM','TEDBİR SAYISI'];
+  katHdr.forEach((h,i) => {
+    S1(i,R, C(h, F.beyazB, KOY, ORTA, B_İNCE));
+  }); R++;
 
   CATEGORIES.forEach((cat, idx) => {
-    const qs = SORULAR_100.filter(q => q.anaKat === cat && STATE.cevaplar[q.id]);
-    const ce = qs.filter(q => STATE.cevaplar[q.id].c === 'evet').length;
-    const ck = qs.filter(q => STATE.cevaplar[q.id].c === 'kismi').length;
-    const ch = qs.filter(q => STATE.cevaplar[q.id].c === 'hayir').length;
-    const ct = qs.length;
-    const cs = ct > 0 ? Math.round(100*(ce+ck*0.5)/ct) : 0;
-    const rowFill = idx % 2 === 0 ? RENK.acik : RENK.beyaz;
-    const skorFill = cs >= 70 ? RENK.yesilaçik : cs >= 40 ? RENK.sariaçik : cs > 0 ? RENK.kirmiziAçik : RENK.griAçik;
-    const skorF = cs >= 70 ? FONT.yesil : cs >= 40 ? FONT.sari : cs > 0 ? FONT.kirmizi : FONT.normal;
-    const durum = cs >= 70 ? '✅ İyi' : cs >= 40 ? '⚠️ Dikkat' : cs > 0 ? '❌ Kritik' : '— Değerlendirilmedi';
+    const qs = SORULAR_100.filter(q => q.anaKat===cat);
+    const ce = qs.filter(q=>STATE.cevaplar[q.id]?.c==='evet').length;
+    const ck = qs.filter(q=>STATE.cevaplar[q.id]?.c==='kismi').length;
+    const ch = qs.filter(q=>STATE.cevaplar[q.id]?.c==='hayir').length;
+    const cc = qs.filter(q=>STATE.cevaplar[q.id]?.c==='kapsam').length;
+    const ct = qs.filter(q=>STATE.cevaplar[q.id]).length;
+    const cs = ct>0 ? Math.round(100*(ce+ck*0.5)/ct) : 0;
+    const rf = idx%2===0 ? ACK : BYZ;
+    const sf = cs>=70?YSA:cs>=40?SAA:cs>0?KIA:GRA;
+    const sfont = cs>=70?F.yesilB:cs>=40?F.sariB:cs>0?F.kirmizB:F.griN;
+    const durum = cs>=70?'✅ İyi':cs>=40?'⚠️ Dikkat':cs>0?'❌ Kritik':'— Değerlendirilmedi';
+    const tSay = qs.reduce((s,q)=>s+(q.kapsananSayi||0),0);
 
-    s1set(0, r, hucre(shortCat(cat), FONT.normal, rowFill, hizaSol, BORDER.ince));
-    s1set(1, r, hucre(ce, { name:'Calibri',sz:10,bold:true,color:{rgb:'065F46'} }, rowFill, hizaOrta, BORDER.ince));
-    s1set(2, r, hucre(ck, { name:'Calibri',sz:10,bold:true,color:{rgb:'92400E'} }, rowFill, hizaOrta, BORDER.ince));
-    s1set(3, r, hucre(ch, { name:'Calibri',sz:10,bold:true,color:{rgb:'991B1B'} }, rowFill, hizaOrta, BORDER.ince));
-    s1set(4, r, hucre(ct, FONT.normal, rowFill, hizaOrta, BORDER.ince));
-    s1set(5, r, hucre(cs + '%', skorF, skorFill, hizaOrta, BORDER.ince));
-    s1set(6, r, hucre(durum, skorF, skorFill, hizaOrta, BORDER.ince));
-    r++;
+    S1(0,R, C(shortCat(cat), F.normal, rf, SOL, B_İNCE));
+    S1(1,R, C(ce, {name:'Calibri',sz:10,bold:true,color:{rgb:YSL}}, rf, ORTA, B_İNCE));
+    S1(2,R, C(ck, {name:'Calibri',sz:10,bold:true,color:{rgb:SAR}}, rf, ORTA, B_İNCE));
+    S1(3,R, C(ch, {name:'Calibri',sz:10,bold:true,color:{rgb:KIR}}, rf, ORTA, B_İNCE));
+    S1(4,R, C(cc, F.griN, rf, ORTA, B_İNCE));
+    S1(5,R, C(ct, F.normal, rf, ORTA, B_İNCE));
+    S1(6,R, C(cs+'%', sfont, sf, ORTA, B_İNCE));
+    S1(7,R, C(durum, sfont, sf, ORTA, B_İNCE));
+    S1(8,R, C(tSay, F.kucuk, rf, ORTA, B_İNCE));
+    R++;
   });
 
-  // Merge cells
-  const s1merges = [
-    { s:{r:0,c:0}, e:{r:0,c:6} },
-    { s:{r:1,c:0}, e:{r:1,c:6} },
-    { s:{r:2,c:0}, e:{r:2,c:6} },
-    { s:{r:4,c:0}, e:{r:4,c:1} },
-    { s:{r:4,c:2}, e:{r:4,c:3} },
-    { s:{r:4,c:4}, e:{r:4,c:6} },
-    { s:{r:5,c:0}, e:{r:5,c:1} },
-    { s:{r:5,c:2}, e:{r:5,c:3} },
-    { s:{r:5,c:4}, e:{r:5,c:6} },
+  ws1['!ref'] = XLSX.utils.encode_range({s:{r:0,c:0},e:{r:R+2,c:9}});
+  ws1['!merges'] = [
+    {s:{r:0,c:0},e:{r:0,c:9}},{s:{r:1,c:0},e:{r:1,c:9}},{s:{r:2,c:0},e:{r:2,c:9}},
+    {s:{r:4,c:0},e:{r:4,c:3}},{s:{r:4,c:4},e:{r:4,c:9}},
+    {s:{r:5,c:0},e:{r:5,c:3}},{s:{r:5,c:4},e:{r:5,c:9}},
+    {s:{r:6,c:0},e:{r:6,c:3}},{s:{r:6,c:4},e:{r:6,c:9}},
   ];
-
-  ws1['!ref'] = XLSX.utils.encode_range({ s:{r:0,c:0}, e:{r:r,c:6} });
-  ws1['!merges'] = s1merges;
-  ws1['!cols'] = [{wch:32},{wch:10},{wch:10},{wch:10},{wch:8},{wch:10},{wch:18}];
-  ws1['!rows'] = [{hpt:36},{hpt:22},{hpt:18}];
+  ws1['!cols'] = [{wch:30},{wch:9},{wch:9},{wch:9},{wch:12},{wch:9},{wch:9},{wch:18},{wch:14}];
+  ws1['!rows'] = [{hpt:40},{hpt:22},{hpt:16},{hpt:8},{hpt:22},{hpt:38},{hpt:16}];
   XLSX.utils.book_append_sheet(wb, ws1, '📊 Yönetim Özeti');
 
   // ══════════════════════════════════════════════════════════
-  // SAYFA 2: BULGULAR RAPORU
+  // SAYFA 2 — BULGULAR RAPORU
   // ══════════════════════════════════════════════════════════
-  const ws2 = {};
-  let r2 = 0;
+  const ws2 = {}; let R2 = 0;
+  const S2 = (c,r,cell) => set(ws2,c,r,cell);
 
-  const s2set = (col, row, cell) => {
-    ws2[XLSX.utils.encode_cell({ c: col, r: row })] = cell;
-  };
+  S2(0,R2, C('BULGULAR VE TESPİTLER RAPORU', {name:'Calibri',sz:22,bold:true,color:{rgb:'FCA5A5'}}, KIR, ORTA, B_ALTIN));
+  for(let c=1;c<=8;c++) S2(c,R2,BOŞ(KIR)); R2++;
+  S2(0,R2, C(firmaAdi+' | '+tarih+' | Toplam '+(kismi+hayir)+' Bulgu', F.altbaslik, LAC, ORTA, null));
+  for(let c=1;c<=8;c++) S2(c,R2,BOŞ(LAC)); R2++;
+  // Risk renk açıklaması
+  S2(0,R2, C('🔴 Çok Riskli', {name:'Calibri',sz:9,bold:true,color:{rgb:KIR}}, KIA, ORTA, B_İNCE));
+  S2(1,R2, C('🟡 Riskli', {name:'Calibri',sz:9,bold:true,color:{rgb:SAR}}, SAA, ORTA, B_İNCE));
+  S2(2,R2, C('🟣 Orta Riskli', {name:'Calibri',sz:9,bold:true,color:{rgb:MOR}}, MOA, ORTA, B_İNCE));
+  for(let c=3;c<=8;c++) S2(c,R2,BOŞ(GRA));
+  R2 += 2;
 
-  // Başlık
-  s2set(0, r2, hucre('BULGULAR VE TESPİTLER RAPORU', FONT.baslik, RENK.koyu, hizaOrta, BORDER.orta));
-  for (let c = 1; c <= 7; c++) s2set(c, r2, bos(RENK.koyu));
-  r2++;
-  s2set(0, r2, hucre(firmaAdi + ' | ' + tarih, FONT.altbaslik, RENK.koyu, hizaOrta, null));
-  for (let c = 1; c <= 7; c++) s2set(c, r2, bos(RENK.koyu));
-  r2 += 2;
-
-  // Tablo başlığı
-  const bulguCols = ['#', 'Tedbir No', 'Kategori', 'Kontrol Adı', 'Risk Seviyesi', 'Tespit / Bulgu', 'Danışman Gözlemi', 'İyileştirme Önerisi'];
-  bulguCols.forEach((h, i) => {
-    s2set(i, r2, hucre(h, FONT.beyaz, RENK.koyu, hizaOrta, BORDER.ince));
-  });
-  r2++;
+  const B2hdr = ['#','Tedbir No','Alt Kategori','Kontrol Adı','Cevap','Risk Seviyesi','Tespit / Bulgu Metni','Danışman Gözlemi','İyileştirme Önerisi'];
+  const B2bg = ['3B1215','3B1215','3B1215','3B1215','3B1215','3B1215','3B1215','3B1215','3B1215'];
+  B2hdr.forEach((h,i) => {
+    S2(i,R2, C(h, {name:'Calibri',sz:10,bold:true,color:{rgb:'FECACA'}}, '3B1215', ORTA, B_İNCE));
+  }); R2++;
 
   const bulgular = SORULAR_100
-    .filter(q => { const cv = STATE.cevaplar[q.id]; return cv && (cv.c === 'hayir' || cv.c === 'kismi'); })
-    .sort((a, b) => (riskDurumu(b, STATE.cevaplar[b.id].c)?.skor||0) - (riskDurumu(a, STATE.cevaplar[a.id].c)?.skor||0));
+    .filter(q => { const cv=STATE.cevaplar[q.id]; return cv&&(cv.c==='hayir'||cv.c==='kismi'); })
+    .sort((a,b) => (riskDurumu(b,STATE.cevaplar[b.id].c)?.skor||0)-(riskDurumu(a,STATE.cevaplar[a.id].c)?.skor||0));
 
-  bulgular.forEach((q, i) => {
+  bulgular.forEach((q,i) => {
     const cv = STATE.cevaplar[q.id];
     const rd = riskDurumu(q, cv.c);
-    const rowFill = rd?.label === 'Çok Riskli' ? RENK.kirmiziAçik :
-                    rd?.label === 'Riskli'      ? RENK.sariaçik :
-                                                  RENK.morAçik;
-    const riskFont = rd?.label === 'Çok Riskli' ? FONT.kirmizi :
-                     rd?.label === 'Riskli'      ? FONT.sari : { name:'Calibri',sz:10,bold:true,color:{rgb:'5B21B6'} };
+    const rfBg  = rd?.label==='Çok Riskli'?KIA : rd?.label==='Riskli'?SAA : MOA;
+    const rfFont= rd?.label==='Çok Riskli'?F.kirmizB : rd?.label==='Riskli'?F.sariB : F.morB;
+    const sepBg = rd?.label==='Çok Riskli'?'FECACA' : rd?.label==='Riskli'?'FDE68A' : 'DDD6FE';
 
-    const tespitText = cv.bulgu || (cv.c === 'hayir'
-      ? `"${q.tedbir}" kapsamındaki gereklilikler uygulanmamaktadır. ${q.altKat} alanında tanımlı bir süreç bulunmamaktadır.`
-      : `"${q.tedbir}" alanında kısmi uygulama tespit edilmiştir.`);
+    const tespit = cv.bulgu || (cv.c==='hayir'
+      ? '"'+q.tedbir+'" kapsamındaki gereklilikler uygulanmamaktadır.'
+      : '"'+q.tedbir+'" alanında kısmi uygulama tespit edilmiştir.');
+    const oneri = (q.oneri||'').split('\n').filter(Boolean)[0] || '—';
+    const cevapLabel = cv.c==='hayir'?'❌ Hayır':'🟡 Kısmen';
 
-    s2set(0, r2, hucre(i+1, FONT.normal, rowFill, hizaOrta, BORDER.ince));
-    s2set(1, r2, hucre(q.tedbirNo, { name:'Calibri',sz:9,bold:true,color:{rgb:'1E293B'},family:3 }, rowFill, hizaOrta, BORDER.ince));
-    s2set(2, r2, hucre(shortCat(q.altKat), FONT.normal, rowFill, hizaSol, BORDER.ince));
-    s2set(3, r2, hucre(q.tedbir, { name:'Calibri',sz:10,bold:true,color:{rgb:'0F172A'} }, rowFill, hizaSol, BORDER.ince));
-    s2set(4, r2, hucre(rd?.label || 'Orta Riskli', riskFont, rowFill, hizaOrta, BORDER.ince));
-    s2set(5, r2, hucre(tespitText, FONT.normal, rowFill, hizaSol, BORDER.ince));
-    s2set(6, r2, hucre(cv.obs || '—', FONT.normal, rowFill, hizaSol, BORDER.ince));
-    s2set(7, r2, hucre((q.oneri || '').split('\n')[0] || '—', FONT.normal, rowFill, hizaSol, BORDER.ince));
-    r2++;
+    // Sol kenar renk şeridi için border
+    const leftBorder = {
+      top:   B_İNCE.top, bottom: B_İNCE.bottom, right: B_İNCE.right,
+      left:  { style:'thick', color:{rgb: rd?.label==='Çok Riskli'?KIR:rd?.label==='Riskli'?SAR:MOR} }
+    };
+
+    S2(0,R2, C(i+1, F.kucuk, rfBg, ORTA, leftBorder));
+    S2(1,R2, C(q.tedbirNo, F.mono, rfBg, ORTA, B_İNCE));
+    S2(2,R2, C(shortCat(q.altKat), F.kucuk, rfBg, SOL, B_İNCE));
+    S2(3,R2, C(q.tedbir, {name:'Calibri',sz:10,bold:true,color:{rgb:'0F172A'}}, rfBg, SOL, B_İNCE));
+    S2(4,R2, C(cevapLabel, rfFont, rfBg, ORTA, B_İNCE));
+    S2(5,R2, C(rd?.label||'Orta Riskli', rfFont, {fgColor:{rgb:sepBg}}&&rfBg, ORTA, B_İNCE));
+    S2(6,R2, C(tespit, F.normal, rfBg, SOL, B_İNCE));
+    S2(7,R2, C(cv.obs||'—', {name:'Calibri',sz:10,italic:true,color:{rgb:'475569'}}, rfBg, SOL, B_İNCE));
+    S2(8,R2, C(oneri, {name:'Calibri',sz:10,color:{rgb:'1E40AF'}}, rfBg, SOL, B_İNCE));
+    R2++;
   });
 
-  ws2['!ref'] = XLSX.utils.encode_range({ s:{r:0,c:0}, e:{r:r2,c:7} });
-  ws2['!merges'] = [
-    { s:{r:0,c:0}, e:{r:0,c:7} },
-    { s:{r:1,c:0}, e:{r:1,c:7} },
-  ];
-  ws2['!cols'] = [{wch:5},{wch:12},{wch:22},{wch:30},{wch:14},{wch:55},{wch:40},{wch:45}];
+  ws2['!ref'] = XLSX.utils.encode_range({s:{r:0,c:0},e:{r:R2,c:8}});
+  ws2['!merges'] = [{s:{r:0,c:0},e:{r:0,c:8}},{s:{r:1,c:0},e:{r:1,c:8}}];
+  ws2['!cols'] = [{wch:5},{wch:13},{wch:22},{wch:28},{wch:12},{wch:14},{wch:55},{wch:40},{wch:45}];
   XLSX.utils.book_append_sheet(wb, ws2, '📑 Bulgular');
 
   // ══════════════════════════════════════════════════════════
-  // SAYFA 3: UYUMLULUK KANITLARI
+  // SAYFA 3 — UYUMLULUK KANITLARI
   // ══════════════════════════════════════════════════════════
-  const ws3 = {};
-  let r3 = 0;
-  const s3set = (col, row, cell) => { ws3[XLSX.utils.encode_cell({ c: col, r: row })] = cell; };
+  const ws3 = {}; let R3 = 0;
+  const S3 = (c,r,cell) => set(ws3,c,r,cell);
+  const YSL_KOY = '064E3B';
+  const YSL_ORT = '065F46';
 
-  s3set(0, r3, hucre('UYUMLULUK KANITLARI', FONT.baslik, { fgColor:{rgb:'065F46'} }, hizaOrta, BORDER.orta));
-  for (let c = 1; c <= 5; c++) s3set(c, r3, bos({ fgColor:{rgb:'065F46'} }));
-  r3++;
-  s3set(0, r3, hucre(firmaAdi + ' | ' + tarih, FONT.altbaslik, { fgColor:{rgb:'065F46'} }, hizaOrta, null));
-  for (let c = 1; c <= 5; c++) s3set(c, r3, bos({ fgColor:{rgb:'065F46'} }));
-  r3 += 2;
+  S3(0,R3, C('UYUMLULUK KANITLARI', {name:'Calibri',sz:22,bold:true,color:{rgb:'A7F3D0'}}, YSL_KOY, ORTA, B_YESIL));
+  for(let c=1;c<=6;c++) S3(c,R3,BOŞ(YSL_KOY)); R3++;
+  S3(0,R3, C(firmaAdi+' | '+tarih+' | '+evet+' uyumlu kontrol', F.altbaslik, YSL_ORT, ORTA, null));
+  for(let c=1;c<=6;c++) S3(c,R3,BOŞ(YSL_ORT)); R3 += 2;
 
-  const uyumluCols = ['#', 'Tedbir No', 'Kategori', 'Kontrol Adı', 'Kritiklik', 'Danışman Uygulama Notu'];
-  uyumluCols.forEach((h, i) => {
-    s3set(i, r3, hucre(h, FONT.beyaz, { fgColor:{rgb:'065F46'} }, hizaOrta, BORDER.ince));
-  });
-  r3++;
+  const U3hdr = ['#','Tedbir No','Alt Kategori','Kontrol Adı','Kritiklik','Kapsanan Tedbir','Danışman Uygulama Notu'];
+  U3hdr.forEach((h,i) => {
+    S3(i,R3, C(h, {name:'Calibri',sz:10,bold:true,color:{rgb:'ECFDF5'}}, '065F46', ORTA, B_İNCE));
+  }); R3++;
 
-  SORULAR_100.filter(q => STATE.cevaplar[q.id]?.c === 'evet').forEach((q, i) => {
+  SORULAR_100.filter(q=>STATE.cevaplar[q.id]?.c==='evet').forEach((q,i) => {
     const cv = STATE.cevaplar[q.id];
-    const rowFill = i % 2 === 0 ? RENK.yesilaçik : RENK.beyaz;
-    const kritikLabel = q.kritiklik===3?'🔴 Yüksek':q.kritiklik===2?'🟡 Orta':'⚪ Düşük';
-    s3set(0, r3, hucre(i+1, FONT.normal, rowFill, hizaOrta, BORDER.ince));
-    s3set(1, r3, hucre(q.tedbirNo, { name:'Calibri',sz:9,bold:true,color:{rgb:'065F46'},family:3 }, rowFill, hizaOrta, BORDER.ince));
-    s3set(2, r3, hucre(shortCat(q.altKat), FONT.normal, rowFill, hizaSol, BORDER.ince));
-    s3set(3, r3, hucre(q.tedbir, { name:'Calibri',sz:10,bold:true,color:{rgb:'065F46'} }, rowFill, hizaSol, BORDER.ince));
-    s3set(4, r3, hucre(kritikLabel, FONT.normal, rowFill, hizaOrta, BORDER.ince));
-    s3set(5, r3, hucre(cv.obs || '—', FONT.normal, rowFill, hizaSol, BORDER.ince));
-    r3++;
+    const rf = i%2===0 ? YSA : 'F0FDF4';
+    const kritBg = q.kritiklik===3?KIA:q.kritiklik===2?SAA:YSA;
+    const kritFont = q.kritiklik===3?F.kirmizB:q.kritiklik===2?F.sariB:F.yesilB;
+    const kritLabel = q.kritiklik===3?'🔴 Yüksek':q.kritiklik===2?'🟡 Orta':'⚪ Düşük';
+
+    S3(0,R3, C(i+1, F.kucuk, rf, ORTA, B_İNCE));
+    S3(1,R3, C(q.tedbirNo, {name:'Courier New',sz:9,bold:true,color:{rgb:YSL_KOY}}, rf, ORTA, B_İNCE));
+    S3(2,R3, C(shortCat(q.altKat), F.kucuk, rf, SOL, B_İNCE));
+    S3(3,R3, C(q.tedbir, {name:'Calibri',sz:10,bold:true,color:{rgb:YSL_KOY}}, rf, SOL, B_İNCE));
+    S3(4,R3, C(kritLabel, kritFont, kritBg, ORTA, B_İNCE));
+    S3(5,R3, C(q.kapsananSayi||0, {name:'Calibri',sz:10,bold:true,color:{rgb:YSL}}, rf, ORTA, B_İNCE));
+    S3(6,R3, C(cv.obs||'—', {name:'Calibri',sz:10,italic:true,color:{rgb:'374151'}}, rf, SOL, B_İNCE));
+    R3++;
   });
 
-  ws3['!ref'] = XLSX.utils.encode_range({ s:{r:0,c:0}, e:{r:r3,c:5} });
-  ws3['!merges'] = [{ s:{r:0,c:0}, e:{r:0,c:5} }, { s:{r:1,c:0}, e:{r:1,c:5} }];
-  ws3['!cols'] = [{wch:5},{wch:12},{wch:25},{wch:35},{wch:12},{wch:60}];
+  // Kapsam dışı bölümü
+  const kapsamDisi = SORULAR_100.filter(q=>STATE.cevaplar[q.id]?.c==='kapsam');
+  if (kapsamDisi.length) {
+    R3++;
+    S3(0,R3, C('KAPSAM DIŞI KONTROLLER', F.altbaslik, '374151', ORTA, B_İNCE));
+    for(let c=1;c<=6;c++) S3(c,R3,BOŞ('374151')); R3++;
+    kapsamDisi.forEach((q,i) => {
+      const cv = STATE.cevaplar[q.id];
+      const rf = i%2===0?GRA:'F8FAFC';
+      S3(0,R3,C(i+1,F.kucuk,rf,ORTA,B_İNCE));
+      S3(1,R3,C(q.tedbirNo,F.mono,rf,ORTA,B_İNCE));
+      S3(2,R3,C(shortCat(q.altKat),F.kucuk,rf,SOL,B_İNCE));
+      S3(3,R3,C(q.tedbir,{name:'Calibri',sz:10,bold:true,color:{rgb:GRI}},rf,SOL,B_İNCE));
+      S3(4,R3,C('⬜ Kapsam Dışı',F.griN,rf,ORTA,B_İNCE));
+      S3(5,R3,C('—',F.kucuk,rf,ORTA,B_İNCE));
+      S3(6,R3,C(cv.obs||'—',{name:'Calibri',sz:10,italic:true,color:{rgb:GRI}},rf,SOL,B_İNCE));
+      R3++;
+    });
+  }
+
+  ws3['!ref'] = XLSX.utils.encode_range({s:{r:0,c:0},e:{r:R3,c:6}});
+  ws3['!merges'] = [{s:{r:0,c:0},e:{r:0,c:6}},{s:{r:1,c:0},e:{r:1,c:6}}];
+  ws3['!cols'] = [{wch:5},{wch:13},{wch:22},{wch:35},{wch:12},{wch:13},{wch:60}];
   XLSX.utils.book_append_sheet(wb, ws3, '✅ Uyumluluk Kanıtları');
 
   // ══════════════════════════════════════════════════════════
-  // SAYFA 4: 1296 TEDBİR LİSTESİ
+  // SAYFA 4 — 1296 TEDBİR LİSTESİ
   // ══════════════════════════════════════════════════════════
-  const ws4 = {};
-  let r4 = 0;
-  const s4set = (col, row, cell) => { ws4[XLSX.utils.encode_cell({ c: col, r: row })] = cell; };
+  const ws4 = {}; let R4 = 0;
+  const S4 = (c,r,cell) => set(ws4,c,r,cell);
 
-  s4set(0, r4, hucre('1296 TEDBİR TAM LİSTESİ', FONT.baslik, RENK.koyu, hizaOrta, BORDER.orta));
-  for (let c = 1; c <= 6; c++) s4set(c, r4, bos(RENK.koyu));
-  r4++;
-  s4set(0, r4, hucre(firmaAdi + ' | ' + tarih, FONT.altbaslik, RENK.koyu, hizaOrta, null));
-  for (let c = 1; c <= 6; c++) s4set(c, r4, bos(RENK.koyu));
-  r4 += 2;
+  S4(0,R4, C('1296 TEDBİR TAM LİSTESİ', F.baslik, KOY, ORTA, B_ALTIN));
+  for(let c=1;c<=7;c++) S4(c,R4,BOŞ(KOY)); R4++;
+  S4(0,R4, C(firmaAdi+' | '+tarih+' | BİGR Kapsamı', F.altbaslik, LAC, ORTA, null));
+  for(let c=1;c<=7;c++) S4(c,R4,BOŞ(LAC)); R4 += 2;
 
-  const t4Cols = ['Tedbir No', 'Kategori', 'Tedbir Adı', 'Denetim Sorusu', 'Uygulama Durumu', 'AI/Şablon Bulgu', 'Kaynak Soru'];
-  t4Cols.forEach((h, i) => {
-    s4set(i, r4, hucre(h, FONT.beyaz, RENK.koyu, hizaOrta, BORDER.ince));
-  });
-  r4++;
+  const T4hdr = ['Tedbir No','Alt Kategori','Tedbir Adı','Denetim Sorusu','Durum','Bulgu / Tespit','Kaynak Soru'];
+  T4hdr.forEach((h,i) => {
+    S4(i,R4, C(h, F.beyazB, KOY, ORTA, B_İNCE));
+  }); R4++;
 
-  let mevGroup = '';
-  SORULAR_1296.forEach((s, idx) => {
-    const cv = STATE.cevaplar1296[s.i] || '';
+  let mevcatGrup = '';
+  SORULAR_1296.forEach(s => {
+    const cv  = STATE.cevaplar1296[s.i]||'';
     const bulguObj = STATE.bulgu1296[s.i];
     const bulguText = bulguObj ? bulguObj.metin : '';
-    const pQ = SORULAR_100.find(q => q.id === s.p);
-    const altKatKisa = s.altk.replace(/^\d+\.\d+\.\d+\.\s*/,'').replace(/^\d+\.\d+\.\s*/,'');
+    const pQ  = SORULAR_100.find(q=>q.id===s.p);
+    const alk = s.altk.replace(/^\d+\.\d+\.\d+\.\s*/,'').replace(/^\d+\.\d+\.\s*/,'');
 
-    // Kategori değişince başlık satırı ekle
-    if (s.ak !== mevGroup) {
-      mevGroup = s.ak;
-      for (let c = 0; c <= 6; c++) {
-        s4set(c, r4, hucre(c === 0 ? shortCat(s.ak) : '', FONT.altın, RENK.orta, c===0?hizaSol:null, BORDER.ince));
-      }
-      r4++;
+    // Kategori başlık satırı
+    if (s.ak !== mevcatGrup) {
+      mevcatGrup = s.ak;
+      S4(0,R4, C('▶  '+shortCat(s.ak), {name:'Calibri',sz:10,bold:true,color:{rgb:ALT}}, ORT, SOL, B_İNCE));
+      for(let c=1;c<=7;c++) S4(c,R4,BOŞ(ORT));
+      R4++;
     }
 
-    const rowFill = cv === 'evet'  ? RENK.yesilaçik :
-                    cv === 'kismi' ? RENK.sariaçik :
-                    cv === 'hayir' ? RENK.kirmiziAçik :
-                    cv === 'kapsam'? RENK.griAçik : RENK.beyaz;
-    const cvLabel = cv === 'evet' ? '✅ Uyumlu' :
-                    cv === 'kismi' ? '🟡 Kısmen' :
-                    cv === 'hayir' ? '❌ Uyumsuz' :
-                    cv === 'kapsam'? '⬜ Kapsam Dışı' : '— Cevapsız';
-    const cvFont  = cv === 'evet'  ? FONT.yesil :
-                    cv === 'kismi' ? FONT.sari :
-                    cv === 'hayir' ? FONT.kirmizi : FONT.normal;
+    const rfBg = cv==='evet'?YSA:cv==='kismi'?SAA:cv==='hayir'?KIA:cv==='kapsam'?GRA:BYZ;
+    const cvLbl= cv==='evet'?'✅ Uyumlu':cv==='kismi'?'🟡 Kısmen':cv==='hayir'?'❌ Uyumsuz':cv==='kapsam'?'⬜ Kapsam Dışı':'— Cevapsız';
+    const cvF  = cv==='evet'?F.yesilB:cv==='kismi'?F.sariB:cv==='hayir'?F.kirmizB:F.griN;
 
-    s4set(0, r4, hucre(s.tn, { name:'Calibri',sz:9,bold:true,color:{rgb:'1E293B'},family:3 }, rowFill, hizaOrta, BORDER.ince));
-    s4set(1, r4, hucre(altKatKisa, { name:'Calibri',sz:9,color:{rgb:'64748B'} }, rowFill, hizaSol, BORDER.ince));
-    s4set(2, r4, hucre(s.ta, { name:'Calibri',sz:10,bold:true,color:{rgb:'0F172A'} }, rowFill, hizaSol, BORDER.ince));
-    s4set(3, r4, hucre(s.q, FONT.normal, rowFill, hizaSol, BORDER.ince));
-    s4set(4, r4, hucre(cvLabel, cvFont, rowFill, hizaOrta, BORDER.ince));
-    s4set(5, r4, hucre(bulguText, FONT.normal, rowFill, hizaSol, BORDER.ince));
-    s4set(6, r4, hucre(pQ ? 'S'+s.p+': '+pQ.tedbir : 'S'+s.p, { name:'Calibri',sz:9,color:{rgb:'6366F1'} }, rowFill, hizaSol, BORDER.ince));
-    r4++;
+    S4(0,R4, C(s.tn, {name:'Courier New',sz:9,bold:true,color:{rgb:'1E293B'}}, rfBg, ORTA, B_İNCE));
+    S4(1,R4, C(alk, F.kucuk, rfBg, SOL, B_İNCE));
+    S4(2,R4, C(s.ta, {name:'Calibri',sz:10,bold:true,color:{rgb:'0F172A'}}, rfBg, SOL, B_İNCE));
+    S4(3,R4, C(s.q, F.normal, rfBg, SOL, B_İNCE));
+    S4(4,R4, C(cvLbl, cvF, rfBg, ORTA, B_İNCE));
+    S4(5,R4, C(bulguText, {name:'Calibri',sz:10,italic:!!bulguObj,color:{rgb:bulguObj?.kaynak==='ai'?'4338CA':'374151'}}, rfBg, SOL, B_İNCE));
+    S4(6,R4, C(pQ?('S'+s.p+': '+pQ.tedbir):'S'+s.p, {name:'Calibri',sz:9,color:{rgb:'6366F1'}}, rfBg, SOL, B_İNCE));
+    R4++;
   });
 
-  ws4['!ref'] = XLSX.utils.encode_range({ s:{r:0,c:0}, e:{r:r4,c:6} });
-  ws4['!merges'] = [{ s:{r:0,c:0}, e:{r:0,c:6} }, { s:{r:1,c:0}, e:{r:1,c:6} }];
-  ws4['!cols'] = [{wch:12},{wch:22},{wch:32},{wch:55},{wch:16},{wch:60},{wch:35}];
+  ws4['!ref'] = XLSX.utils.encode_range({s:{r:0,c:0},e:{r:R4,c:7}});
+  ws4['!merges'] = [{s:{r:0,c:0},e:{r:0,c:7}},{s:{r:1,c:0},e:{r:1,c:7}}];
+  ws4['!cols'] = [{wch:13},{wch:22},{wch:30},{wch:52},{wch:16},{wch:60},{wch:32}];
   XLSX.utils.book_append_sheet(wb, ws4, '📋 1296 Tedbir');
 
   // ── KAYDET ────────────────────────────────────────────────
-  const dosyaAdi = (firmaAdi.replace(/[^a-zA-Z0-9ğüşıöçĞÜŞİÖÇ\s]/g, '').trim() || 'Rapor') +
-    '_BilgiGuvenligi_GapAnalizi_' + new Date().toISOString().split('T')[0] + '.xlsx';
-
-  XLSX.writeFile(wb, dosyaAdi);
-  toast('✅ Tasarımlı Excel raporu indirildi', 'success');
+  const dosya = (firmaAdi.replace(/[^\w\s]/g,'').trim()||'Rapor')
+    +'_BilgiGuvenligi_GapAnalizi_'+new Date().toISOString().split('T')[0]+'.xlsx';
+  XLSX.writeFile(wb, dosya);
+  toast('✅ Excel raporu indirildi: '+dosya, 'success');
 }
+
 
 
 // ══════════════════════════════════════════════════════════════
@@ -1882,6 +1905,335 @@ function exportData() {
   a.download = `${STATE.projeAdi.replace(/\s+/g, '_')}_GapAnalizi.json`;
   a.click();
 }
+
+function pdfRapor() {
+  const firmaAdi = STATE.projeAdi || 'Kurum Adı';
+  const tarih = new Date().toLocaleDateString('tr-TR', { day:'2-digit', month:'long', year:'numeric' });
+  const all = Object.values(STATE.cevaplar);
+  const evet  = all.filter(v=>v.c==='evet').length;
+  const kismi = all.filter(v=>v.c==='kismi').length;
+  const hayir = all.filter(v=>v.c==='hayir').length;
+  const kapsam= all.filter(v=>v.c==='kapsam').length;
+  const total = evet+kismi+hayir+kapsam;
+  const skorBaz = evet+kismi+hayir;
+  const skor = skorBaz>0 ? Math.round(100*(evet+kismi*0.5)/skorBaz) : 0;
+  const skorRenk = skor>=70?'#059669':skor>=40?'#D97706':'#DC2626';
+  const skorBg   = skor>=70?'#D1FAE5':skor>=40?'#FEF3C7':'#FEE2E2';
+  const skorEtkt = skor>=70?'✅ Uyumlu Seviye':skor>=40?'⚠️ Geliştirilebilir':'❌ Kritik Seviye';
+
+  // ── Kategori verileri ──────────────────────────────────────
+  const katData = CATEGORIES.map(cat => {
+    const qs = SORULAR_100.filter(q=>q.anaKat===cat);
+    const ce = qs.filter(q=>STATE.cevaplar[q.id]?.c==='evet').length;
+    const ck = qs.filter(q=>STATE.cevaplar[q.id]?.c==='kismi').length;
+    const ch = qs.filter(q=>STATE.cevaplar[q.id]?.c==='hayir').length;
+    const ct = qs.filter(q=>STATE.cevaplar[q.id]).length;
+    const cs = ct>0?Math.round(100*(ce+ck*0.5)/ct):0;
+    return { ad:shortCat(cat), ce, ck, ch, ct, cs };
+  }).filter(k=>k.ct>0);
+
+  // ── Bulgular ──────────────────────────────────────────────
+  const bulgular = SORULAR_100
+    .filter(q=>{ const cv=STATE.cevaplar[q.id]; return cv&&(cv.c==='hayir'||cv.c==='kismi'); })
+    .sort((a,b)=>(riskDurumu(b,STATE.cevaplar[b.id].c)?.skor||0)-(riskDurumu(a,STATE.cevaplar[a.id].c)?.skor||0));
+
+  // ── Uyumlular ─────────────────────────────────────────────
+  const uyumlular = SORULAR_100.filter(q=>STATE.cevaplar[q.id]?.c==='evet');
+
+  // ── YARDIMCI ──────────────────────────────────────────────
+  const riskBadge = (rd) => {
+    if(!rd) return '';
+    const bg = rd.label==='Çok Riskli'?'#FEE2E2':rd.label==='Riskli'?'#FEF3C7':'#EDE9FE';
+    const fg = rd.label==='Çok Riskli'?'#DC2626':rd.label==='Riskli'?'#D97706':'#7C3AED';
+    return `<span style="background:${bg};color:${fg};padding:3px 10px;border-radius:12px;font-size:11px;font-weight:700">${rd.label}</span>`;
+  };
+
+  const katBar = (pct) => {
+    const bg = pct>=70?'#059669':pct>=40?'#D97706':'#DC2626';
+    return `<div style="display:flex;align-items:center;gap:8px">
+      <div style="flex:1;background:#E2E8F0;border-radius:4px;height:8px">
+        <div style="width:${pct}%;background:${bg};height:8px;border-radius:4px"></div>
+      </div>
+      <span style="font-size:11px;font-weight:700;color:${bg};min-width:36px">%${pct}</span>
+    </div>`;
+  };
+
+  const bulguKart = (q, idx) => {
+    const cv  = STATE.cevaplar[q.id];
+    const rd  = riskDurumu(q, cv.c);
+    const mev = lkp('mev', q.mev);
+    const iso1= lkp('iso1', q.iso1);
+    const iso2= lkp('iso2', q.iso2);
+    const iso3= lkp('iso3', q.iso3);
+    const rBorder = rd?.label==='Çok Riskli'?'#DC2626':rd?.label==='Riskli'?'#D97706':'#7C3AED';
+    const rBg     = rd?.label==='Çok Riskli'?'#FFF5F5':rd?.label==='Riskli'?'#FFFBEB':'#FAF5FF';
+
+    const tespit = cv.bulgu || (cv.c==='hayir'
+      ? `Yapılan saha incelemelerinde "${q.tedbir}" kapsamındaki gerekliliklerin kurum bünyesinde uygulanmadığı tespit edilmiştir. ${q.altKat} alanına ilişkin tanımlı bir süreç veya kontrol mekanizması bulunmamaktadır.`
+      : cv.obs ? `"${q.tedbir}" alanında kısmi uygulama tespit edilmiştir. ${cv.obs}` : `"${q.tedbir}" alanında kısmi uygulama tespit edilmiştir.`);
+
+    const riskKatHTML = (() => {
+      if(STATE.riskAnalizi[q.id]) {
+        return `<div style="font-size:11px;color:#1E293B;line-height:1.7;background:#F8FAFC;padding:10px;border-radius:6px">${STATE.riskAnalizi[q.id].replace(/\n/g,'<br>')}</div>`;
+      }
+      const k = q.kritiklik; const isH = cv.c==='hayir';
+      const katlar = [
+        { icon:'⚡', ad:'STRATEJİK', renk:'#DC2626',
+          metin: isH ? `${q.tedbir} alanındaki kontrol eksikliği kurumun güvenlik stratejisini zayıflatmaktadır.`
+                     : `${q.tedbir} alanındaki kısmi uygulama stratejik hedeflerin tam karşılanamamasına yol açmaktadır.` },
+        { icon:'🔧', ad:'OPERASYONEL', renk:'#EA580C',
+          metin: isH ? 'Tedbirin uygulanmaması operasyonel süreçlerin güvenlik açıklarına karşı korumasız kalmasına neden olmaktadır.'
+                     : 'Kısmi uygulama operasyonel etkinliği sınırlandırmakta, süreçlerde güvenlik açığı devam etmektedir.' },
+        { icon:'⚖️', ad:'MEVZUAT', renk:'#2563EB',
+          metin: mev ? `BİGR ${q.tedbirNo} kapsamında uyumsuzluk riski. ${mev.split('\n')[0]}`
+                     : `BİGR ${q.tedbirNo} numaralı tedbire doğrudan uyumsuzluk teşkil etmektedir.` },
+      ];
+      return katlar.map(kat=>`
+        <div style="margin-bottom:6px;padding:7px 10px;background:#fff;border-radius:6px;border-left:3px solid ${kat.renk}">
+          <div style="font-size:10px;font-weight:700;color:${kat.renk};margin-bottom:3px">${kat.icon} ${kat.ad}</div>
+          <div style="font-size:11px;color:#374151;line-height:1.5">${kat.metin}</div>
+        </div>`).join('');
+    })();
+
+    let mevHTML = '';
+    if(mev) mevHTML += `<div style="margin-bottom:8px"><div style="font-size:10px;font-weight:700;color:#92400E;margin-bottom:4px">📜 İlgili Mevzuat</div>${mev.split('\n').filter(Boolean).map(s=>`<div style="font-size:11px;color:#374151;padding:2px 0;border-bottom:1px dashed #E2E8F0">• ${s.trim()}</div>`).join('')}</div>`;
+    if(iso1||iso2||iso3) {
+      let isoT = '';
+      if(iso1) iso1.split('\n').filter(Boolean).forEach(v=>{ isoT+=`<span style="background:#EFF6FF;color:#1D4ED8;font-size:10px;padding:2px 6px;border-radius:4px;margin:2px 2px 0 0;display:inline-block">ISO 27001 ${v.trim()}</span>`; });
+      if(iso2) iso2.split('\n').filter(Boolean).forEach(v=>{ isoT+=`<span style="background:#F0FDF4;color:#065F46;font-size:10px;padding:2px 6px;border-radius:4px;margin:2px 2px 0 0;display:inline-block">ISO 27701 ${v.trim()}</span>`; });
+      if(iso3) iso3.split('\n').filter(Boolean).forEach(v=>{ isoT+=`<span style="background:#F5F3FF;color:#5B21B6;font-size:10px;padding:2px 6px;border-radius:4px;margin:2px 2px 0 0;display:inline-block">ISO 20000 ${v.trim()}</span>`; });
+      mevHTML += `<div style="margin-bottom:6px"><div style="font-size:10px;font-weight:700;color:#374151;margin-bottom:4px">🏷 Standart Referanslar</div>${isoT}</div>`;
+    }
+    if(!mevHTML) mevHTML = `<div style="font-size:11px;color:#9CA3AF">BİGR ${q.tedbirNo} kapsamında.</div>`;
+
+    const oneriLines = (q.oneri||'').split('\n').map(s=>s.trim()).filter(s=>s.length>5).slice(0,5);
+    const oneriHTML = oneriLines.length ? oneriLines.map((l,i)=>`<div style="display:flex;gap:8px;margin-bottom:6px"><span style="background:#0D1B2E;color:#D4AF4A;width:20px;height:20px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;flex-shrink:0">${i+1}</span><span style="font-size:11px;color:#374151;line-height:1.5">${l}</span></div>`).join('') : `<div style="font-size:11px;color:#9CA3AF">Kontrol mekanizması oluşturularak dokümante edilmelidir.</div>`;
+
+    return `
+    <div style="border:1px solid #E2E8F0;border-left:5px solid ${rBorder};border-radius:8px;margin-bottom:20px;background:${rBg};page-break-inside:avoid;overflow:hidden">
+      <div style="background:#0D1B2E;padding:12px 16px;display:flex;justify-content:space-between;align-items:center">
+        <div>
+          <div style="font-size:10px;color:#D4AF4A;font-weight:600;letter-spacing:1px;margin-bottom:3px">DANIŞMANLIK GÖRÜŞÜ #${idx+1}</div>
+          <div style="font-size:14px;font-weight:700;color:#FFFFFF">${q.tedbir}</div>
+          <div style="font-size:11px;color:#94A3B8;margin-top:2px">${q.altKat} • ${q.tedbirNo}</div>
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:flex-end;gap:5px">
+          ${riskBadge(rd)}
+          <span style="font-size:10px;color:#CBD5E1">${cv.c==='hayir'?'❌ Uygulanmıyor':'🟡 Kısmen Uygulanıyor'}</span>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:0;padding:0">
+        <div style="padding:14px;border-right:1px solid #E2E8F0">
+          <div style="font-size:10px;font-weight:700;color:#475569;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;padding-bottom:6px;border-bottom:2px solid ${rBorder}">🔍 Tespitler</div>
+          <div style="font-size:12px;color:#1E293B;line-height:1.7">${tespit}</div>
+          ${cv.obs&&cv.c==='kismi'&&!cv.bulgu?`<div style="margin-top:8px;padding:8px;background:#FFFBEB;border-radius:6px;font-size:11px;color:#92400E;font-style:italic">💬 Gözlem: ${cv.obs}</div>`:''}
+        </div>
+        <div style="padding:14px;border-right:1px solid #E2E8F0;background:rgba(0,0,0,0.01)">
+          <div style="font-size:10px;font-weight:700;color:#475569;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;padding-bottom:6px;border-bottom:2px solid #6366F1">⚠️ Risk Analizi</div>
+          <div style="margin-bottom:8px;padding:6px 10px;background:#fff;border-radius:6px;border:1px solid #E2E8F0;display:flex;justify-content:space-between">
+            <span style="font-size:10px;color:#475569">Kritiklik Derecesi</span>
+            <span style="font-size:10px;font-weight:700;color:#0D1B2E">${q.kritiklik===3?'🔴 Yüksek':q.kritiklik===2?'🟡 Orta':'⚪ Düşük'} (${q.kritiklik*4} Puan)</span>
+          </div>
+          ${riskKatHTML}
+        </div>
+        <div style="padding:14px;border-right:1px solid #E2E8F0">
+          <div style="font-size:10px;font-weight:700;color:#475569;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;padding-bottom:6px;border-bottom:2px solid #2563EB">⚖️ Mevzuat Uyumu</div>
+          ${mevHTML}
+        </div>
+        <div style="padding:14px">
+          <div style="font-size:10px;font-weight:700;color:#475569;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;padding-bottom:6px;border-bottom:2px solid #059669">💡 İyileştirme Önerileri</div>
+          ${oneriHTML}
+        </div>
+      </div>
+      <div style="background:#F8FAFC;padding:8px 16px;border-top:1px solid #E2E8F0;display:flex;justify-content:space-between;align-items:center">
+        <span style="font-size:10px;color:#94A3B8;font-family:monospace">${q.tedbirNo} • S${q.id}/100 • ${q.kapsananSayi} Tedbir Kapsamı</span>
+        <span style="font-size:10px;color:#6366F1">${STATE.bulgu1296?Object.entries(STATE.bulgu1296).filter(([k,v])=>SORULAR_1296.find(s=>s.i==k&&s.p==q.id)&&v.kaynak==='ai').length+' AI Bulgu':''}</span>
+      </div>
+    </div>`;
+  };
+
+  // ── HTML RAPORU ───────────────────────────────────────────
+  const html = `<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>${firmaAdi} — Bilgi Güvenliği Gap Analizi Raporu</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { font-family:'Segoe UI',Calibri,Arial,sans-serif; color:#1E293B; background:#fff; }
+  .sayfa { max-width:1100px; margin:0 auto; padding:0 30px; }
+  @media print {
+    body { -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+    .no-print { display:none!important; }
+    .sayfa-kiriliyor { page-break-before:always; }
+    @page { margin:15mm 12mm; size:A4 landscape; }
+  }
+  .print-btn {
+    position:fixed; top:20px; right:20px; z-index:999;
+    background:#0D1B2E; color:#D4AF4A; border:2px solid #D4AF4A;
+    padding:10px 24px; border-radius:8px; font-size:14px; font-weight:700;
+    cursor:pointer; display:flex; align-items:center; gap:8px;
+  }
+  .print-btn:hover { background:#D4AF4A; color:#0D1B2E; }
+</style>
+</head>
+<body>
+<button class="print-btn no-print" onclick="window.print()">🖨 PDF Olarak Kaydet</button>
+
+<!-- ══ KAPAK ══ -->
+<div style="background:#0D1B2E;min-height:280px;display:flex;flex-direction:column;justify-content:center;padding:50px 60px;position:relative;overflow:hidden">
+  <div style="position:absolute;top:0;left:0;right:0;height:6px;background:linear-gradient(90deg,#D4AF4A,#F5E49C,#D4AF4A)"></div>
+  <div style="font-size:13px;color:#D4AF4A;font-weight:600;letter-spacing:3px;text-transform:uppercase;margin-bottom:16px">BİLGİ GÜVENLİĞİ GAP ANALİZİ RAPORU</div>
+  <div style="font-size:36px;font-weight:800;color:#FFFFFF;margin-bottom:8px">${firmaAdi}</div>
+  <div style="font-size:16px;color:#94A3B8;margin-bottom:30px">BİGR & KVKK Uyumluluk Değerlendirmesi</div>
+  <div style="display:flex;gap:20px;flex-wrap:wrap">
+    <div style="background:rgba(255,255,255,0.08);border:1px solid rgba(212,175,74,0.3);padding:12px 20px;border-radius:8px">
+      <div style="font-size:11px;color:#94A3B8;margin-bottom:3px">Rapor Tarihi</div>
+      <div style="font-size:15px;font-weight:700;color:#FFFFFF">${tarih}</div>
+    </div>
+    <div style="background:${skorBg};border:2px solid ${skorRenk};padding:12px 20px;border-radius:8px">
+      <div style="font-size:11px;color:${skorRenk};margin-bottom:3px;font-weight:600">Genel Uyum Skoru</div>
+      <div style="font-size:28px;font-weight:800;color:${skorRenk}">%${skor}</div>
+    </div>
+    <div style="background:rgba(255,255,255,0.08);padding:12px 20px;border-radius:8px">
+      <div style="font-size:11px;color:#94A3B8;margin-bottom:3px">Değerlendirme Kapsamı</div>
+      <div style="font-size:15px;font-weight:700;color:#FFFFFF">${total}/100 Kontrol • 1296 Tedbir</div>
+    </div>
+  </div>
+  <div style="position:absolute;bottom:0;left:0;right:0;height:4px;background:linear-gradient(90deg,#D4AF4A,#F5E49C,#D4AF4A)"></div>
+</div>
+
+<!-- ══ YÖNETİM ÖZETİ ══ -->
+<div class="sayfa" style="margin-top:40px">
+  <div style="display:flex;align-items:center;gap:12px;margin-bottom:24px">
+    <div style="width:5px;height:32px;background:#D4AF4A;border-radius:3px"></div>
+    <div style="font-size:20px;font-weight:800;color:#0D1B2E">Yönetim Özeti</div>
+  </div>
+
+  <!-- Metrik kartlar -->
+  <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:28px">
+    ${[
+      { lbl:'Uyumlu', val:evet, bg:'#D1FAE5', fg:'#059669', icon:'✅' },
+      { lbl:'Kısmen', val:kismi, bg:'#FEF3C7', fg:'#D97706', icon:'🟡' },
+      { lbl:'Uyumsuz', val:hayir, bg:'#FEE2E2', fg:'#DC2626', icon:'❌' },
+      { lbl:'Kapsam Dışı', val:kapsam, bg:'#F1F5F9', fg:'#64748B', icon:'⬜' },
+      { lbl:'Toplam Bulgu', val:kismi+hayir, bg:'#EDE9FE', fg:'#7C3AED', icon:'📋' },
+    ].map(k=>`
+    <div style="background:${k.bg};border-radius:10px;padding:16px;text-align:center">
+      <div style="font-size:11px;font-weight:700;color:${k.fg};margin-bottom:6px">${k.icon} ${k.lbl}</div>
+      <div style="font-size:32px;font-weight:800;color:${k.fg}">${k.val}</div>
+    </div>`).join('')}
+  </div>
+
+  <!-- Uyum skoru banner -->
+  <div style="background:${skorBg};border:2px solid ${skorRenk};border-radius:10px;padding:16px 24px;margin-bottom:28px;display:flex;align-items:center;justify-content:space-between">
+    <div>
+      <div style="font-size:12px;font-weight:700;color:${skorRenk};text-transform:uppercase;letter-spacing:1px">${skorEtkt}</div>
+      <div style="font-size:13px;color:#475569;margin-top:4px">${skorBaz} yanıtlanan kontrolün ağırlıklı ortalaması</div>
+    </div>
+    <div style="font-size:48px;font-weight:800;color:${skorRenk}">%${skor}</div>
+  </div>
+
+  <!-- Kategori tablosu -->
+  <div style="margin-bottom:36px">
+    <div style="font-size:14px;font-weight:700;color:#0D1B2E;margin-bottom:12px">Kategori Bazlı Uyum Analizi</div>
+    <table style="width:100%;border-collapse:collapse">
+      <thead>
+        <tr style="background:#0D1B2E">
+          <th style="padding:10px 14px;text-align:left;color:#D4AF4A;font-size:11px;font-weight:700">KATEGORİ</th>
+          <th style="padding:10px 8px;text-align:center;color:#D4AF4A;font-size:11px;font-weight:700;width:70px">UYUMLU</th>
+          <th style="padding:10px 8px;text-align:center;color:#D4AF4A;font-size:11px;font-weight:700;width:70px">KISMİ</th>
+          <th style="padding:10px 8px;text-align:center;color:#D4AF4A;font-size:11px;font-weight:700;width:70px">UYUMSUZ</th>
+          <th style="padding:10px 14px;text-align:left;color:#D4AF4A;font-size:11px;font-weight:700;width:200px">UYUM ORANI</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${katData.map((k,i)=>`
+        <tr style="background:${i%2===0?'#F8FAFC':'#FFFFFF'};border-bottom:1px solid #E2E8F0">
+          <td style="padding:10px 14px;font-size:12px;font-weight:600;color:#0F172A">${k.ad}</td>
+          <td style="padding:10px 8px;text-align:center;font-size:12px;font-weight:700;color:#059669">${k.ce}</td>
+          <td style="padding:10px 8px;text-align:center;font-size:12px;font-weight:700;color:#D97706">${k.ck}</td>
+          <td style="padding:10px 8px;text-align:center;font-size:12px;font-weight:700;color:#DC2626">${k.ch}</td>
+          <td style="padding:10px 14px">${katBar(k.cs)}</td>
+        </tr>`).join('')}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ══ BULGULAR ══ -->
+<div class="sayfa sayfa-kiriliyor">
+  <div style="display:flex;align-items:center;gap:12px;margin-bottom:8px;padding-top:30px">
+    <div style="width:5px;height:32px;background:#DC2626;border-radius:3px"></div>
+    <div>
+      <div style="font-size:20px;font-weight:800;color:#0D1B2E">Bulgular ve Tespitler</div>
+      <div style="font-size:13px;color:#64748B;margin-top:2px">Risk seviyesine göre sıralanmış ${bulgular.length} bulgu</div>
+    </div>
+  </div>
+  <!-- Risk renk açıklaması -->
+  <div style="display:flex;gap:12px;margin-bottom:20px;flex-wrap:wrap">
+    <span style="background:#FEE2E2;color:#DC2626;padding:4px 12px;border-radius:12px;font-size:11px;font-weight:700">🔴 Çok Riskli</span>
+    <span style="background:#FEF3C7;color:#D97706;padding:4px 12px;border-radius:12px;font-size:11px;font-weight:700">🟡 Riskli</span>
+    <span style="background:#EDE9FE;color:#7C3AED;padding:4px 12px;border-radius:12px;font-size:11px;font-weight:700">🟣 Orta Riskli</span>
+  </div>
+  ${bulgular.map((q,i)=>bulguKart(q,i)).join('')}
+</div>
+
+<!-- ══ UYUMLULUK KANITLARI ══ -->
+<div class="sayfa sayfa-kiriliyor">
+  <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px;padding-top:30px">
+    <div style="width:5px;height:32px;background:#059669;border-radius:3px"></div>
+    <div>
+      <div style="font-size:20px;font-weight:800;color:#0D1B2E">Uyumluluk Kanıtları</div>
+      <div style="font-size:13px;color:#64748B;margin-top:2px">${evet} uyumlu kontrol</div>
+    </div>
+  </div>
+  <table style="width:100%;border-collapse:collapse">
+    <thead>
+      <tr style="background:#065F46">
+        <th style="padding:10px 12px;text-align:left;color:#A7F3D0;font-size:11px">#</th>
+        <th style="padding:10px 12px;text-align:left;color:#A7F3D0;font-size:11px">TEDBİR NO</th>
+        <th style="padding:10px 12px;text-align:left;color:#A7F3D0;font-size:11px">KATEGORİ</th>
+        <th style="padding:10px 12px;text-align:left;color:#A7F3D0;font-size:11px">KONTROL ADI</th>
+        <th style="padding:10px 12px;text-align:center;color:#A7F3D0;font-size:11px">KRİTİKLİK</th>
+        <th style="padding:10px 12px;text-align:left;color:#A7F3D0;font-size:11px">UYGULAMA NOTU</th>
+      </tr>
+    </thead>
+    <tbody>
+      ${uyumlular.map((q,i)=>{
+        const cv=STATE.cevaplar[q.id];
+        const bg=i%2===0?'#F0FDF4':'#FFFFFF';
+        const kBg=q.kritiklik===3?'#FEE2E2':q.kritiklik===2?'#FEF3C7':'#D1FAE5';
+        const kFg=q.kritiklik===3?'#DC2626':q.kritiklik===2?'#D97706':'#059669';
+        const kLbl=q.kritiklik===3?'🔴 Yüksek':q.kritiklik===2?'🟡 Orta':'⚪ Düşük';
+        return `<tr style="background:${bg};border-bottom:1px solid #D1FAE5">
+          <td style="padding:9px 12px;font-size:11px;color:#6B7280">${i+1}</td>
+          <td style="padding:9px 12px;font-size:11px;font-family:monospace;font-weight:700;color:#065F46">${q.tedbirNo}</td>
+          <td style="padding:9px 12px;font-size:11px;color:#374151">${shortCat(q.altKat)}</td>
+          <td style="padding:9px 12px;font-size:12px;font-weight:600;color:#064E3B">${q.tedbir}</td>
+          <td style="padding:9px 12px;text-align:center"><span style="background:${kBg};color:${kFg};font-size:10px;padding:2px 8px;border-radius:8px;font-weight:700">${kLbl}</span></td>
+          <td style="padding:9px 12px;font-size:11px;color:#374151;font-style:italic">${cv.obs||'—'}</td>
+        </tr>`;
+      }).join('')}
+    </tbody>
+  </table>
+</div>
+
+<!-- ══ FOOTER ══ -->
+<div style="background:#0D1B2E;margin-top:50px;padding:24px 60px;display:flex;justify-content:space-between;align-items:center">
+  <div style="font-size:12px;color:#94A3B8">Bilgi Güvenliği Gap Analizi • BİGR & KVKK • ${tarih}</div>
+  <div style="font-size:12px;color:#D4AF4A;font-weight:700">${firmaAdi}</div>
+</div>
+
+</body>
+</html>`;
+
+  const w = window.open('', '_blank');
+  w.document.write(html);
+  w.document.close();
+}
+
 
 // ── INIT ─────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
