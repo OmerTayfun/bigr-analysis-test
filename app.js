@@ -1441,77 +1441,378 @@ function buildKritikBulgular() {
 
 function exportExcel() {
   if (typeof XLSX === 'undefined') { toast('SheetJS yüklenemedi', 'error'); return; }
-  const wb    = XLSX.utils.book_new();
+
+  const wb = XLSX.utils.book_new();
   const tarih = new Date().toLocaleDateString('tr-TR');
-  const all   = Object.values(STATE.cevaplar);
-  const evet  = all.filter(v=>v.c==='evet').length;
-  const kismi = all.filter(v=>v.c==='kismi').length;
-  const hayir = all.filter(v=>v.c==='hayir').length;
-  const total = evet+kismi+hayir;
-  const skor  = total>0 ? Math.round(100*(evet+kismi*0.5)/total) : 0;
+  const firmaAdi = STATE.projeAdi || 'Kurum Adı';
+  const all = Object.values(STATE.cevaplar);
+  const evet = all.filter(v => v.c === 'evet').length;
+  const kismi = all.filter(v => v.c === 'kismi').length;
+  const hayir = all.filter(v => v.c === 'hayir').length;
+  const kapsam = all.filter(v => v.c === 'kapsam').length;
+  const total = evet + kismi + hayir + kapsam;
+  const skorBaz = evet + kismi + hayir;
+  const skor = skorBaz > 0 ? Math.round(100 * (evet + kismi * 0.5) / skorBaz) : 0;
 
-  // Özet
-  const ws1 = XLSX.utils.aoa_to_sheet([
-    ['BİLGİ GÜVENLİĞİ GAP ANALİZİ - YÖNETİM ÖZETİ'],
-    ['Oluşturulma Tarihi', tarih], [],
-    ['KAPSAM','DEĞER','AÇIKLAMA'],
-    ['Yanıtlanan Kontrol', total, '100 kontrol üzerinden'],
-    ['Genel Uyum Skoru', skor+'%', 'Ağırlıklı ortalama'],
-    ['Tamamen Uyumlu', evet, ''], ['Kısmen Uyumlu', kismi, ''], ['Uyumsuz', hayir, ''], ['Toplam Bulgu', kismi+hayir, ''], [],
-    ['1296 TEDBİR KAPSAMASI'],
-    ['Cevaplanan', Object.keys(STATE.cevaplar1296).length, ''],
-    ['Uyumlu',    Object.values(STATE.cevaplar1296).filter(c=>c==='evet').length,  ''],
-    ['Kısmen',    Object.values(STATE.cevaplar1296).filter(c=>c==='kismi').length, ''],
-    ['Uyumsuz',   Object.values(STATE.cevaplar1296).filter(c=>c==='hayir').length, ''], [],
-    ['KATEGORİ','Uyumlu','Kısmen','Uyumsuz','Uyum %'],
-    ...CATEGORIES.map(cat => {
-      const qs = SORULAR_100.filter(q=>q.anaKat===cat && STATE.cevaplar[q.id]);
-      const e=qs.filter(q=>STATE.cevaplar[q.id].c==='evet').length;
-      const k=qs.filter(q=>STATE.cevaplar[q.id].c==='kismi').length;
-      const h=qs.filter(q=>STATE.cevaplar[q.id].c==='hayir').length;
-      const n=qs.length;
-      return [shortCat(cat),e,k,h,n>0?Math.round(100*(e+k*0.5)/n)+'%':'—'];
-    })
-  ]);
-  ws1['!cols'] = [{wch:35},{wch:15},{wch:40}];
-  XLSX.utils.book_append_sheet(wb, ws1, 'Özet');
+  // ── RENK PALETİ ──────────────────────────────────────────
+  const RENK = {
+    baslik:    { fgColor: { rgb: 'D4AF4A' } },  // altın sarısı
+    koyu:      { fgColor: { rgb: '0F1C2E' } },  // koyu lacivert
+    orta:      { fgColor: { rgb: '1A2D44' } },  // orta lacivert
+    acik:      { fgColor: { rgb: 'EFF3F8' } },  // açık gri
+    beyaz:     { fgColor: { rgb: 'FFFFFF' } },
+    yesil:     { fgColor: { rgb: '10B981' } },
+    yesilaçik: { fgColor: { rgb: 'D1FAE5' } },
+    sari:      { fgColor: { rgb: 'F59E0B' } },
+    sariaçik:  { fgColor: { rgb: 'FEF3C7' } },
+    kirmizi:   { fgColor: { rgb: 'EF4444' } },
+    kirmiziAçik:{ fgColor:{ rgb: 'FEE2E2' } },
+    morAçik:   { fgColor: { rgb: 'EDE9FE' } },
+    griAçik:   { fgColor: { rgb: 'F1F5F9' } },
+  };
 
-  // Bulgular
-  const ws2_data = [['BULGULAR'],['Sıra','Tedbir No','Ana Kat','Alt Kat','Tedbir','Cevap','Risk','Gözlem','AI Bulgu','Öneri','Mevzuat','ISO 27001','ISO 27701']];
-  SORULAR_100.filter(q=>{ const cv=STATE.cevaplar[q.id]; return cv&&cv.c!=='evet'; })
-    .sort((a,b)=>(riskDurumu(b,STATE.cevaplar[b.id].c)?.skor||0)-(riskDurumu(a,STATE.cevaplar[a.id].c)?.skor||0))
-    .forEach((q,i) => {
-      const cv=STATE.cevaplar[q.id]; const rd=riskDurumu(q,cv.c);
-      ws2_data.push([i+1,q.tedbirNo,q.anaKat,q.altKat,q.tedbir,cevapLabel(cv.c),rd?.label||'',cv.obs||'',cv.bulgu||'',q.oneri||'',lkp('mev',q.mev),lkp('iso1',q.iso1),lkp('iso2',q.iso2)]);
-    });
-  const ws2 = XLSX.utils.aoa_to_sheet(ws2_data);
-  ws2['!cols'] = [{wch:5},{wch:12},{wch:25},{wch:25},{wch:35},{wch:20},{wch:12},{wch:50},{wch:50},{wch:50},{wch:50},{wch:15},{wch:15}];
-  XLSX.utils.book_append_sheet(wb, ws2, 'Bulgular');
+  const FONT = {
+    baslik:    { name: 'Calibri', sz: 20, bold: true, color: { rgb: 'D4AF4A' } },
+    altbaslik: { name: 'Calibri', sz: 12, bold: true, color: { rgb: 'FFFFFF' } },
+    beyaz:     { name: 'Calibri', sz: 11, bold: true, color: { rgb: 'FFFFFF' } },
+    koyu:      { name: 'Calibri', sz: 11, bold: true, color: { rgb: '0F1C2E' } },
+    normal:    { name: 'Calibri', sz: 10, color: { rgb: '1E293B' } },
+    kucuk:     { name: 'Calibri', sz: 9, color: { rgb: '64748B' } },
+    yesil:     { name: 'Calibri', sz: 10, bold: true, color: { rgb: '065F46' } },
+    sari:      { name: 'Calibri', sz: 10, bold: true, color: { rgb: '92400E' } },
+    kirmizi:   { name: 'Calibri', sz: 10, bold: true, color: { rgb: '991B1B' } },
+    altın:     { name: 'Calibri', sz: 11, bold: true, color: { rgb: 'D4AF4A' } },
+  };
 
-  // Uyumluluk
-  const ws3_data = [['UYUMLULUK KANITLARI'],['Sıra','Tedbir No','Ana Kat','Alt Kat','Tedbir','Kritiklik','Danışman Notu','Öneri','Kapsanan','ISO 27001']];
-  SORULAR_100.filter(q=>STATE.cevaplar[q.id]?.c==='evet').forEach((q,i) => {
-    const cv=STATE.cevaplar[q.id];
-    ws3_data.push([i+1,q.tedbirNo,q.anaKat,q.altKat,q.tedbir,q.kritiklik===3?'Yüksek':q.kritiklik===2?'Orta':'Düşük',cv.obs||'',q.oneri||'',q.kapsananSayi,lkp('iso1',q.iso1)]);
+  const BORDER = {
+    ince: {
+      top:    { style: 'thin', color: { rgb: 'CBD5E1' } },
+      bottom: { style: 'thin', color: { rgb: 'CBD5E1' } },
+      left:   { style: 'thin', color: { rgb: 'CBD5E1' } },
+      right:  { style: 'thin', color: { rgb: 'CBD5E1' } },
+    },
+    orta: {
+      top:    { style: 'medium', color: { rgb: 'D4AF4A' } },
+      bottom: { style: 'medium', color: { rgb: 'D4AF4A' } },
+      left:   { style: 'medium', color: { rgb: 'D4AF4A' } },
+      right:  { style: 'medium', color: { rgb: 'D4AF4A' } },
+    }
+  };
+
+  const hizaOrta = { horizontal: 'center', vertical: 'center', wrapText: true };
+  const hizaSol  = { horizontal: 'left',   vertical: 'center', wrapText: true };
+
+  // Hücre yardımcısı
+  function hucre(v, font, fill, alignment, border) {
+    const c = { v, t: typeof v === 'number' ? 'n' : 's' };
+    const s = {};
+    if (font)      s.font = font;
+    if (fill)      s.fill = { patternType: 'solid', ...fill };
+    if (alignment) s.alignment = alignment;
+    if (border)    s.border = border;
+    if (Object.keys(s).length) c.s = s;
+    return c;
+  }
+
+  function bos(fill) {
+    return hucre('', null, fill, null, null);
+  }
+
+  // ══════════════════════════════════════════════════════════
+  // SAYFA 1: YÖNETİM ÖZETİ
+  // ══════════════════════════════════════════════════════════
+  const ws1 = {};
+  let r = 0;
+
+  const s1set = (col, row, cell) => {
+    const addr = XLSX.utils.encode_cell({ c: col, r: row });
+    ws1[addr] = cell;
+  };
+
+  // Başlık alanı (A1:G3)
+  s1set(0, r, hucre('BİLGİ GÜVENLİĞİ GAP ANALİZİ', FONT.baslik, RENK.koyu, hizaOrta, BORDER.orta));
+  for (let c = 1; c <= 6; c++) s1set(c, r, bos(RENK.koyu));
+  r++;
+  s1set(0, r, hucre(firmaAdi + ' — Uyumluluk Değerlendirme Raporu', FONT.altbaslik, RENK.koyu, hizaOrta, null));
+  for (let c = 1; c <= 6; c++) s1set(c, r, bos(RENK.koyu));
+  r++;
+  s1set(0, r, hucre(tarih + ' tarihi itibarıyla hazırlanmıştır.', { name: 'Calibri', sz: 10, italic: true, color: { rgb: 'D4AF4A' } }, RENK.koyu, hizaOrta, null));
+  for (let c = 1; c <= 6; c++) s1set(c, r, bos(RENK.koyu));
+  r += 2;
+
+  // Uyum skoru kartı
+  const skorRenk = skor >= 70 ? RENK.yesilaçik : skor >= 40 ? RENK.sariaçik : RENK.kirmiziAçik;
+  const skorFont = skor >= 70 ? { name:'Calibri',sz:28,bold:true,color:{rgb:'065F46'} } :
+                   skor >= 40 ? { name:'Calibri',sz:28,bold:true,color:{rgb:'92400E'} } :
+                                { name:'Calibri',sz:28,bold:true,color:{rgb:'991B1B'} };
+  s1set(0, r, hucre('GENEL UYUM SKORU', { name:'Calibri',sz:11,bold:true,color:{rgb:'1E293B'} }, RENK.acik, hizaOrta, BORDER.ince));
+  s1set(1, r, bos(RENK.acik));
+  s1set(2, r, hucre(skor + '%', skorFont, skorRenk, hizaOrta, BORDER.orta));
+  s1set(3, r, bos(skorRenk));
+  s1set(4, r, hucre(total + '/100 Kontrol Yanıtlandı', FONT.normal, RENK.acik, hizaOrta, BORDER.ince));
+  s1set(5, r, bos(RENK.acik));
+  s1set(6, r, bos(RENK.acik));
+  r++;
+  s1set(0, r, hucre('Değerlendirme Tarihi: ' + tarih, FONT.kucuk, RENK.acik, hizaOrta, BORDER.ince));
+  s1set(1, r, bos(RENK.acik));
+  s1set(2, r, bos(skorRenk));
+  s1set(3, r, bos(skorRenk));
+  s1set(4, r, bos(RENK.acik)); s1set(5, r, bos(RENK.acik)); s1set(6, r, bos(RENK.acik));
+  r += 2;
+
+  // Özet sayılar
+  const ozetKartlar = [
+    { baslik: '✅ Uyumlu', deger: evet, alt: evet+' kontrol', fill: RENK.yesilaçik, font: FONT.yesil },
+    { baslik: '🟡 Kısmen', deger: kismi, alt: kismi+' kontrol', fill: RENK.sariaçik, font: FONT.sari },
+    { baslik: '❌ Uyumsuz', deger: hayir, alt: hayir+' kontrol', fill: RENK.kirmiziAçik, font: FONT.kirmizi },
+    { baslik: '⬜ Kapsam Dışı', deger: kapsam, alt: kapsam+' kontrol', fill: RENK.griAçik, font: FONT.normal },
+    { baslik: '📋 Toplam Bulgu', deger: kismi+hayir, alt: 'Hayır+Kısmen', fill: RENK.morAçik, font: { name:'Calibri',sz:10,bold:true,color:{rgb:'5B21B6'} } },
+  ];
+
+  // Özet kartları 2 sütun olarak yay
+  ozetKartlar.forEach((k, i) => {
+    const col = (i % 3) * 2;
+    if (i % 3 === 0 && i > 0) r += 3;
+    if (i === 0 || i === 3) {
+      // Başlık satırı
+    }
+    s1set(col, r, hucre(k.baslik, { name:'Calibri',sz:10,bold:true,color:{rgb:'1E293B'} }, k.fill, hizaOrta, BORDER.ince));
+    s1set(col+1, r, bos(k.fill));
   });
-  const ws3 = XLSX.utils.aoa_to_sheet(ws3_data);
-  ws3['!cols'] = [{wch:5},{wch:12},{wch:25},{wch:25},{wch:35},{wch:10},{wch:60},{wch:50},{wch:12},{wch:15}];
-  XLSX.utils.book_append_sheet(wb, ws3, 'Uyumluluk Kanıtları');
-
-  // 1296 Tedbir
-  const ws4_data = [['1296 TEDBİR TAM LİSTESİ'],['#','Tedbir No','Ana Kat','Alt Kat','Tedbir Adı','Denetim Sorusu','Cevap','Uygulama Durumu','Kaynak','Kritiklik','Mevzuat','ISO 27001']];
-  SORULAR_1296.forEach((s,idx) => {
-    const cv=STATE.cevaplar1296[s.i]||'';
-    const pQ=SORULAR_100.find(q=>q.id===s.p);
-    ws4_data.push([idx+1,s.tn,s.ak,s.altk,s.ta,s.q,cv,cevapLabel(cv)||'Cevapsız',pQ?`S${s.p}: ${pQ.tedbir}`:`S${s.p}`,s.k===3?'Yüksek':s.k===2?'Orta':'Düşük',lkp('mev',s.mev),lkp('iso1',s.iso1)]);
+  r++;
+  ozetKartlar.forEach((k, i) => {
+    const col = (i % 3) * 2;
+    s1set(col, r, hucre(k.deger, { name:'Calibri',sz:24,bold:true,color:k.font.color }, k.fill, hizaOrta, BORDER.ince));
+    s1set(col+1, r, bos(k.fill));
   });
-  const ws4 = XLSX.utils.aoa_to_sheet(ws4_data);
-  ws4['!cols'] = [{wch:5},{wch:12},{wch:25},{wch:25},{wch:35},{wch:60},{wch:8},{wch:25},{wch:45},{wch:10},{wch:50},{wch:15}];
-  XLSX.utils.book_append_sheet(wb, ws4, '1296 Tedbir Listesi');
+  r++;
+  ozetKartlar.forEach((k, i) => {
+    const col = (i % 3) * 2;
+    s1set(col, r, hucre(k.alt, { name:'Calibri',sz:9,color:{rgb:'64748B'} }, k.fill, hizaOrta, BORDER.ince));
+    s1set(col+1, r, bos(k.fill));
+  });
+  r += 2;
 
-  XLSX.writeFile(wb, `BG-Gap-Analizi-${new Date().toISOString().split('T')[0]}.xlsx`);
-  toast('✅ Excel raporu indirildi', 'success');
+  // Kategori tablosu başlığı
+  const katCols = ['KATEGORİ', 'UYUMLU', 'KISMİ', 'UYUMSUZ', 'TOP.', 'UYUM %', 'DURUM'];
+  const katColFonts = [FONT.beyaz, FONT.beyaz, FONT.beyaz, FONT.beyaz, FONT.beyaz, FONT.beyaz, FONT.beyaz];
+  katCols.forEach((h, i) => {
+    s1set(i, r, hucre(h, katColFonts[i], RENK.koyu, hizaOrta, BORDER.ince));
+  });
+  r++;
+
+  CATEGORIES.forEach((cat, idx) => {
+    const qs = SORULAR_100.filter(q => q.anaKat === cat && STATE.cevaplar[q.id]);
+    const ce = qs.filter(q => STATE.cevaplar[q.id].c === 'evet').length;
+    const ck = qs.filter(q => STATE.cevaplar[q.id].c === 'kismi').length;
+    const ch = qs.filter(q => STATE.cevaplar[q.id].c === 'hayir').length;
+    const ct = qs.length;
+    const cs = ct > 0 ? Math.round(100*(ce+ck*0.5)/ct) : 0;
+    const rowFill = idx % 2 === 0 ? RENK.acik : RENK.beyaz;
+    const skorFill = cs >= 70 ? RENK.yesilaçik : cs >= 40 ? RENK.sariaçik : cs > 0 ? RENK.kirmiziAçik : RENK.griAçik;
+    const skorF = cs >= 70 ? FONT.yesil : cs >= 40 ? FONT.sari : cs > 0 ? FONT.kirmizi : FONT.normal;
+    const durum = cs >= 70 ? '✅ İyi' : cs >= 40 ? '⚠️ Dikkat' : cs > 0 ? '❌ Kritik' : '— Değerlendirilmedi';
+
+    s1set(0, r, hucre(shortCat(cat), FONT.normal, rowFill, hizaSol, BORDER.ince));
+    s1set(1, r, hucre(ce, { name:'Calibri',sz:10,bold:true,color:{rgb:'065F46'} }, rowFill, hizaOrta, BORDER.ince));
+    s1set(2, r, hucre(ck, { name:'Calibri',sz:10,bold:true,color:{rgb:'92400E'} }, rowFill, hizaOrta, BORDER.ince));
+    s1set(3, r, hucre(ch, { name:'Calibri',sz:10,bold:true,color:{rgb:'991B1B'} }, rowFill, hizaOrta, BORDER.ince));
+    s1set(4, r, hucre(ct, FONT.normal, rowFill, hizaOrta, BORDER.ince));
+    s1set(5, r, hucre(cs + '%', skorF, skorFill, hizaOrta, BORDER.ince));
+    s1set(6, r, hucre(durum, skorF, skorFill, hizaOrta, BORDER.ince));
+    r++;
+  });
+
+  // Merge cells
+  const s1merges = [
+    { s:{r:0,c:0}, e:{r:0,c:6} },
+    { s:{r:1,c:0}, e:{r:1,c:6} },
+    { s:{r:2,c:0}, e:{r:2,c:6} },
+    { s:{r:4,c:0}, e:{r:4,c:1} },
+    { s:{r:4,c:2}, e:{r:4,c:3} },
+    { s:{r:4,c:4}, e:{r:4,c:6} },
+    { s:{r:5,c:0}, e:{r:5,c:1} },
+    { s:{r:5,c:2}, e:{r:5,c:3} },
+    { s:{r:5,c:4}, e:{r:5,c:6} },
+  ];
+
+  ws1['!ref'] = XLSX.utils.encode_range({ s:{r:0,c:0}, e:{r:r,c:6} });
+  ws1['!merges'] = s1merges;
+  ws1['!cols'] = [{wch:32},{wch:10},{wch:10},{wch:10},{wch:8},{wch:10},{wch:18}];
+  ws1['!rows'] = [{hpt:36},{hpt:22},{hpt:18}];
+  XLSX.utils.book_append_sheet(wb, ws1, '📊 Yönetim Özeti');
+
+  // ══════════════════════════════════════════════════════════
+  // SAYFA 2: BULGULAR RAPORU
+  // ══════════════════════════════════════════════════════════
+  const ws2 = {};
+  let r2 = 0;
+
+  const s2set = (col, row, cell) => {
+    ws2[XLSX.utils.encode_cell({ c: col, r: row })] = cell;
+  };
+
+  // Başlık
+  s2set(0, r2, hucre('BULGULAR VE TESPİTLER RAPORU', FONT.baslik, RENK.koyu, hizaOrta, BORDER.orta));
+  for (let c = 1; c <= 7; c++) s2set(c, r2, bos(RENK.koyu));
+  r2++;
+  s2set(0, r2, hucre(firmaAdi + ' | ' + tarih, FONT.altbaslik, RENK.koyu, hizaOrta, null));
+  for (let c = 1; c <= 7; c++) s2set(c, r2, bos(RENK.koyu));
+  r2 += 2;
+
+  // Tablo başlığı
+  const bulguCols = ['#', 'Tedbir No', 'Kategori', 'Kontrol Adı', 'Risk Seviyesi', 'Tespit / Bulgu', 'Danışman Gözlemi', 'İyileştirme Önerisi'];
+  bulguCols.forEach((h, i) => {
+    s2set(i, r2, hucre(h, FONT.beyaz, RENK.koyu, hizaOrta, BORDER.ince));
+  });
+  r2++;
+
+  const bulgular = SORULAR_100
+    .filter(q => { const cv = STATE.cevaplar[q.id]; return cv && (cv.c === 'hayir' || cv.c === 'kismi'); })
+    .sort((a, b) => (riskDurumu(b, STATE.cevaplar[b.id].c)?.skor||0) - (riskDurumu(a, STATE.cevaplar[a.id].c)?.skor||0));
+
+  bulgular.forEach((q, i) => {
+    const cv = STATE.cevaplar[q.id];
+    const rd = riskDurumu(q, cv.c);
+    const rowFill = rd?.label === 'Çok Riskli' ? RENK.kirmiziAçik :
+                    rd?.label === 'Riskli'      ? RENK.sariaçik :
+                                                  RENK.morAçik;
+    const riskFont = rd?.label === 'Çok Riskli' ? FONT.kirmizi :
+                     rd?.label === 'Riskli'      ? FONT.sari : { name:'Calibri',sz:10,bold:true,color:{rgb:'5B21B6'} };
+
+    const tespitText = cv.bulgu || (cv.c === 'hayir'
+      ? `"${q.tedbir}" kapsamındaki gereklilikler uygulanmamaktadır. ${q.altKat} alanında tanımlı bir süreç bulunmamaktadır.`
+      : `"${q.tedbir}" alanında kısmi uygulama tespit edilmiştir.`);
+
+    s2set(0, r2, hucre(i+1, FONT.normal, rowFill, hizaOrta, BORDER.ince));
+    s2set(1, r2, hucre(q.tedbirNo, { name:'Calibri',sz:9,bold:true,color:{rgb:'1E293B'},family:3 }, rowFill, hizaOrta, BORDER.ince));
+    s2set(2, r2, hucre(shortCat(q.altKat), FONT.normal, rowFill, hizaSol, BORDER.ince));
+    s2set(3, r2, hucre(q.tedbir, { name:'Calibri',sz:10,bold:true,color:{rgb:'0F172A'} }, rowFill, hizaSol, BORDER.ince));
+    s2set(4, r2, hucre(rd?.label || 'Orta Riskli', riskFont, rowFill, hizaOrta, BORDER.ince));
+    s2set(5, r2, hucre(tespitText, FONT.normal, rowFill, hizaSol, BORDER.ince));
+    s2set(6, r2, hucre(cv.obs || '—', FONT.normal, rowFill, hizaSol, BORDER.ince));
+    s2set(7, r2, hucre((q.oneri || '').split('\n')[0] || '—', FONT.normal, rowFill, hizaSol, BORDER.ince));
+    r2++;
+  });
+
+  ws2['!ref'] = XLSX.utils.encode_range({ s:{r:0,c:0}, e:{r:r2,c:7} });
+  ws2['!merges'] = [
+    { s:{r:0,c:0}, e:{r:0,c:7} },
+    { s:{r:1,c:0}, e:{r:1,c:7} },
+  ];
+  ws2['!cols'] = [{wch:5},{wch:12},{wch:22},{wch:30},{wch:14},{wch:55},{wch:40},{wch:45}];
+  XLSX.utils.book_append_sheet(wb, ws2, '📑 Bulgular');
+
+  // ══════════════════════════════════════════════════════════
+  // SAYFA 3: UYUMLULUK KANITLARI
+  // ══════════════════════════════════════════════════════════
+  const ws3 = {};
+  let r3 = 0;
+  const s3set = (col, row, cell) => { ws3[XLSX.utils.encode_cell({ c: col, r: row })] = cell; };
+
+  s3set(0, r3, hucre('UYUMLULUK KANITLARI', FONT.baslik, { fgColor:{rgb:'065F46'} }, hizaOrta, BORDER.orta));
+  for (let c = 1; c <= 5; c++) s3set(c, r3, bos({ fgColor:{rgb:'065F46'} }));
+  r3++;
+  s3set(0, r3, hucre(firmaAdi + ' | ' + tarih, FONT.altbaslik, { fgColor:{rgb:'065F46'} }, hizaOrta, null));
+  for (let c = 1; c <= 5; c++) s3set(c, r3, bos({ fgColor:{rgb:'065F46'} }));
+  r3 += 2;
+
+  const uyumluCols = ['#', 'Tedbir No', 'Kategori', 'Kontrol Adı', 'Kritiklik', 'Danışman Uygulama Notu'];
+  uyumluCols.forEach((h, i) => {
+    s3set(i, r3, hucre(h, FONT.beyaz, { fgColor:{rgb:'065F46'} }, hizaOrta, BORDER.ince));
+  });
+  r3++;
+
+  SORULAR_100.filter(q => STATE.cevaplar[q.id]?.c === 'evet').forEach((q, i) => {
+    const cv = STATE.cevaplar[q.id];
+    const rowFill = i % 2 === 0 ? RENK.yesilaçik : RENK.beyaz;
+    const kritikLabel = q.kritiklik===3?'🔴 Yüksek':q.kritiklik===2?'🟡 Orta':'⚪ Düşük';
+    s3set(0, r3, hucre(i+1, FONT.normal, rowFill, hizaOrta, BORDER.ince));
+    s3set(1, r3, hucre(q.tedbirNo, { name:'Calibri',sz:9,bold:true,color:{rgb:'065F46'},family:3 }, rowFill, hizaOrta, BORDER.ince));
+    s3set(2, r3, hucre(shortCat(q.altKat), FONT.normal, rowFill, hizaSol, BORDER.ince));
+    s3set(3, r3, hucre(q.tedbir, { name:'Calibri',sz:10,bold:true,color:{rgb:'065F46'} }, rowFill, hizaSol, BORDER.ince));
+    s3set(4, r3, hucre(kritikLabel, FONT.normal, rowFill, hizaOrta, BORDER.ince));
+    s3set(5, r3, hucre(cv.obs || '—', FONT.normal, rowFill, hizaSol, BORDER.ince));
+    r3++;
+  });
+
+  ws3['!ref'] = XLSX.utils.encode_range({ s:{r:0,c:0}, e:{r:r3,c:5} });
+  ws3['!merges'] = [{ s:{r:0,c:0}, e:{r:0,c:5} }, { s:{r:1,c:0}, e:{r:1,c:5} }];
+  ws3['!cols'] = [{wch:5},{wch:12},{wch:25},{wch:35},{wch:12},{wch:60}];
+  XLSX.utils.book_append_sheet(wb, ws3, '✅ Uyumluluk Kanıtları');
+
+  // ══════════════════════════════════════════════════════════
+  // SAYFA 4: 1296 TEDBİR LİSTESİ
+  // ══════════════════════════════════════════════════════════
+  const ws4 = {};
+  let r4 = 0;
+  const s4set = (col, row, cell) => { ws4[XLSX.utils.encode_cell({ c: col, r: row })] = cell; };
+
+  s4set(0, r4, hucre('1296 TEDBİR TAM LİSTESİ', FONT.baslik, RENK.koyu, hizaOrta, BORDER.orta));
+  for (let c = 1; c <= 6; c++) s4set(c, r4, bos(RENK.koyu));
+  r4++;
+  s4set(0, r4, hucre(firmaAdi + ' | ' + tarih, FONT.altbaslik, RENK.koyu, hizaOrta, null));
+  for (let c = 1; c <= 6; c++) s4set(c, r4, bos(RENK.koyu));
+  r4 += 2;
+
+  const t4Cols = ['Tedbir No', 'Kategori', 'Tedbir Adı', 'Denetim Sorusu', 'Uygulama Durumu', 'AI/Şablon Bulgu', 'Kaynak Soru'];
+  t4Cols.forEach((h, i) => {
+    s4set(i, r4, hucre(h, FONT.beyaz, RENK.koyu, hizaOrta, BORDER.ince));
+  });
+  r4++;
+
+  let mevGroup = '';
+  SORULAR_1296.forEach((s, idx) => {
+    const cv = STATE.cevaplar1296[s.i] || '';
+    const bulguObj = STATE.bulgu1296[s.i];
+    const bulguText = bulguObj ? bulguObj.metin : '';
+    const pQ = SORULAR_100.find(q => q.id === s.p);
+    const altKatKisa = s.altk.replace(/^\d+\.\d+\.\d+\.\s*/,'').replace(/^\d+\.\d+\.\s*/,'');
+
+    // Kategori değişince başlık satırı ekle
+    if (s.ak !== mevGroup) {
+      mevGroup = s.ak;
+      for (let c = 0; c <= 6; c++) {
+        s4set(c, r4, hucre(c === 0 ? shortCat(s.ak) : '', FONT.altın, RENK.orta, c===0?hizaSol:null, BORDER.ince));
+      }
+      r4++;
+    }
+
+    const rowFill = cv === 'evet'  ? RENK.yesilaçik :
+                    cv === 'kismi' ? RENK.sariaçik :
+                    cv === 'hayir' ? RENK.kirmiziAçik :
+                    cv === 'kapsam'? RENK.griAçik : RENK.beyaz;
+    const cvLabel = cv === 'evet' ? '✅ Uyumlu' :
+                    cv === 'kismi' ? '🟡 Kısmen' :
+                    cv === 'hayir' ? '❌ Uyumsuz' :
+                    cv === 'kapsam'? '⬜ Kapsam Dışı' : '— Cevapsız';
+    const cvFont  = cv === 'evet'  ? FONT.yesil :
+                    cv === 'kismi' ? FONT.sari :
+                    cv === 'hayir' ? FONT.kirmizi : FONT.normal;
+
+    s4set(0, r4, hucre(s.tn, { name:'Calibri',sz:9,bold:true,color:{rgb:'1E293B'},family:3 }, rowFill, hizaOrta, BORDER.ince));
+    s4set(1, r4, hucre(altKatKisa, { name:'Calibri',sz:9,color:{rgb:'64748B'} }, rowFill, hizaSol, BORDER.ince));
+    s4set(2, r4, hucre(s.ta, { name:'Calibri',sz:10,bold:true,color:{rgb:'0F172A'} }, rowFill, hizaSol, BORDER.ince));
+    s4set(3, r4, hucre(s.q, FONT.normal, rowFill, hizaSol, BORDER.ince));
+    s4set(4, r4, hucre(cvLabel, cvFont, rowFill, hizaOrta, BORDER.ince));
+    s4set(5, r4, hucre(bulguText, FONT.normal, rowFill, hizaSol, BORDER.ince));
+    s4set(6, r4, hucre(pQ ? 'S'+s.p+': '+pQ.tedbir : 'S'+s.p, { name:'Calibri',sz:9,color:{rgb:'6366F1'} }, rowFill, hizaSol, BORDER.ince));
+    r4++;
+  });
+
+  ws4['!ref'] = XLSX.utils.encode_range({ s:{r:0,c:0}, e:{r:r4,c:6} });
+  ws4['!merges'] = [{ s:{r:0,c:0}, e:{r:0,c:6} }, { s:{r:1,c:0}, e:{r:1,c:6} }];
+  ws4['!cols'] = [{wch:12},{wch:22},{wch:32},{wch:55},{wch:16},{wch:60},{wch:35}];
+  XLSX.utils.book_append_sheet(wb, ws4, '📋 1296 Tedbir');
+
+  // ── KAYDET ────────────────────────────────────────────────
+  const dosyaAdi = (firmaAdi.replace(/[^a-zA-Z0-9ğüşıöçĞÜŞİÖÇ\s]/g, '').trim() || 'Rapor') +
+    '_BilgiGuvenligi_GapAnalizi_' + new Date().toISOString().split('T')[0] + '.xlsx';
+
+  XLSX.writeFile(wb, dosyaAdi);
+  toast('✅ Tasarımlı Excel raporu indirildi', 'success');
 }
+
 
 // ══════════════════════════════════════════════════════════════
 // API KEY / RESET / EXPORT
