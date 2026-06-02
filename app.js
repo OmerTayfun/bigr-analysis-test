@@ -1840,7 +1840,7 @@ function exportExcel() {
   const a = document.createElement('a');
   a.href = url; a.download = dosya; a.click();
   URL.revokeObjectURL(url);
-  toast('✅ Excel raporu indirildi: ' + dosya, 'success');  toast('✅ Excel raporu indirildi: '+dosya, 'success');
+  toast('✅ Excel raporu indirildi: ' + dosya, 'success');  
   }
 
 
@@ -1856,8 +1856,8 @@ function showAPIKeyModal() {
 function saveAPIKey() {
   const k = document.getElementById('api-key-input').value.trim();
   if (!k) { toast('Boş olamaz', 'error'); return; }
-  if (k.length < 10) { toast('Geçersiz anahtar', 'error'); return; }  localStorage.setItem(API_KEY_STOR, k);
-  closeAPIModal();
+if (k.length < 10) { toast('Geçersiz anahtar', 'error'); return; }
+localStorage.setItem(API_KEY_STOR, k);  closeAPIModal();
   toast('✅ API anahtarı kaydedildi', 'success');
 }
 function closeAPIModal() { document.getElementById('api-modal').classList.remove('visible'); }
