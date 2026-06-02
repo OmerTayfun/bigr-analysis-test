@@ -1831,9 +1831,17 @@ function exportExcel() {
   // ── KAYDET ────────────────────────────────────────────────
   const dosya = (firmaAdi.replace(/[^\w\s]/g,'').trim()||'Rapor')
     +'_BilgiGuvenligi_GapAnalizi_'+new Date().toISOString().split('T')[0]+'.xlsx';
-  XLSX.writeFile(wb, dosya);
-  toast('✅ Excel raporu indirildi: '+dosya, 'success');
-}
+  const wbout = XLSX.write(wb, { bookType:'xlsx', bookSST:false, type:'binary' });
+  const buf = new ArrayBuffer(wbout.length);
+  const view = new Uint8Array(buf);
+  for (let i=0; i<wbout.length; i++) view[i] = wbout.charCodeAt(i) & 0xFF;
+  const blob = new Blob([buf], { type:'application/octet-stream' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = dosya; a.click();
+  URL.revokeObjectURL(url);
+  toast('✅ Excel raporu indirildi: ' + dosya, 'success');  toast('✅ Excel raporu indirildi: '+dosya, 'success');
+  }
 
 
 
