@@ -1831,17 +1831,9 @@ function exportExcel() {
   // ── KAYDET ────────────────────────────────────────────────
   const dosya = (firmaAdi.replace(/[^\w\s]/g,'').trim()||'Rapor')
     +'_BilgiGuvenligi_GapAnalizi_'+new Date().toISOString().split('T')[0]+'.xlsx';
-  const wbout = XLSX.write(wb, { bookType:'xlsx', bookSST:false, type:'binary' });
-  const buf = new ArrayBuffer(wbout.length);
-  const view = new Uint8Array(buf);
-  for (let i=0; i<wbout.length; i++) view[i] = wbout.charCodeAt(i) & 0xFF;
-  const blob = new Blob([buf], { type:'application/octet-stream' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url; a.download = dosya; a.click();
-  URL.revokeObjectURL(url);
-  toast('✅ Excel raporu indirildi: ' + dosya, 'success');  
-  }
+  XLSX.writeFile(wb, dosya);
+  toast('✅ Excel raporu indirildi: '+dosya, 'success');
+}
 
 
 
@@ -1856,8 +1848,8 @@ function showAPIKeyModal() {
 function saveAPIKey() {
   const k = document.getElementById('api-key-input').value.trim();
   if (!k) { toast('Boş olamaz', 'error'); return; }
-if (k.length < 10) { toast('Geçersiz anahtar', 'error'); return; }
-localStorage.setItem(API_KEY_STOR, k);  closeAPIModal();
+  if (k.length < 10) { toast('Geçersiz anahtar', 'error'); return; }  localStorage.setItem(API_KEY_STOR, k);
+  closeAPIModal();
   toast('✅ API anahtarı kaydedildi', 'success');
 }
 function closeAPIModal() { document.getElementById('api-modal').classList.remove('visible'); }
@@ -1985,16 +1977,29 @@ function pdfRapor() {
         return `<div style="font-size:11px;color:#1E293B;line-height:1.7;background:#F8FAFC;padding:10px;border-radius:6px">${STATE.riskAnalizi[q.id].replace(/\n/g,'<br>')}</div>`;
       }
       const k = q.kritiklik; const isH = cv.c==='hayir';
+      const isKisiselVeri = (q.anaKat||'').toLowerCase().includes('kişisel');
       const katlar = [
         { icon:'⚡', ad:'STRATEJİK', renk:'#DC2626',
-          metin: isH ? `${q.tedbir} alanındaki kontrol eksikliği kurumun güvenlik stratejisini zayıflatmaktadır.`
-                     : `${q.tedbir} alanındaki kısmi uygulama stratejik hedeflerin tam karşılanamamasına yol açmaktadır.` },
+          metin: isH ? `${q.tedbir} alanındaki kontrol eksikliği kurumun güvenlik stratejisini zayıflatmakta, üst yönetimin bilinçli risk kararları almasını engellemektedir.`
+                     : `${q.tedbir} alanındaki kısmi uygulama, stratejik güvenlik hedeflerinin tam karşılanamamasına yol açmaktadır.` },
         { icon:'🔧', ad:'OPERASYONEL', renk:'#EA580C',
-          metin: isH ? 'Tedbirin uygulanmaması operasyonel süreçlerin güvenlik açıklarına karşı korumasız kalmasına neden olmaktadır.'
-                     : 'Kısmi uygulama operasyonel etkinliği sınırlandırmakta, süreçlerde güvenlik açığı devam etmektedir.' },
+          metin: isH ? 'Tedbirin uygulanmaması operasyonel süreçlerin güvenlik açıklarına karşı korumasız kalmasına ve iş sürekliliğinin tehlikeye girmesine neden olmaktadır.'
+                     : 'Kısmi uygulama operasyonel etkinliği sınırlandırmakta; tam uyum sağlanana kadar süreçlerde güvenlik açığı devam etmektedir.' },
+        { icon:'💰', ad:'FİNANSAL', renk:'#D97706',
+          metin: isKisiselVeri
+            ? 'KVKK kapsamında idari para cezası ve tazminat riski doğmakta; veri ihlali durumunda mali yükümlülükler önemli ölçüde artabilmektedir.'
+            : isH ? 'Olası güvenlik ihlali sonrasında olay müdahale, sistem kurtarma ve tazminat maliyetleri kurumun bütçesini ciddi biçimde etkileyebilir.'
+                  : 'Eksikliğin giderilmemesi durumunda bütçelenmemiş güvenlik maliyetleri ve beklenmedik mali yükler gündeme gelebilir.' },
         { icon:'⚖️', ad:'MEVZUAT', renk:'#2563EB',
-          metin: mev ? `BİGR ${q.tedbirNo} kapsamında uyumsuzluk riski. ${mev.split('\n')[0]}`
-                     : `BİGR ${q.tedbirNo} numaralı tedbire doğrudan uyumsuzluk teşkil etmektedir.` },
+          metin: isKisiselVeri
+            ? `KVKK'nın 12. maddesi kapsamında teknik ve idari tedbirlerin alınmaması, Kişisel Verileri Koruma Kurulu'nun idari yaptırım uygulamasına zemin hazırlamaktadır.`
+            : mev ? `BİGR ${q.tedbirNo} kapsamında uyumsuzluk riski. ${mev.split('\n')[0]}`
+                  : `BİGR ${q.tedbirNo} numaralı tedbire doğrudan uyumsuzluk teşkil etmektedir.` },
+        { icon:'📣', ad:'İTİBAR', renk:'#7C3AED',
+          metin: isKisiselVeri
+            ? 'Kişisel veri ihlali durumunda kurumun kamuoyu nezdindeki güvenilirliği zedelenebilir; müşteri ve iş ortağı ilişkileri olumsuz etkilenebilir.'
+            : isH ? 'Güvenlik açığının kamuoyuna yansıması veya bir ihlal yaşanması halinde kurumun sektördeki itibarı ve paydaş güveni ciddi biçimde sarsılabilir.'
+                  : 'Eksikliğin devam etmesi durumunda yaşanabilecek güvenlik olayları kurumun itibarına kalıcı zarar verebilir.' },
       ];
       return katlar.map(kat=>`
         <div style="margin-bottom:6px;padding:7px 10px;background:#fff;border-radius:6px;border-left:3px solid ${kat.renk}">
