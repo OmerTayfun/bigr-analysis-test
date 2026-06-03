@@ -2202,7 +2202,7 @@ function pdfRapor() {
   };
 
   const matrisHTML = `
-  <div style="margin-bottom:36px;">
+  <div style="margin-bottom:36px;page-break-inside:avoid;">
     <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px">
       <div style="width:5px;height:28px;background:#6366F1;border-radius:3px"></div>
       <div style="font-size:16px;font-weight:800;color:#0D1B2E">Risk Dağılım Matrisleri</div>
