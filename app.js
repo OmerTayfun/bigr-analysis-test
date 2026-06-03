@@ -2492,6 +2492,8 @@ function pdfRapor() {
       }).join('')}
     </tbody>
   </table>
+  ${matrisHTML}
+  ${kritikBulgularHTML}
 </div>
 
 <!-- ══ BULGULAR ══ -->
