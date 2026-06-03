@@ -1512,6 +1512,7 @@ function buildRiskMatris() {
         <div style="font-size:11px;font-weight:700;color:var(--text);margin-bottom:8px">
           📋 BİGR Rehberi — 3×3 Risk Matrisi
         </div>
+        ${guide3}
         <div style="margin-bottom:10px;text-align:center">
           <div style="display:inline-flex;gap:8px;flex-wrap:wrap;justify-content:center">
             <div style="display:flex;align-items:center;gap:5px;background:rgba(16,185,129,0.12);border:1px solid #10B981;border-radius:6px;padding:4px 10px">
@@ -1528,13 +1529,13 @@ function buildRiskMatris() {
             </div>
           </div>
         </div>
-        ${guide3}
         ${mat3()}
       </div>
       <div>
         <div style="font-size:11px;font-weight:700;color:var(--text);margin-bottom:8px">
           🌐 ISO 31000 Uyarlaması — 5×5 Risk Matrisi
         </div>
+        ${guide5}
         <div style="margin-bottom:10px;text-align:center">
           <div style="display:inline-flex;gap:8px;flex-wrap:wrap;justify-content:center">
             <div style="display:flex;align-items:center;gap:5px;background:rgba(16,185,129,0.12);border:1px solid #10B981;border-radius:6px;padding:4px 10px">
@@ -1555,7 +1556,6 @@ function buildRiskMatris() {
             </div>
           </div>
         </div>
-        ${guide5}
         ${mat5()}
       </div>
     </div>`;
