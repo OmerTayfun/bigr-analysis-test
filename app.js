@@ -2202,7 +2202,7 @@ function pdfRapor() {
   };
 
   const matrisHTML = `
-  <div style="margin-bottom:36px;page-break-inside:avoid">
+  <div style="margin-bottom:36px;">
     <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px">
       <div style="width:5px;height:28px;background:#6366F1;border-radius:3px"></div>
       <div style="font-size:16px;font-weight:800;color:#0D1B2E">Risk Dağılım Matrisleri</div>
@@ -2339,7 +2339,7 @@ function pdfRapor() {
     const oneriHTML = oneriLines.length ? oneriLines.map((l,i)=>`<div style="display:flex;gap:8px;margin-bottom:6px"><span style="background:#0D1B2E;color:#D4AF4A;width:20px;height:20px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;flex-shrink:0">${i+1}</span><span style="font-size:11px;color:#374151;line-height:1.5">${l}</span></div>`).join('') : `<div style="font-size:11px;color:#9CA3AF">Kontrol mekanizması oluşturularak dokümante edilmelidir.</div>`;
 
     return `
-    <div style="border:1px solid #E2E8F0;border-left:5px solid ${rBorder};border-radius:8px;margin-bottom:20px;background:${rBg};page-break-inside:avoid;overflow:hidden">
+    <div style="border:1px solid #E2E8F0;border-left:5px solid ${rBorder};border-radius:8px;margin-bottom:20px;background:${rBg};overflow:hidden">
       <div style="background:#0D1B2E;padding:12px 16px;display:flex;justify-content:space-between;align-items:center">
         <div>
           <div style="font-size:10px;color:#D4AF4A;font-weight:600;letter-spacing:1px;margin-bottom:3px">DANIŞMANLIK GÖRÜŞÜ #${idx+1}</div>
@@ -2535,7 +2535,7 @@ function pdfRapor() {
 
 <!-- ══ BULGULAR ══ -->
 <div class="sayfa sayfa-kiriliyor">
-  <div style="display:flex;align-items:center;gap:12px;margin-bottom:8px;padding-top:30px;page-break-after:avoid">
+  <div style="display:flex;align-items:center;gap:12px;margin-bottom:8px;padding-top:10px;page-break-after:avoid">
     <div style="width:5px;height:32px;background:#DC2626;border-radius:3px"></div>
     <div>
       <div style="font-size:20px;font-weight:800;color:#0D1B2E">Bulgular ve Tespitler</div>
