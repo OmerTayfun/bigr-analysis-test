@@ -1528,45 +1528,16 @@ function buildKritikBulgular() {
     .filter(q => { const cv=STATE.cevaplar[q.id]; return cv && cv.c!=='evet'; })
     .map(q => ({ q, cv:STATE.cevaplar[q.id], rd:riskDurumu(q,STATE.cevaplar[q.id].c) }))
     .sort((a,b) => (b.rd?.skor||0)-(a.rd?.skor||0))
-    .slice(0,25);
-
+    .slice(0,10);
   document.getElementById('kritik-bulgular').innerHTML = bulgular.length
-    ? bulgular.map(({q,cv,rd},i) => {
-        const isCr = rd?.label==='Çok Riskli';
-        const isR  = rd?.label==='Riskli';
-        const bdg  = isCr ? 'cr' : isR ? 'r' : 'o';
-        const bdr  = isCr ? '#DC2626' : isR ? '#EA580C' : '#F59E0B';
-        const bg   = isCr ? 'rgba(220,38,38,0.07)' : isR ? 'rgba(234,88,12,0.07)' : 'rgba(245,158,11,0.06)';
-
-        const satirlar = (q.oneri||'').split('\n').map(s=>s.trim()).filter(s=>s.length>10);
-        const oneriHTML = satirlar.length
-          ? satirlar.slice(0,4).map((s,j)=>`
-              <div style="display:flex;gap:7px;margin-bottom:5px;align-items:flex-start">
-                <span style="min-width:17px;height:17px;background:${bdr};color:#fff;border-radius:50%;
-                  font-size:9px;font-weight:700;display:flex;align-items:center;justify-content:center;
-                  flex-shrink:0;margin-top:1px">${j+1}</span>
-                <span style="font-size:11.5px;color:var(--text2);line-height:1.55">${s}</span>
-              </div>`).join('')
-          : `<div style="font-size:11px;color:var(--text3)">Kontrol mekanizması oluşturularak dokümante edilmelidir.</div>`;
-
-        return `
-        <div style="border:1px solid ${bdr}33;border-left:4px solid ${bdr};border-radius:8px;
-          margin-bottom:12px;overflow:hidden;background:${bg}">
-          <div style="padding:10px 14px;display:flex;align-items:flex-start;gap:10px">
-            <span class="kb-badge ${bdg}" style="flex-shrink:0;margin-top:2px">${rd?.label||'Riskli'}</span>
-            <div style="flex:1;min-width:0">
-              <div class="kb-text">${q.tedbir}</div>
-              <div class="kb-sub">${shortCat(q.altKat)} • ${cv.c==='hayir'?'❌ Uygulanmıyor':'🟡 Kısmen Uygulandı'} • ${q.tedbirNo}</div>
-            </div>
-            <span style="font-size:10px;color:var(--text3);flex-shrink:0;margin-top:2px">#${i+1}</span>
-          </div>
-          <div style="padding:9px 14px 12px;border-top:1px solid ${bdr}22;background:rgba(0,0,0,0.1)">
-            <div style="font-size:9px;font-weight:700;color:${bdr};text-transform:uppercase;
-              letter-spacing:.6px;margin-bottom:7px">💡 İyileştirme Adımları</div>
-            ${oneriHTML}
-          </div>
-        </div>`;
-      }).join('')
+    ? bulgular.map(({q,cv,rd}) => `
+      <div class="kritik-bulgu-item">
+        <span class="kb-badge ${rd?.label==='Çok Riskli'?'cr':'r'}">${rd?.label||'Riskli'}</span>
+        <div>
+          <div class="kb-text">${q.tedbir}</div>
+          <div class="kb-sub">${shortCat(q.altKat)} • ${cv.c==='hayir'?'Uygulanmıyor':'Kısmen'} • ${q.tedbirNo}</div>
+        </div>
+      </div>`).join('')
     : '<p style="color:var(--text2);font-size:13px">Henüz bulgu yok.</p>';
 }
 
@@ -2080,13 +2051,15 @@ function pdfRapor() {
     return { ad:shortCat(cat), ce, ck, ch, ct, cs };
   }).filter(k=>k.ct>0);
 
+   // ── Uyumlular ─────────────────────────────────────────────
+  const uyumlular = SORULAR_100.filter(q=>STATE.cevaplar[q.id]?.c==='evet');
+  
   // ── Bulgular ──────────────────────────────────────────────
   const bulgular = SORULAR_100
     .filter(q=>{ const cv=STATE.cevaplar[q.id]; return cv&&(cv.c==='hayir'||cv.c==='kismi'); })
     .sort((a,b)=>(riskDurumu(b,STATE.cevaplar[b.id].c)?.skor||0)-(riskDurumu(a,STATE.cevaplar[a.id].c)?.skor||0));
 
-  // ── Uyumlular ─────────────────────────────────────────────
-  const uyumlular = SORULAR_100.filter(q=>STATE.cevaplar[q.id]?.c==='evet');
+ 
 
   // ── YARDIMCI ──────────────────────────────────────────────
   const riskBadge = (rd) => {
@@ -2213,7 +2186,134 @@ function pdfRapor() {
     </div>`;
   };
 
+
+  // ── MATRİS VERİSİ ──────────────────────────────────────────
+  // BİGR 3x3: kritiklik(1-3) x cevap(hayir→olas3, kismi→olas2) → skor=etki*olas
+  const matris3 = {};
+  const matris5 = {};
+  for(let e=1;e<=3;e++) for(let o=1;o<=3;o++) matris3[`${e}_${o}`]=[];
+  for(let e=1;e<=5;e++) for(let o=1;o<=5;o++) matris5[`${e}_${o}`]=[];
+
+  SORULAR_100.forEach(q=>{
+    const cv=STATE.cevaplar[q.id];
+    if(!cv||cv.c==='evet'||cv.c==='kapsam') return;
+    const k=q.kritiklik; // 1-3
+    // BİGR 3x3
+    const o3 = cv.c==='hayir'?3:2;
+    const e3 = k; // 1-3
+    if(matris3[`${e3}_${o3}`]) matris3[`${e3}_${o3}`].push(q);
+    // ISO 5x5 mapping: k1→e2, k2→e3, k3→e5 | hayir→o5, kismi→o3
+    const e5 = k===1?2:k===2?3:5;
+    const o5 = cv.c==='hayir'?5:3;
+    if(matris5[`${e5}_${o5}`]) matris5[`${e5}_${o5}`].push(q);
+  });
+
+  const zone3 = (e,o) => { const s=e*o; return s<=3?'#16A34A':s<=6?'#CA8A04':'#DC2626'; };
+  const zone5 = (e,o) => { const s=e*o; return s<=4?'#16A34A':s<=9?'#CA8A04':s<=14?'#EA580C':'#DC2626'; };
+  const zoneBg3 = (e,o) => { const s=e*o; return s<=3?'rgba(22,163,74,.12)':s<=6?'rgba(202,138,4,.12)':'rgba(220,38,38,.12)'; };
+  const zoneBg5 = (e,o) => { const s=e*o; return s<=4?'rgba(22,163,74,.12)':s<=9?'rgba(202,138,4,.12)':s<=14?'rgba(234,88,12,.12)':'rgba(220,38,38,.12)'; };
+
+  const buildMatrisHTML = (mx, rows, cols, zoneFn, bgFn, title, subtitle) => {
+    const cellW = `${Math.floor(480/(cols+1))}px`;
+    const hdrBg = '#0D1B2E';
+    let tbl = `<table style="border-collapse:collapse;width:100%;table-layout:fixed">`;
+    // header row
+    tbl += `<tr><th style="width:${cellW};background:${hdrBg};color:#D4AF4A;font-size:10px;padding:7px;text-align:center;border:1px solid #334155">ETKİ↓ / OLAS→</th>`;
+    for(let o=1;o<=cols;o++) tbl+=`<th style="width:${cellW};background:${hdrBg};color:#94A3B8;font-size:10px;padding:7px;text-align:center;border:1px solid #334155">${o}</th>`;
+    tbl += '</tr>';
+    // data rows (etki yüksekten aşağı)
+    for(let e=rows;e>=1;e--) {
+      tbl += `<tr><td style="background:${hdrBg};color:#D4AF4A;font-size:10px;padding:7px;text-align:center;font-weight:700;border:1px solid #334155">${e}</td>`;
+      for(let o=1;o<=cols;o++){
+        const key=`${e}_${o}`;
+        const items=mx[key]||[];
+        const skor=e*o;
+        const bc=zoneFn(e,o); const bg=bgFn(e,o);
+        tbl += `<td style="background:${bg};border:2px solid ${bc}44;text-align:center;padding:6px;vertical-align:middle">`;
+        tbl += `<div style="font-size:16px;font-weight:800;color:${bc}">${skor}</div>`;
+        if(items.length) tbl += `<div style="font-size:9px;background:${bc};color:#fff;border-radius:8px;padding:1px 6px;display:inline-block;margin-top:2px">${items.length} bulgu</div>`;
+        tbl += '</td>';
+      }
+      tbl += '</tr>';
+    }
+    tbl += '</table>';
+    return `
+    <div style="flex:1;min-width:0">
+      <div style="font-size:12px;font-weight:700;color:#0D1B2E;margin-bottom:4px">${title}</div>
+      <div style="font-size:10px;color:#64748B;margin-bottom:10px">${subtitle}</div>
+      ${tbl}
+    </div>`;
+  };
+
+  const matrisHTML = `
+  <div style="margin-bottom:36px;page-break-inside:avoid">
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px">
+      <div style="width:5px;height:28px;background:#6366F1;border-radius:3px"></div>
+      <div style="font-size:16px;font-weight:800;color:#0D1B2E">Risk Dağılım Matrisleri</div>
+    </div>
+    <div style="display:flex;gap:24px;align-items:flex-start">
+      ${buildMatrisHTML(matris3,3,3,zone3,zoneBg3,'BİGR 3×3 Matris','Etki(1-3) × Olasılık(1-3)')}
+      ${buildMatrisHTML(matris5,5,5,zone5,zoneBg5,'ISO 31000 5×5 Matris','Etki(1-5) × Olasılık(1-5)')}
+    </div>
+    <div style="display:flex;gap:16px;margin-top:10px;flex-wrap:wrap">
+      <span style="font-size:10px;background:rgba(22,163,74,.15);color:#16A34A;padding:3px 10px;border-radius:8px">🟢 Düşük / Kabul Edilebilir</span>
+      <span style="font-size:10px;background:rgba(202,138,4,.15);color:#CA8A04;padding:3px 10px;border-radius:8px">🟡 Orta / Tolere Edilebilir</span>
+      <span style="font-size:10px;background:rgba(234,88,12,.15);color:#EA580C;padding:3px 10px;border-radius:8px">🟠 Önemli</span>
+      <span style="font-size:10px;background:rgba(220,38,38,.15);color:#DC2626;padding:3px 10px;border-radius:8px">🔴 Yüksek / Kabul Edilemez</span>
+    </div>
+  </div>`;
+
+  // ── EN KRİTİK 25 BULGU (PDF) ────────────────────────────────
+  const kritik25 = SORULAR_100
+    .filter(q=>{ const cv=STATE.cevaplar[q.id]; return cv&&cv.c!=='evet'&&cv.c!=='kapsam'; })
+    .map(q=>({ q, cv:STATE.cevaplar[q.id], rd:riskDurumu(q,STATE.cevaplar[q.id].c) }))
+    .sort((a,b)=>(b.rd?.skor||0)-(a.rd?.skor||0))
+    .slice(0,25);
+
+  const kritikBulgularHTML = `
+  <div style="margin-bottom:36px;page-break-before:always">
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:6px;padding-top:30px">
+      <div style="width:5px;height:28px;background:#DC2626;border-radius:3px"></div>
+      <div>
+        <div style="font-size:16px;font-weight:800;color:#0D1B2E">En Kritik 25 Bulgu</div>
+        <div style="font-size:12px;color:#64748B;margin-top:2px">Risk skoruna göre sıralanmış öncelikli iyileştirme alanları</div>
+      </div>
+    </div>
+    <table style="width:100%;border-collapse:collapse;margin-top:14px">
+      <thead>
+        <tr style="background:#0D1B2E">
+          <th style="padding:9px 10px;color:#D4AF4A;font-size:10px;text-align:left;width:28px">#</th>
+          <th style="padding:9px 10px;color:#D4AF4A;font-size:10px;text-align:left;width:70px">RİSK</th>
+          <th style="padding:9px 10px;color:#D4AF4A;font-size:10px;text-align:left">BULGU / KATEGORİ</th>
+          <th style="padding:9px 10px;color:#D4AF4A;font-size:10px;text-align:left">İYİLEŞTİRME ADIMLARI</th>
+          <th style="padding:9px 10px;color:#D4AF4A;font-size:10px;text-align:center;width:70px">DURUM</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${kritik25.map(({q,cv,rd},i)=>{
+          const isCr=rd?.label==='Çok Riskli';
+          const isR=rd?.label==='Riskli';
+          const bdr=isCr?'#DC2626':isR?'#EA580C':'#F59E0B';
+          const rbg=isCr?'#FFF5F5':isR?'#FFFBEB':'#FFFDF0';
+          const rbadge=isCr?`<span style="background:#FEE2E2;color:#DC2626;font-size:9px;padding:2px 7px;border-radius:8px;font-weight:700">Çok Riskli</span>`:isR?`<span style="background:#FEF3C7;color:#D97706;font-size:9px;padding:2px 7px;border-radius:8px;font-weight:700">Riskli</span>`:`<span style="background:#EDE9FE;color:#7C3AED;font-size:9px;padding:2px 7px;border-radius:8px;font-weight:700">Orta</span>`;
+          const oneriSat=(q.oneri||'').split('\n').map(s=>s.trim()).filter(s=>s.length>10).slice(0,4);
+          const oneriCol=oneriSat.length
+            ?oneriSat.map((s,j)=>`<div style="display:flex;gap:5px;margin-bottom:4px;align-items:flex-start"><span style="background:${bdr};color:#fff;min-width:14px;height:14px;border-radius:50%;font-size:8px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px">${j+1}</span><span style="font-size:10px;color:#374151;line-height:1.5">${s}</span></div>`).join('')
+            :`<span style="font-size:10px;color:#9CA3AF">Kontrol mekanizması oluşturulmalıdır.</span>`;
+          return `<tr style="background:${i%2===0?rbg:'#FFFFFF'};border-bottom:1px solid #E2E8F0;border-left:3px solid ${bdr}">
+            <td style="padding:9px 10px;font-size:11px;color:#6B7280;font-weight:700;vertical-align:top">${i+1}</td>
+            <td style="padding:9px 10px;vertical-align:top">${rbadge}<br><span style="font-size:9px;color:#94A3B8;display:block;margin-top:3px">Skor: ${rd?.skor||0}</span></td>
+            <td style="padding:9px 10px;vertical-align:top"><div style="font-size:11px;font-weight:700;color:#0F172A;margin-bottom:3px">${q.tedbir}</div><div style="font-size:10px;color:#64748B">${shortCat(q.altKat)} • ${q.tedbirNo}</div></td>
+            <td style="padding:9px 10px;vertical-align:top">${oneriCol}</td>
+            <td style="padding:9px 10px;text-align:center;vertical-align:top"><span style="font-size:10px">${cv.c==='hayir'?'❌':'🟡'}</span><div style="font-size:9px;color:#64748B;margin-top:2px">${cv.c==='hayir'?'Uygulanmıyor':'Kısmen'}</div></td>
+          </tr>`;
+        }).join('')}
+      </tbody>
+    </table>
+  </div>`;
+
   // ── HTML RAPORU ───────────────────────────────────────────
+
   const html = `<!DOCTYPE html>
 <html lang="tr">
 <head>
@@ -2321,6 +2421,8 @@ function pdfRapor() {
       </tbody>
     </table>
   </div>
+  ${matrisHTML}
+  ${kritikBulgularHTML}
 </div>
 
 <!-- ══ BULGULAR ══ -->
