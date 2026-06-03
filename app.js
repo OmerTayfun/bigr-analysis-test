@@ -2211,6 +2211,14 @@ function pdfRapor() {
       ${buildMatrisHTML(matris3,3,3,zone3,zoneBg3,'BİGR 3×3 Matris','Etki(1-3) × Olasılık(1-3)')}
       ${buildMatrisHTML(matris5,5,5,zone5,zoneBg5,'ISO 31000 5×5 Matris','Etki(1-5) × Olasılık(1-5)')}
     </div>
+    <div style="margin-top:10px;text-align:right">
+      <div style="display:inline-flex;gap:8px;flex-wrap:wrap;justify-content:flex-end">
+        <span style="font-size:10px;background:rgba(22,163,74,.15);color:#16A34A;padding:3px 10px;border-radius:8px">🟢 1–4 Kabul Edilebilir</span>
+        <span style="font-size:10px;background:rgba(202,138,4,.15);color:#CA8A04;padding:3px 10px;border-radius:8px">🟡 5–9 Tolere Edilebilir</span>
+        <span style="font-size:10px;background:rgba(234,88,12,.15);color:#EA580C;padding:3px 10px;border-radius:8px">🟠 10–14 Önemli</span>
+        <span style="font-size:10px;background:rgba(220,38,38,.15);color:#DC2626;padding:3px 10px;border-radius:8px">🔴 15–25 Kabul Edilemez</span>
+      </div>
+    </div>
     <div style="display:flex;gap:16px;margin-top:10px;flex-wrap:wrap">
       <span style="font-size:10px;background:rgba(22,163,74,.15);color:#16A34A;padding:3px 10px;border-radius:8px">🟢 Düşük / Kabul Edilebilir</span>
       <span style="font-size:10px;background:rgba(202,138,4,.15);color:#CA8A04;padding:3px 10px;border-radius:8px">🟡 Orta / Tolere Edilebilir</span>
@@ -2226,7 +2234,7 @@ function pdfRapor() {
     .slice(0,25);
 
   const kritikBulgularHTML = `
-  <div style="margin-bottom:36px;page-break-before:always">
+  <div style="margin-bottom:36px;page-break-before:auto">
     <div style="display:flex;align-items:center;gap:12px;margin-bottom:6px;padding-top:30px">
       <div style="width:5px;height:28px;background:#DC2626;border-radius:3px"></div>
       <div>
@@ -2521,8 +2529,8 @@ function pdfRapor() {
       }).join('')}
     </tbody>
   </table>
-  ${matrisHTML}
   ${kritikBulgularHTML}
+  ${matrisHTML}
 </div>
 
 <!-- ══ BULGULAR ══ -->
