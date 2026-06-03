@@ -1349,6 +1349,7 @@ function renderOzet() {
     <div class="ozet-kart"><div class="ozet-kart-val" style="color:var(--green)">${evet}</div><div class="ozet-kart-lbl">Uyumlu</div><div class="ozet-kart-sub">${kapQ.filter(q=>STATE.cevaplar[q.id].c==='evet').reduce((s,q)=>s+q.kapsananSayi,0)} tedbir</div></div>
     <div class="ozet-kart"><div class="ozet-kart-val" style="color:var(--amber)">${kismi}</div><div class="ozet-kart-lbl">Kısmen</div><div class="ozet-kart-sub">${kapQ.filter(q=>STATE.cevaplar[q.id].c==='kismi').reduce((s,q)=>s+q.kapsananSayi,0)} tedbir</div></div>
     <div class="ozet-kart"><div class="ozet-kart-val" style="color:var(--red)">${hayir}</div><div class="ozet-kart-lbl">Uyumsuz</div><div class="ozet-kart-sub">${kapQ.filter(q=>STATE.cevaplar[q.id].c==='hayir').reduce((s,q)=>s+q.kapsananSayi,0)} tedbir</div></div>
+    <div class="ozet-kart"><div class="ozet-kart-val" style="color:#94A3B8">${kapsam}</div><div class="ozet-kart-lbl">Kapsam Dışı</div><div class="ozet-kart-sub">${kapQ.filter(q=>STATE.cevaplar[q.id].c==='kapsam').reduce((s,q)=>s+q.kapsananSayi,0)} tedbir</div></div>
     <div class="ozet-kart"><div class="ozet-kart-val" style="color:var(--purple)">${kismi+hayir}</div><div class="ozet-kart-lbl">Toplam Bulgu</div><div class="ozet-kart-sub">Raporda yer alan</div></div>
     <div class="ozet-kart"><div class="ozet-kart-val" style="color:var(--teal)">${Object.keys(STATE.cevaplar1296).length}</div><div class="ozet-kart-lbl">1296 Tedbir</div><div class="ozet-kart-sub">Cevaplanan</div></div>`;
 
