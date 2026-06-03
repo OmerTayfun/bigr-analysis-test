@@ -2526,7 +2526,7 @@ function pdfRapor() {
 
 <!-- ══ BULGULAR ══ -->
 <div class="sayfa sayfa-kiriliyor">
-  <div style="display:flex;align-items:center;gap:12px;margin-bottom:8px;padding-top:30px">
+  <div style="display:flex;align-items:center;gap:12px;margin-bottom:8px;padding-top:30px;page-break-after:avoid">
     <div style="width:5px;height:32px;background:#DC2626;border-radius:3px"></div>
     <div>
       <div style="font-size:20px;font-weight:800;color:#0D1B2E">Bulgular ve Tespitler</div>
@@ -2534,7 +2534,7 @@ function pdfRapor() {
     </div>
   </div>
   <!-- Risk renk açıklaması -->
-  <div style="display:flex;gap:12px;margin-bottom:20px;flex-wrap:wrap">
+  <div style="display:flex;gap:12px;margin-bottom:20px;flex-wrap:wrap;page-break-after:avoid">
     <span style="background:#FEE2E2;color:#DC2626;padding:4px 12px;border-radius:12px;font-size:11px;font-weight:700">🔴 Çok Riskli</span>
     <span style="background:#FEF3C7;color:#D97706;padding:4px 12px;border-radius:12px;font-size:11px;font-weight:700">🟡 Riskli</span>
     <span style="background:#EDE9FE;color:#7C3AED;padding:4px 12px;border-radius:12px;font-size:11px;font-weight:700">🟣 Orta Riskli</span>
