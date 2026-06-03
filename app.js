@@ -1402,178 +1402,126 @@ function buildRiskMatris() {
     if (key in m) m[key]++;
   });
 
-  // 3x3: Etki(1-3) x Olasılık(1-3)
-  // Olasılık: 1=düşük(0), 2=orta(kısmen), 3=yüksek(hayır)
-  const soruSayisi3 = (etki, olas) => {
-    if (olas === 1) return 0;
+  // ── Zon renkleri ─────────────────────────────────────────
+  const zone3 = (s) => {
+    if (s <= 2) return { bg:'rgba(16,185,129,0.15)', b:'#10B981', t:'#10B981', l:'Düşük'  };
+    if (s <= 4) return { bg:'rgba(245,158,11,0.18)', b:'#F59E0B', t:'#F59E0B', l:'Orta'   };
+    if (s <= 6) return { bg:'rgba(234,88,12,0.22)',  b:'#EA580C', t:'#EA580C', l:'Yüksek' };
+    return             { bg:'rgba(220,38,38,0.25)',  b:'#DC2626', t:'#DC2626', l:'Kritik' };
+  };
+  const zone5 = (s) => {
+    if (s <= 4)  return { bg:'rgba(16,185,129,0.15)', b:'#10B981', t:'#10B981', l:'Kabul Edilebilir'  };
+    if (s <= 9)  return { bg:'rgba(245,158,11,0.18)', b:'#F59E0B', t:'#F59E0B', l:'Tolere Edilebilir' };
+    if (s <= 14) return { bg:'rgba(234,88,12,0.22)',  b:'#EA580C', t:'#EA580C', l:'Önemli'            };
+    return              { bg:'rgba(220,38,38,0.25)',  b:'#DC2626', t:'#DC2626', l:'Kabul Edilemez'    };
+  };
+
+  // ── Veri eşleme ───────────────────────────────────────────
+  // 3x3: Olas 1=düşük(0 soru), 2=orta(kısmen), 3=yüksek(hayır)
+  const n3 = (etki, olas) => {
     if (olas === 2) return m[`${etki}-kismi`];
     if (olas === 3) return m[`${etki}-hayir`];
     return 0;
   };
-
-  // 5x5: Kritiklik → Etki mapping: 1→2, 2→3, 3→5
-  // Cevap → Olasılık mapping: kısmen→3, hayır→5
-  const soruSayisi5 = (etki, olas) => {
-    const etkiMap = { 2:1, 3:2, 5:3 };
-    const olasMap = { 3:'kismi', 5:'hayir' };
-    const k = etkiMap[etki];
-    const c = olasMap[olas];
-    if (!k || !c) return 0;
-    return m[`${k}-${c}`] || 0;
-  };
-
-  // ── Zon renk fonksiyonu (skor bazlı) ─────────────────────
-  const zone3 = (skor) => {
-    if (skor <= 2) return { bg:'rgba(16,185,129,0.18)',  b:'#10B981', t:'#10B981', l:'Düşük'  };
-    if (skor <= 4) return { bg:'rgba(245,158,11,0.18)',  b:'#F59E0B', t:'#F59E0B', l:'Orta'   };
-    if (skor <= 6) return { bg:'rgba(234,88,12,0.22)',   b:'#EA580C', t:'#EA580C', l:'Yüksek' };
-    return               { bg:'rgba(220,38,38,0.25)',   b:'#DC2626', t:'#DC2626', l:'Kritik' };
-  };
-
-  const zone5 = (skor) => {
-    if (skor <= 4)  return { bg:'rgba(16,185,129,0.18)',  b:'#10B981', t:'#10B981', l:'Kabul Edilebilir'  };
-    if (skor <= 9)  return { bg:'rgba(245,158,11,0.18)',  b:'#F59E0B', t:'#F59E0B', l:'Tolere Edilebilir' };
-    if (skor <= 14) return { bg:'rgba(234,88,12,0.22)',   b:'#EA580C', t:'#EA580C', l:'Önemli'            };
-    return                { bg:'rgba(220,38,38,0.25)',   b:'#DC2626', t:'#DC2626', l:'Kabul Edilemez'    };
-  };
-
-  const bigrZone3 = (etki, olas) => {
-    const skor = etki * olas;
-    if (etki === 3 && olas === 3) return { ...zone3(9), l:'Çok Riskli'  };
-    if (skor >= 6)                return { ...zone3(6), l:'Riskli'       };
-    if (skor >= 3)                return { ...zone3(3), l:'Orta Riskli'  };
-    return                               { ...zone3(1), l:'Düşük Risk'   };
-  };
-
-  const bigrZone5 = (etki, olas) => {
-    const skor = etki * olas;
-    if (skor >= 20) return { ...zone5(20), l:'Çok Riskli'  };
-    if (skor >= 12) return { ...zone5(12), l:'Riskli'       };
-    if (skor >= 6)  return { ...zone5(6),  l:'Orta Riskli'  };
-    if (skor >= 3)  return { ...zone5(3),  l:'Düşük Risk'   };
-    return                 { ...zone5(1),  l:'Kabul Edilebilir' };
+  // 5x5: Kritiklik 1→Etki2, 2→Etki3, 3→Etki5 | Kısmen→Olas3, Hayır→Olas5
+  const n5 = (etki, olas) => {
+    const ek = {2:1, 3:2, 5:3}[etki];
+    const ok = {3:'kismi', 5:'hayir'}[olas];
+    return (ek && ok) ? (m[`${ek}-${ok}`] || 0) : 0;
   };
 
   // ── Hücre oluşturucu ──────────────────────────────────────
-  const cell = (skor, n, z, size) => {
-    const fs = size === 5 ? '16px' : '20px';
-    const pad = size === 5 ? '5px 2px' : '8px 4px';
-    const mh  = size === 5 ? '54px' : '66px';
-    return `<div style="
-      background:${z.bg};border:1px solid ${z.b};border-radius:5px;
-      padding:${pad};text-align:center;min-height:${mh};
-      display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;
-    ">
-      <div style="font-size:${fs};font-weight:800;color:${z.t};line-height:1">${skor}</div>
-      <div style="font-size:7px;font-weight:700;color:${z.t};letter-spacing:.3px">${z.l}</div>
-      ${n > 0
-        ? `<div style="margin-top:2px;background:rgba(0,0,0,0.2);color:${z.t};font-size:7px;font-weight:600;padding:1px 5px;border-radius:6px">${n}</div>`
-        : ''}
+  const cell = (skor, n, z, small) => `
+    <div style="background:${z.bg};border:1px solid ${z.b};border-radius:5px;
+      padding:${small?'5px 2px':'7px 3px'};text-align:center;
+      min-height:${small?'50px':'60px'};
+      display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;">
+      <div style="font-size:${small?'14px':'18px'};font-weight:800;color:${z.t};line-height:1">${skor}</div>
+      <div style="font-size:7px;font-weight:700;color:${z.t};opacity:.85">${z.l}</div>
+      ${n > 0 ? `<div style="background:rgba(0,0,0,0.2);color:${z.t};font-size:7px;font-weight:700;
+        padding:1px 5px;border-radius:6px;margin-top:2px">${n} kontrol</div>` : ''}
     </div>`;
+
+  // ── 3×3 matris ───────────────────────────────────────────
+  const mat3 = () => {
+    const rLbl = [[3,'🔴 Yüksek','#f87171'],[2,'🟡 Orta','#fbbf24'],[1,'🟢 Düşük','#34d399']];
+    const cLbl = ['DÜŞÜK (×1)','ORTA (×2)','YÜKSEK (×3)'];
+    let g = `<div style="display:grid;grid-template-columns:60px 1fr 1fr 1fr;gap:4px;align-items:center">`;
+    g += `<div style="font-size:7px;color:var(--text3);text-align:center;line-height:1.4">ETKİ ↓<br>OLAS. →</div>`;
+    cLbl.forEach(l => g += `<div style="text-align:center;font-size:8px;font-weight:700;
+      color:var(--text2);padding:3px;background:rgba(255,255,255,0.04);border-radius:3px">${l}</div>`);
+    rLbl.forEach(([etki, lbl, color]) => {
+      g += `<div style="font-size:8px;font-weight:700;color:${color};text-align:right;padding-right:5px">${lbl}</div>`;
+      [1,2,3].forEach(olas => g += cell(etki*olas, n3(etki,olas), zone3(etki*olas), false));
+    });
+    return g + `</div>`;
   };
 
-  // ── 3x3 matris ───────────────────────────────────────────
-  const make3x3 = (title, zoneFn) => {
-    const cols = [1,2,3];
-    const rows = [3,2,1];
-    const colLbls = ['DÜŞÜK (×1)','ORTA (×2)','YÜKSEK (×3)'];
-    const rowLbls = [['🔴','YÜK.','#f87171'],['🟡','ORTA','#fbbf24'],['🟢','DÜŞ.','#34d399']];
-
-    let grid = `<div style="display:grid;grid-template-columns:48px 1fr 1fr 1fr;gap:4px;align-items:center">`;
-    // Başlık
-    grid += `<div style="font-size:7px;color:var(--text3);text-align:center">ETKİ↓ OLAS.→</div>`;
-    colLbls.forEach(l => {
-      grid += `<div style="text-align:center;font-size:8px;font-weight:700;color:var(--text2);padding:3px 1px;background:rgba(255,255,255,0.04);border-radius:3px">${l}</div>`;
-    });
-    // Satırlar
-    rows.forEach((etki, ri) => {
-      const [icon, lbl, color] = rowLbls[ri];
-      grid += `<div style="font-size:8px;font-weight:700;color:${color};text-align:right;padding-right:4px">${icon} ${lbl}</div>`;
-      cols.forEach(olas => {
-        const skor = etki * olas;
-        const n = soruSayisi3(etki, olas);
-        const z = zoneFn(etki, olas);
-        grid += cell(skor, n, z, 3);
-      });
-    });
-    grid += `</div>`;
-    return `<div><div style="font-size:10px;font-weight:700;color:var(--text);margin-bottom:6px">${title}</div>${grid}</div>`;
-  };
-
-  // ── 5x5 matris ───────────────────────────────────────────
-  const make5x5 = (title, zoneFn) => {
-    const cols = [1,2,3,4,5];
-    const rows = [5,4,3,2,1];
-    const colLbls = ['ÇOK DÜŞÜK','DÜŞÜK','ORTA','YÜKSEK','ÇOK YÜKSEK'];
-    const rowLbls = [
-      ['','KRİTİK (5)','#f87171'],
-      ['','YÜKSEK (4)','#fb923c'],
-      ['','ORTA (3)','#fbbf24'],
-      ['','DÜŞÜK (2)','#34d399'],
-      ['','ÇOK DÜŞÜK (1)','#94a3b8'],
+  // ── 5×5 matris ───────────────────────────────────────────
+  const mat5 = () => {
+    const rLbl = [
+      [5,'Kritik (5)','#f87171'],
+      [4,'Yüksek (4)','#fb923c'],
+      [3,'Orta (3)',  '#fbbf24'],
+      [2,'Düşük (2)', '#34d399'],
+      [1,'Çok Düşük (1)','#94a3b8'],
     ];
-
-    let grid = `<div style="display:grid;grid-template-columns:68px 1fr 1fr 1fr 1fr 1fr;gap:3px;align-items:center">`;
-    // Başlık
-    grid += `<div style="font-size:7px;color:var(--text3);text-align:center">ETKİ↓ OLAS.→</div>`;
-    colLbls.forEach(l => {
-      grid += `<div style="text-align:center;font-size:7px;font-weight:700;color:var(--text2);padding:2px 1px;background:rgba(255,255,255,0.04);border-radius:3px">${l}</div>`;
+    const cLbl = ['ÇOK DÜŞÜK','DÜŞÜK','ORTA','YÜKSEK','ÇOK YÜKSEK'];
+    let g = `<div style="display:grid;grid-template-columns:70px 1fr 1fr 1fr 1fr 1fr;gap:3px;align-items:center">`;
+    g += `<div style="font-size:7px;color:var(--text3);text-align:center;line-height:1.4">ETKİ ↓<br>OLAS. →</div>`;
+    cLbl.forEach(l => g += `<div style="text-align:center;font-size:7px;font-weight:700;
+      color:var(--text2);padding:2px;background:rgba(255,255,255,0.04);border-radius:3px">${l}</div>`);
+    rLbl.forEach(([etki, lbl, color]) => {
+      g += `<div style="font-size:7px;font-weight:700;color:${color};text-align:right;padding-right:4px;line-height:1.3">${lbl}</div>`;
+      [1,2,3,4,5].forEach(olas => g += cell(etki*olas, n5(etki,olas), zone5(etki*olas), true));
     });
-    // Satırlar
-    rows.forEach((etki, ri) => {
-      const [icon, lbl, color] = rowLbls[ri];
-      grid += `<div style="font-size:7px;font-weight:700;color:${color};text-align:right;padding-right:4px;line-height:1.3">${lbl}</div>`;
-      cols.forEach(olas => {
-        const skor = etki * olas;
-        const n = soruSayisi5(etki, olas);
-        const z = zoneFn(etki, olas);
-        grid += cell(skor, n, z, 5);
-      });
-    });
-    grid += `</div>`;
-    return `<div><div style="font-size:10px;font-weight:700;color:var(--text);margin-bottom:6px">${title}</div>${grid}</div>`;
+    return g + `</div>`;
   };
 
-  // ── Legend ────────────────────────────────────────────────
-  const legend3 = () => `<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px">
-    ${[['#10B981','1–2 Düşük'],['#F59E0B','3–4 Orta'],['#EA580C','5–6 Yüksek'],['#DC2626','7–9 Kritik']]
-      .map(([c,l])=>`<span style="display:flex;align-items:center;gap:3px;font-size:8px;color:var(--text2)">
-        <span style="width:8px;height:8px;background:${c};border-radius:2px;display:inline-block"></span>${l}</span>`).join('')}
-    <span style="font-size:8px;color:var(--text3)">· Üstteki = Skor · Rozet = Kontrol adedi</span>
-  </div>`;
+  // ── Okuma rehberleri ──────────────────────────────────────
+  const guide3 = `
+    <div style="margin-top:10px;padding:10px 12px;background:rgba(255,255,255,0.03);
+      border-radius:7px;border-left:3px solid #10B981;font-size:9px;color:var(--text2);line-height:1.8">
+      <div style="font-size:10px;font-weight:700;color:var(--text);margin-bottom:4px">📖 Nasıl Okunur?</div>
+      <b>Dikey eksen (Etki):</b> Kontrolün kritikliği — BİGR rehberindeki ağırlık.<br>
+      <b>Yatay eksen (Olasılık):</b> Denetim cevabı — Düşük: uygulanıyor, Orta: kısmen, Yüksek: uygulanmıyor.<br>
+      <b>Hücredeki büyük sayı</b> risk skorudur (Etki × Olasılık). Maksimum 9.<br>
+      <b>Küçük rozet</b> o hücreye düşen gerçek kontrol adedini gösterir.<br>
+      <span style="color:#10B981">■</span> 1–2 Düşük &nbsp;
+      <span style="color:#F59E0B">■</span> 3–4 Orta &nbsp;
+      <span style="color:#EA580C">■</span> 5–6 Yüksek &nbsp;
+      <span style="color:#DC2626">■</span> 7–9 Kritik
+    </div>`;
 
-  const legend5 = () => `<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px">
-    ${[['#10B981','1–4 Kabul'],['#F59E0B','5–9 Tolere'],['#EA580C','10–14 Önemli'],['#DC2626','15–25 Kabul Edilemez']]
-      .map(([c,l])=>`<span style="display:flex;align-items:center;gap:3px;font-size:8px;color:var(--text2)">
-        <span style="width:8px;height:8px;background:${c};border-radius:2px;display:inline-block"></span>${l}</span>`).join('')}
-    <span style="font-size:8px;color:var(--text3)">· Kritiklik 1→2, 2→3, 3→5 · Kısmen→Olas.3, Hayır→Olas.5</span>
-  </div>`;
+  const guide5 = `
+    <div style="margin-top:10px;padding:10px 12px;background:rgba(255,255,255,0.03);
+      border-radius:7px;border-left:3px solid #6366f1;font-size:9px;color:var(--text2);line-height:1.8">
+      <div style="font-size:10px;font-weight:700;color:var(--text);margin-bottom:4px">📖 Nasıl Okunur?</div>
+      <b>ISO 31000 standardı</b> 5 seviyeli Etki × Olasılık matrisini öngörür. Maksimum skor 25.<br>
+      <b>Veriler BİGR'den aktarılmıştır:</b> Kritiklik Düşük→2, Orta→3, Yüksek→5 &nbsp;|&nbsp; Kısmen→Olas.3, Hayır→Olas.5.<br>
+      <b>Boş hücreler</b> bölgenin risk seviyesini gösterir; veri düştüğünde kontrol adedi belirir.<br>
+      <span style="color:#10B981">■</span> 1–4 Kabul Edilebilir &nbsp;
+      <span style="color:#F59E0B">■</span> 5–9 Tolere Edilebilir &nbsp;
+      <span style="color:#EA580C">■</span> 10–14 Önemli &nbsp;
+      <span style="color:#DC2626">■</span> 15–25 Kabul Edilemez
+    </div>`;
 
   document.getElementById('risk-matris').innerHTML = `
-    <div style="margin-bottom:16px">
-      <div style="font-size:10px;font-weight:600;color:var(--text2);margin-bottom:8px;padding-bottom:6px;border-bottom:1px solid var(--border)">
-        3×3 Matris — Etki(1-3) × Olasılık(1-3) · Maks skor: 9
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;align-items:start">
+      <div>
+        <div style="font-size:11px;font-weight:700;color:var(--text);margin-bottom:8px">
+          📋 BİGR Rehberi — 3×3 Risk Matrisi
+        </div>
+        ${mat3()}
+        ${guide3}
       </div>
-      ${legend3()}
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
-        ${make3x3('📋 BİGR Denetim (3×3)', bigrZone3)}
-        ${make3x3('🌐 ISO 31000 (3×3)', (e,o) => zone3(e*o))}
+      <div>
+        <div style="font-size:11px;font-weight:700;color:var(--text);margin-bottom:8px">
+          🌐 ISO 31000 Uyarlaması — 5×5 Risk Matrisi
+        </div>
+        ${mat5()}
+        ${guide5}
       </div>
-    </div>
-    <div>
-      <div style="font-size:10px;font-weight:600;color:var(--text2);margin-bottom:8px;padding-bottom:6px;border-bottom:1px solid var(--border)">
-        5×5 Matris — Etki(1-5) × Olasılık(1-5) · Maks skor: 25
-      </div>
-      ${legend5()}
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
-        ${make5x5('📋 BİGR Denetim (5×5)', bigrZone5)}
-        ${make5x5('🌐 ISO 31000 (5×5)', (e,o) => zone5(e*o))}
-      </div>
-    </div>
-    <div style="margin-top:8px;font-size:8px;color:var(--text3);display:flex;gap:14px;flex-wrap:wrap">
-      <span>🟢 Düşük olasılık = uygulanıyor (0 kontrol)</span>
-      <span>🟡 Orta olasılık = kısmen uygulanıyor</span>
-      <span>🔴 Yüksek olasılık = uygulanmıyor</span>
     </div>`;
 }
 
