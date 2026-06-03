@@ -1512,18 +1512,20 @@ function buildRiskMatris() {
         </div>
         ${guide3}
         ${mat3()}
-        <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;justify-content:center;width:100%">
-          <div style="display:flex;align-items:center;gap:5px;background:rgba(16,185,129,0.12);border:1px solid #10B981;border-radius:6px;padding:4px 10px">
-            <div style="width:8px;height:8px;border-radius:50%;background:#10B981"></div>
-            <span style="font-size:9px;font-weight:700;color:#10B981">1–3 Düşük Risk</span>
-          </div>
-          <div style="display:flex;align-items:center;gap:5px;background:rgba(245,158,11,0.12);border:1px solid #F59E0B;border-radius:6px;padding:4px 10px">
-            <div style="width:8px;height:8px;border-radius:50%;background:#F59E0B"></div>
-            <span style="font-size:9px;font-weight:700;color:#F59E0B">4–6 Orta Risk</span>
-          </div>
-          <div style="display:flex;align-items:center;gap:5px;background:rgba(220,38,38,0.12);border:1px solid #DC2626;border-radius:6px;padding:4px 10px">
-            <div style="width:8px;height:8px;border-radius:50%;background:#DC2626"></div>
-            <span style="font-size:9px;font-weight:700;color:#DC2626">7–9 Yüksek Risk</span>
+        <div style="margin-top:10px;text-align:center">
+          <div style="display:inline-flex;gap:8px;flex-wrap:wrap;justify-content:center">
+            <div style="display:flex;align-items:center;gap:5px;background:rgba(16,185,129,0.12);border:1px solid #10B981;border-radius:6px;padding:4px 10px">
+              <div style="width:8px;height:8px;border-radius:50%;background:#10B981"></div>
+              <span style="font-size:9px;font-weight:700;color:#10B981">1–3 Düşük Risk</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:5px;background:rgba(245,158,11,0.12);border:1px solid #F59E0B;border-radius:6px;padding:4px 10px">
+              <div style="width:8px;height:8px;border-radius:50%;background:#F59E0B"></div>
+              <span style="font-size:9px;font-weight:700;color:#F59E0B">4–6 Orta Risk</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:5px;background:rgba(220,38,38,0.12);border:1px solid #DC2626;border-radius:6px;padding:4px 10px">
+              <div style="width:8px;height:8px;border-radius:50%;background:#DC2626"></div>
+              <span style="font-size:9px;font-weight:700;color:#DC2626">7–9 Yüksek Risk</span>
+            </div>
           </div>
         </div>
       </div>
@@ -1533,26 +1535,24 @@ function buildRiskMatris() {
         </div>
         ${guide5}
         ${mat5()}
-        <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;justify-content:center;width:100%">
-          <div style="display:flex;align-items:center;gap:5px;background:rgba(16,185,129,0.12);
-            border:1px solid #10B981;border-radius:6px;padding:4px 10px">
-            <div style="width:8px;height:8px;border-radius:50%;background:#10B981"></div>
-            <span style="font-size:9px;font-weight:700;color:#10B981">1–4 Kabul Edilebilir</span>
-          </div>
-          <div style="display:flex;align-items:center;gap:5px;background:rgba(245,158,11,0.12);
-            border:1px solid #F59E0B;border-radius:6px;padding:4px 10px">
-            <div style="width:8px;height:8px;border-radius:50%;background:#F59E0B"></div>
-            <span style="font-size:9px;font-weight:700;color:#F59E0B">5–9 Tolere Edilebilir</span>
-          </div>
-          <div style="display:flex;align-items:center;gap:5px;background:rgba(234,88,12,0.12);
-            border:1px solid #EA580C;border-radius:6px;padding:4px 10px">
-            <div style="width:8px;height:8px;border-radius:50%;background:#EA580C"></div>
-            <span style="font-size:9px;font-weight:700;color:#EA580C">10–14 Önemli</span>
-          </div>
-          <div style="display:flex;align-items:center;gap:5px;background:rgba(220,38,38,0.12);
-            border:1px solid #DC2626;border-radius:6px;padding:4px 10px">
-            <div style="width:8px;height:8px;border-radius:50%;background:#DC2626"></div>
-            <span style="font-size:9px;font-weight:700;color:#DC2626">15–25 Kabul Edilemez</span>
+        <div style="margin-top:10px;text-align:center">
+          <div style="display:inline-flex;gap:8px;flex-wrap:wrap;justify-content:center">
+            <div style="display:flex;align-items:center;gap:5px;background:rgba(16,185,129,0.12);border:1px solid #10B981;border-radius:6px;padding:4px 10px">
+              <div style="width:8px;height:8px;border-radius:50%;background:#10B981"></div>
+              <span style="font-size:9px;font-weight:700;color:#10B981">1–4 Kabul Edilebilir</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:5px;background:rgba(245,158,11,0.12);border:1px solid #F59E0B;border-radius:6px;padding:4px 10px">
+              <div style="width:8px;height:8px;border-radius:50%;background:#F59E0B"></div>
+              <span style="font-size:9px;font-weight:700;color:#F59E0B">5–9 Tolere Edilebilir</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:5px;background:rgba(234,88,12,0.12);border:1px solid #EA580C;border-radius:6px;padding:4px 10px">
+              <div style="width:8px;height:8px;border-radius:50%;background:#EA580C"></div>
+              <span style="font-size:9px;font-weight:700;color:#EA580C">10–14 Önemli</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:5px;background:rgba(220,38,38,0.12);border:1px solid #DC2626;border-radius:6px;padding:4px 10px">
+              <div style="width:8px;height:8px;border-radius:50%;background:#DC2626"></div>
+              <span style="font-size:9px;font-weight:700;color:#DC2626">15–25 Kabul Edilemez</span>
+            </div>
           </div>
         </div>
       </div>
