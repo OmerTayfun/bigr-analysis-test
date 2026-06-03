@@ -1404,10 +1404,9 @@ function buildRiskMatris() {
 
   // ── Zon renkleri ─────────────────────────────────────────
   const zone3 = (s) => {
-    if (s <= 2) return { bg:'rgba(16,185,129,0.15)', b:'#10B981', t:'#10B981', l:'Düşük'  };
-    if (s <= 4) return { bg:'rgba(245,158,11,0.18)', b:'#F59E0B', t:'#F59E0B', l:'Orta'   };
-    if (s <= 6) return { bg:'rgba(234,88,12,0.22)',  b:'#EA580C', t:'#EA580C', l:'Yüksek' };
-    return             { bg:'rgba(220,38,38,0.25)',  b:'#DC2626', t:'#DC2626', l:'Kritik' };
+    if (s <= 3) return { bg:'rgba(16,185,129,0.15)', b:'#10B981', t:'#10B981', l:'Düşük Risk'  };
+    if (s <= 6) return { bg:'rgba(245,158,11,0.18)', b:'#F59E0B', t:'#F59E0B', l:'Orta Risk'   };
+    return             { bg:'rgba(220,38,38,0.25)',  b:'#DC2626', t:'#DC2626', l:'Yüksek Risk' };
   };
   const zone5 = (s) => {
     if (s <= 4)  return { bg:'rgba(16,185,129,0.15)', b:'#10B981', t:'#10B981', l:'Kabul Edilebilir'  };
@@ -1451,10 +1450,9 @@ function buildRiskMatris() {
       <b>Yatay eksen (Olasılık):</b> Denetim cevabı — Düşük: uygulanıyor, Orta: kısmen, Yüksek: uygulanmıyor.<br>
       <b>Hücredeki büyük sayı</b> risk skorudur (Etki × Olasılık). Maksimum 9.<br>
       <b>Küçük rozet</b> o hücreye düşen gerçek kontrol adedini gösterir.<br>
-      <span style="color:#10B981">■</span> 1–2 Düşük &nbsp;
-      <span style="color:#F59E0B">■</span> 3–4 Orta &nbsp;
-      <span style="color:#EA580C">■</span> 5–6 Yüksek &nbsp;
-      <span style="color:#DC2626">■</span> 7–9 Kritik
+      <span style="color:#10B981">■</span> 1–3 Düşük Risk &nbsp;
+      <span style="color:#F59E0B">■</span> 4–6 Orta Risk &nbsp;
+      <span style="color:#DC2626">■</span> 7–9 Yüksek Risk
     </div>`;
 
   const guide5 = `
