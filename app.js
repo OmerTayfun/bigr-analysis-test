@@ -1563,7 +1563,7 @@ function buildRiskMatris() {
 
 function buildKritikBulgular() {
   const bulgular = SORULAR_100
-    .filter(q => { const cv=STATE.cevaplar[q.id]; return cv && cv.c!=='evet'; })
+    .filter(q => { const cv=STATE.cevaplar[q.id]; return cv && cv.c!=='evet' && cv.c!=='kapsam'; })
     .map(q => ({ q, cv:STATE.cevaplar[q.id], rd:riskDurumu(q,STATE.cevaplar[q.id].c) }))
     .sort((a,b) => (b.rd?.skor||0)-(a.rd?.skor||0))
     .slice(0,25);
