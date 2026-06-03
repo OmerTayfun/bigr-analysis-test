@@ -1462,8 +1462,6 @@ function buildRiskMatris() {
       border-radius:7px;border-left:3px solid #6366f1;font-size:9px;color:var(--text2);line-height:1.8">
       <div style="font-size:10px;font-weight:700;color:var(--text);margin-bottom:4px">📖 Nasıl Okunur?</div>
       <b>ISO 31000 standardı</b> 5 seviyeli Etki × Olasılık matrisini öngörür. Maksimum skor 25.<br>
-      <b>Veriler BİGR'den aktarılmıştır:</b> Kritiklik Düşük→2, Orta→3, Yüksek→5 &nbsp;|&nbsp; Kısmen→Olas.3, Hayır→Olas.5.<br>
-      <b>Boş hücreler</b> bölgenin risk seviyesini gösterir; veri düştüğünde kontrol adedi belirir.<br>
       <span style="color:#10B981">■</span> 1–4 Kabul Edilebilir &nbsp;
       <span style="color:#F59E0B">■</span> 5–9 Tolere Edilebilir &nbsp;
       <span style="color:#EA580C">■</span> 10–14 Önemli &nbsp;
