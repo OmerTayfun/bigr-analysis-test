@@ -2316,24 +2316,6 @@ function pdfRapor() {
   </div>
 </div>
 
-<!-- ══ BULGULAR ══ -->
-<div class="sayfa sayfa-kiriliyor">
-  <div style="display:flex;align-items:center;gap:12px;margin-bottom:8px;padding-top:30px">
-    <div style="width:5px;height:32px;background:#DC2626;border-radius:3px"></div>
-    <div>
-      <div style="font-size:20px;font-weight:800;color:#0D1B2E">Bulgular ve Tespitler</div>
-      <div style="font-size:13px;color:#64748B;margin-top:2px">Risk seviyesine göre sıralanmış ${bulgular.length} bulgu</div>
-    </div>
-  </div>
-  <!-- Risk renk açıklaması -->
-  <div style="display:flex;gap:12px;margin-bottom:20px;flex-wrap:wrap">
-    <span style="background:#FEE2E2;color:#DC2626;padding:4px 12px;border-radius:12px;font-size:11px;font-weight:700">🔴 Çok Riskli</span>
-    <span style="background:#FEF3C7;color:#D97706;padding:4px 12px;border-radius:12px;font-size:11px;font-weight:700">🟡 Riskli</span>
-    <span style="background:#EDE9FE;color:#7C3AED;padding:4px 12px;border-radius:12px;font-size:11px;font-weight:700">🟣 Orta Riskli</span>
-  </div>
-  ${bulgular.map((q,i)=>bulguKart(q,i)).join('')}
-</div>
-
 <!-- ══ UYUMLULUK KANITLARI ══ -->
 <div class="sayfa sayfa-kiriliyor">
   <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px;padding-top:30px">
@@ -2372,6 +2354,24 @@ function pdfRapor() {
       }).join('')}
     </tbody>
   </table>
+</div>
+
+<!-- ══ BULGULAR ══ -->
+<div class="sayfa sayfa-kiriliyor">
+  <div style="display:flex;align-items:center;gap:12px;margin-bottom:8px;padding-top:30px">
+    <div style="width:5px;height:32px;background:#DC2626;border-radius:3px"></div>
+    <div>
+      <div style="font-size:20px;font-weight:800;color:#0D1B2E">Bulgular ve Tespitler</div>
+      <div style="font-size:13px;color:#64748B;margin-top:2px">Risk seviyesine göre sıralanmış ${bulgular.length} bulgu</div>
+    </div>
+  </div>
+  <!-- Risk renk açıklaması -->
+  <div style="display:flex;gap:12px;margin-bottom:20px;flex-wrap:wrap">
+    <span style="background:#FEE2E2;color:#DC2626;padding:4px 12px;border-radius:12px;font-size:11px;font-weight:700">🔴 Çok Riskli</span>
+    <span style="background:#FEF3C7;color:#D97706;padding:4px 12px;border-radius:12px;font-size:11px;font-weight:700">🟡 Riskli</span>
+    <span style="background:#EDE9FE;color:#7C3AED;padding:4px 12px;border-radius:12px;font-size:11px;font-weight:700">🟣 Orta Riskli</span>
+  </div>
+  ${bulgular.map((q,i)=>bulguKart(q,i)).join('')}
 </div>
 
 <!-- ══ FOOTER ══ -->
