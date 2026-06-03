@@ -1564,16 +1564,44 @@ function buildKritikBulgular() {
     .filter(q => { const cv=STATE.cevaplar[q.id]; return cv && cv.c!=='evet'; })
     .map(q => ({ q, cv:STATE.cevaplar[q.id], rd:riskDurumu(q,STATE.cevaplar[q.id].c) }))
     .sort((a,b) => (b.rd?.skor||0)-(a.rd?.skor||0))
-    .slice(0,10);
+    .slice(0,25);
   document.getElementById('kritik-bulgular').innerHTML = bulgular.length
-    ? bulgular.map(({q,cv,rd}) => `
-      <div class="kritik-bulgu-item">
-        <span class="kb-badge ${rd?.label==='Çok Riskli'?'cr':'r'}">${rd?.label||'Riskli'}</span>
-        <div>
-          <div class="kb-text">${q.tedbir}</div>
-          <div class="kb-sub">${shortCat(q.altKat)} • ${cv.c==='hayir'?'Uygulanmıyor':'Kısmen'} • ${q.tedbirNo}</div>
-        </div>
-      </div>`).join('')
+    ? bulgular.map(({q,cv,rd},i) => {
+        const isCr = rd?.label==='Çok Riskli';
+        const isR  = rd?.label==='Riskli';
+        const bdg  = isCr ? 'cr' : isR ? 'r' : 'o';
+        const bdr  = isCr ? '#DC2626' : isR ? '#EA580C' : '#F59E0B';
+        const bg   = isCr ? 'rgba(220,38,38,0.07)' : isR ? 'rgba(234,88,12,0.07)' : 'rgba(245,158,11,0.06)';
+
+        const satirlar = (q.oneri||'').split('\n').map(s=>s.trim()).filter(s=>s.length>10);
+        const oneriHTML = satirlar.length
+          ? satirlar.slice(0,4).map((s,j)=>`
+              <div style="display:flex;gap:7px;margin-bottom:5px;align-items:flex-start">
+                <span style="min-width:17px;height:17px;background:${bdr};color:#fff;border-radius:50%;
+                  font-size:9px;font-weight:700;display:flex;align-items:center;justify-content:center;
+                  flex-shrink:0;margin-top:1px">${j+1}</span>
+                <span style="font-size:11.5px;color:var(--text2);line-height:1.55">${s}</span>
+              </div>`).join('')
+          : `<div style="font-size:11px;color:var(--text3)">Kontrol mekanizması oluşturularak dokümante edilmelidir.</div>`;
+
+        return `
+        <div style="border:1px solid ${bdr}33;border-left:4px solid ${bdr};border-radius:8px;
+          margin-bottom:12px;overflow:hidden;background:${bg}">
+          <div style="padding:10px 14px;display:flex;align-items:flex-start;gap:10px">
+            <span class="kb-badge ${bdg}" style="flex-shrink:0;margin-top:2px">${rd?.label||'Riskli'}</span>
+            <div style="flex:1;min-width:0">
+              <div class="kb-text">${q.tedbir}</div>
+              <div class="kb-sub">${shortCat(q.altKat)} • ${cv.c==='hayir'?'❌ Uygulanmıyor':'🟡 Kısmen Uygulandı'} • ${q.tedbirNo}</div>
+            </div>
+            <span style="font-size:10px;color:var(--text3);flex-shrink:0;margin-top:2px">#${i+1}</span>
+          </div>
+          <div style="padding:9px 14px 12px;border-top:1px solid ${bdr}22;background:rgba(0,0,0,0.1)">
+            <div style="font-size:9px;font-weight:700;color:${bdr};text-transform:uppercase;
+              letter-spacing:.6px;margin-bottom:7px">💡 İyileştirme Adımları</div>
+            ${oneriHTML}
+          </div>
+        </div>`;
+      }).join('')
     : '<p style="color:var(--text2);font-size:13px">Henüz bulgu yok.</p>';
 }
 
