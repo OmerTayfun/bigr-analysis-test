@@ -2202,34 +2202,36 @@ function pdfRapor() {
   };
 
   const matrisHTML = `
-  <div style="margin-bottom:36px;">
+  <div style="margin-bottom:36px;page-break-inside:avoid;break-inside:avoid">
     <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px">
       <div style="width:5px;height:28px;background:#6366F1;border-radius:3px"></div>
       <div style="font-size:16px;font-weight:800;color:#0D1B2E">Risk Dağılım Matrisleri</div>
     </div>
-    <div style="display:flex;gap:24px;align-items:flex-start">
-      <div style="flex:1;min-width:0">
-        <div style="font-size:12px;font-weight:700;color:#0D1B2E;margin-bottom:4px">BİGR 3×3 Matris</div>
-        <div style="font-size:10px;color:#64748B;margin-bottom:8px">Etki(1-3) × Olasılık(1-3)</div>
-        <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px">
-          <span style="font-size:10px;background:rgba(22,163,74,.15);color:#16A34A;padding:3px 10px;border-radius:8px">🟢 Düşük / Kabul Edilebilir</span>
-          <span style="font-size:10px;background:rgba(202,138,4,.15);color:#CA8A04;padding:3px 10px;border-radius:8px">🟡 Orta / Tolere Edilebilir</span>
-          <span style="font-size:10px;background:rgba(220,38,38,.15);color:#DC2626;padding:3px 10px;border-radius:8px">🔴 Yüksek / Kabul Edilemez</span>
-        </div>
-        ${(()=>{ let tbl=`<table style="border-collapse:collapse;width:100%;table-layout:fixed">`;tbl+=`<tr><th style="background:#0D1B2E;color:#D4AF4A;font-size:10px;padding:7px;text-align:center;border:1px solid #334155">ETKİ↓ / OLAS→</th>`;for(let o=1;o<=3;o++)tbl+=`<th style="background:#0D1B2E;color:#94A3B8;font-size:10px;padding:7px;text-align:center;border:1px solid #334155">${o}</th>`;tbl+='</tr>';for(let e=3;e>=1;e--){tbl+=`<tr><td style="background:#0D1B2E;color:#D4AF4A;font-size:10px;padding:7px;text-align:center;font-weight:700;border:1px solid #334155">${e}</td>`;for(let o=1;o<=3;o++){const key=`${e}_${o}`;const items=(matris3[key]||[]);const skor=e*o;const bc=zone3(e,o);const bg=zoneBg3(e,o);tbl+=`<td style="background:${bg};border:2px solid ${bc}44;text-align:center;padding:6px;vertical-align:middle"><div style="font-size:16px;font-weight:800;color:${bc}">${skor}</div>`;if(items.length)tbl+=`<div style="font-size:9px;background:${bc};color:#fff;border-radius:8px;padding:1px 6px;display:inline-block;margin-top:2px">${items.length} bulgu</div>`;tbl+='</td>';}tbl+='</tr>';}tbl+='</table>';return tbl;})()}
-      </div>
-      <div style="flex:1;min-width:0">
-        <div style="font-size:12px;font-weight:700;color:#0D1B2E;margin-bottom:4px">ISO 31000 5×5 Matris</div>
-        <div style="font-size:10px;color:#64748B;margin-bottom:8px">Etki(1-5) × Olasılık(1-5)</div>
-        <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px">
-          <span style="font-size:10px;background:rgba(22,163,74,.15);color:#16A34A;padding:3px 10px;border-radius:8px">🟢 1–4 Kabul Edilebilir</span>
-          <span style="font-size:10px;background:rgba(202,138,4,.15);color:#CA8A04;padding:3px 10px;border-radius:8px">🟡 5–9 Tolere Edilebilir</span>
-          <span style="font-size:10px;background:rgba(234,88,12,.15);color:#EA580C;padding:3px 10px;border-radius:8px">🟠 10–14 Önemli</span>
-          <span style="font-size:10px;background:rgba(220,38,38,.15);color:#DC2626;padding:3px 10px;border-radius:8px">🔴 15–25 Kabul Edilemez</span>
-        </div>
-        ${(()=>{ let tbl=`<table style="border-collapse:collapse;width:100%;table-layout:fixed">`;tbl+=`<tr><th style="background:#0D1B2E;color:#D4AF4A;font-size:10px;padding:7px;text-align:center;border:1px solid #334155">ETKİ↓ / OLAS→</th>`;for(let o=1;o<=5;o++)tbl+=`<th style="background:#0D1B2E;color:#94A3B8;font-size:10px;padding:7px;text-align:center;border:1px solid #334155">${o}</th>`;tbl+='</tr>';for(let e=5;e>=1;e--){tbl+=`<tr><td style="background:#0D1B2E;color:#D4AF4A;font-size:10px;padding:7px;text-align:center;font-weight:700;border:1px solid #334155">${e}</td>`;for(let o=1;o<=5;o++){const key=`${e}_${o}`;const items=(matris5[key]||[]);const skor=e*o;const bc=zone5(e,o);const bg=zoneBg5(e,o);tbl+=`<td style="background:${bg};border:2px solid ${bc}44;text-align:center;padding:6px;vertical-align:middle"><div style="font-size:16px;font-weight:800;color:${bc}">${skor}</div>`;if(items.length)tbl+=`<div style="font-size:9px;background:${bc};color:#fff;border-radius:8px;padding:1px 6px;display:inline-block;margin-top:2px">${items.length} bulgu</div>`;tbl+='</td>';}tbl+='</tr>';}tbl+='</table>';return tbl;})()}
-      </div>
-    </div>
+    <table style="width:100%;border-collapse:collapse;table-layout:fixed">
+      <tr>
+        <td style="width:48%;padding-right:16px;vertical-align:top">
+          <div style="font-size:12px;font-weight:700;color:#0D1B2E;margin-bottom:4px">BİGR 3×3 Matris</div>
+          <div style="font-size:10px;color:#64748B;margin-bottom:8px">Etki(1-3) × Olasılık(1-3)</div>
+          <div style="margin-bottom:10px">
+            <span style="font-size:10px;background:rgba(22,163,74,.15);color:#16A34A;padding:3px 10px;border-radius:8px;margin-right:4px;display:inline-block;margin-bottom:4px">🟢 Düşük / Kabul Edilebilir</span>
+            <span style="font-size:10px;background:rgba(202,138,4,.15);color:#CA8A04;padding:3px 10px;border-radius:8px;margin-right:4px;display:inline-block;margin-bottom:4px">🟡 Orta / Tolere Edilebilir</span>
+            <span style="font-size:10px;background:rgba(220,38,38,.15);color:#DC2626;padding:3px 10px;border-radius:8px;display:inline-block;margin-bottom:4px">🔴 Yüksek / Kabul Edilemez</span>
+          </div>
+          ${(()=>{ let tbl=`<table style="border-collapse:collapse;width:100%;table-layout:fixed">`;tbl+=`<tr><th style="background:#0D1B2E;color:#D4AF4A;font-size:10px;padding:7px;text-align:center;border:1px solid #334155">ETKİ↓ / OLAS→</th>`;for(let o=1;o<=3;o++)tbl+=`<th style="background:#0D1B2E;color:#94A3B8;font-size:10px;padding:7px;text-align:center;border:1px solid #334155">${o}</th>`;tbl+='</tr>';for(let e=3;e>=1;e--){tbl+=`<tr><td style="background:#0D1B2E;color:#D4AF4A;font-size:10px;padding:7px;text-align:center;font-weight:700;border:1px solid #334155">${e}</td>`;for(let o=1;o<=3;o++){const key=`${e}_${o}`;const items=(matris3[key]||[]);const skor=e*o;const bc=zone3(e,o);const bg=zoneBg3(e,o);tbl+=`<td style="background:${bg};border:2px solid ${bc}44;text-align:center;padding:6px;vertical-align:middle"><div style="font-size:16px;font-weight:800;color:${bc}">${skor}</div>`;if(items.length)tbl+=`<div style="font-size:9px;background:${bc};color:#fff;border-radius:8px;padding:1px 6px;display:inline-block;margin-top:2px">${items.length} bulgu</div>`;tbl+='</td>';}tbl+='</tr>';}tbl+='</table>';return tbl;})()}
+        </td>
+        <td style="width:52%;padding-left:8px;vertical-align:top">
+          <div style="font-size:12px;font-weight:700;color:#0D1B2E;margin-bottom:4px">ISO 31000 5×5 Matris</div>
+          <div style="font-size:10px;color:#64748B;margin-bottom:8px">Etki(1-5) × Olasılık(1-5)</div>
+          <div style="margin-bottom:10px">
+            <span style="font-size:10px;background:rgba(22,163,74,.15);color:#16A34A;padding:3px 10px;border-radius:8px;margin-right:4px;display:inline-block;margin-bottom:4px">🟢 1–4 Kabul Edilebilir</span>
+            <span style="font-size:10px;background:rgba(202,138,4,.15);color:#CA8A04;padding:3px 10px;border-radius:8px;margin-right:4px;display:inline-block;margin-bottom:4px">🟡 5–9 Tolere Edilebilir</span>
+            <span style="font-size:10px;background:rgba(234,88,12,.15);color:#EA580C;padding:3px 10px;border-radius:8px;margin-right:4px;display:inline-block;margin-bottom:4px">🟠 10–14 Önemli</span>
+            <span style="font-size:10px;background:rgba(220,38,38,.15);color:#DC2626;padding:3px 10px;border-radius:8px;display:inline-block;margin-bottom:4px">🔴 15–25 Kabul Edilemez</span>
+          </div>
+          ${(()=>{ let tbl=`<table style="border-collapse:collapse;width:100%;table-layout:fixed">`;tbl+=`<tr><th style="background:#0D1B2E;color:#D4AF4A;font-size:10px;padding:7px;text-align:center;border:1px solid #334155">ETKİ↓ / OLAS→</th>`;for(let o=1;o<=5;o++)tbl+=`<th style="background:#0D1B2E;color:#94A3B8;font-size:10px;padding:7px;text-align:center;border:1px solid #334155">${o}</th>`;tbl+='</tr>';for(let e=5;e>=1;e--){tbl+=`<tr><td style="background:#0D1B2E;color:#D4AF4A;font-size:10px;padding:7px;text-align:center;font-weight:700;border:1px solid #334155">${e}</td>`;for(let o=1;o<=5;o++){const key=`${e}_${o}`;const items=(matris5[key]||[]);const skor=e*o;const bc=zone5(e,o);const bg=zoneBg5(e,o);tbl+=`<td style="background:${bg};border:2px solid ${bc}44;text-align:center;padding:6px;vertical-align:middle"><div style="font-size:16px;font-weight:800;color:${bc}">${skor}</div>`;if(items.length)tbl+=`<div style="font-size:9px;background:${bc};color:#fff;border-radius:8px;padding:1px 6px;display:inline-block;margin-top:2px">${items.length} bulgu</div>`;tbl+='</td>';}tbl+='</tr>';}tbl+='</table>';return tbl;})()}
+        </td>
+      </tr>
+    </table>
   </div>`;
 
   // ── EN KRİTİK 25 BULGU (PDF) ────────────────────────────────
