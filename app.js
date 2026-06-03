@@ -1393,28 +1393,136 @@ function buildBar() {
 }
 
 function buildRiskMatris() {
-  const m = { '1-kismi':0,'2-kismi':0,'3-kismi':0,'1-hayir':0,'2-hayir':0,'3-hayir':0 };
+  // ── Veri toplama ──────────────────────────────────────────
+  const m = { '3-hayir':0,'3-kismi':0,'2-hayir':0,'2-kismi':0,'1-hayir':0,'1-kismi':0 };
   SORULAR_100.forEach(q => {
     const cv = STATE.cevaplar[q.id];
-    if (!cv || cv.c==='evet') return;
+    if (!cv || cv.c === 'evet' || cv.c === 'kapsam') return;
     const key = `${q.kritiklik}-${cv.c}`;
     if (key in m) m[key]++;
   });
-  const cell = (key, cls) => {
-    const n = m[key];
-    const lbl = cls==='critical'?'Çok Riskli':cls==='high'?'Riskli':'Orta';
-    return `<div class="rm-cell ${cls}">${n>0?`<span class="rm-count">${n}</span><span style="font-size:9px">${lbl}</span>`:'<span class="rm-count-0">0</span>'}</div>`;
+
+  // Etki(satır) x Olasılık(sütun) → [düşük, orta, yüksek]
+  // Düşük olasılık sütunu = 0 (kontrol uygulanıyor demek)
+  // Orta  olasılık sütunu = kısmen
+  // Yüksek olasılık sütunu = hayır
+  const data = {
+    3: [0, m['3-kismi'], m['3-hayir']],  // Yüksek etki
+    2: [0, m['2-kismi'], m['2-hayir']],  // Orta etki
+    1: [0, m['1-kismi'], m['1-hayir']],  // Düşük etki
   };
-  document.getElementById('risk-matris').innerHTML = `
-    <div style="font-size:11px;color:var(--text2);margin-bottom:10px">Satır: Uygulama Durumu | Sütun: Kritiklik</div>
-    <div class="risk-matris-grid">
-      <div></div>
-      <div style="text-align:center;font-size:10px;color:var(--text2);font-weight:600;padding-bottom:4px">⚪ Düşük</div>
-      <div style="text-align:center;font-size:10px;color:var(--text2);font-weight:600;padding-bottom:4px">🟡 Orta</div>
-      <div style="text-align:center;font-size:10px;color:var(--text2);font-weight:600;padding-bottom:4px">🔴 Yüksek</div>
-      <div class="rm-label">🟡 Kısmen</div>${cell('1-kismi','medium')}${cell('2-kismi','medium')}${cell('3-kismi','high')}
-      <div class="rm-label">❌ Hayır</div>${cell('1-hayir','medium')}${cell('2-hayir','high')}${cell('3-hayir','critical')}
+
+  // ── ISO 31000 Zon renkleri (Etki × Olasılık skoru) ───────
+  // Skor = etki(1-3) × olasılık(1-3)
+  // 1    → Kabul Edilebilir  (yeşil)
+  // 2-3  → Tolere Edilebilir (sarı)
+  // 4-6  → Önemli            (turuncu)
+  // 7-9  → Kabul Edilemez    (kırmızı)
+  const isoZon = (etki, olas) => {
+    const skor = etki * olas;
+    if (skor <= 1) return { bg:'rgba(16,185,129,0.15)',  border:'#10B981', lbl:'Kabul Edilebilir',  txt:'#10B981' };
+    if (skor <= 3) return { bg:'rgba(245,158,11,0.15)',  border:'#F59E0B', lbl:'Tolere Edilebilir', txt:'#F59E0B' };
+    if (skor <= 6) return { bg:'rgba(234,88,12,0.20)',   border:'#EA580C', lbl:'Önemli',            txt:'#EA580C' };
+    return              { bg:'rgba(220,38,38,0.25)',   border:'#DC2626', lbl:'Kabul Edilemez',   txt:'#DC2626' };
+  };
+
+  // ── BİGR Zon renkleri (denetim odaklı) ───────────────────
+  const bigrZon = (etki, olas) => {
+    if (etki === 3 && olas === 3) return { bg:'rgba(220,38,38,0.25)',  border:'#DC2626', lbl:'Çok Riskli', txt:'#DC2626' };
+    if ((etki === 3 && olas === 2) || (etki === 2 && olas === 3))
+                                   return { bg:'rgba(234,88,12,0.20)',  border:'#EA580C', lbl:'Riskli',     txt:'#EA580C' };
+    if ((etki === 2 && olas === 2) || (etki === 1 && olas === 3) || (etki === 3 && olas === 1))
+                                   return { bg:'rgba(245,158,11,0.18)', border:'#F59E0B', lbl:'Orta Riskli',txt:'#F59E0B' };
+    return                               { bg:'rgba(16,185,129,0.15)',  border:'#10B981', lbl:'Düşük Risk', txt:'#10B981' };
+  };
+
+  // ── Hücre oluşturucu ──────────────────────────────────────
+  const makeCell = (etki, olasIdx, zonFn) => {
+    const olasVal = olasIdx + 1; // 1=düşük, 2=orta, 3=yüksek
+    const n = data[etki][olasIdx];
+    const z = zonFn(etki, olasVal);
+    return `<div style="
+      background:${z.bg};border:1px solid ${z.border};border-radius:6px;
+      padding:8px 4px;text-align:center;min-height:64px;
+      display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;
+    ">
+      ${n > 0
+        ? `<div style="font-size:20px;font-weight:800;color:${z.txt};line-height:1">${n}</div>
+           <div style="font-size:8px;font-weight:700;color:${z.txt};letter-spacing:.4px">${z.lbl}</div>`
+        : `<div style="font-size:16px;color:${z.border};opacity:0.4">—</div>
+           <div style="font-size:8px;color:${z.txt};opacity:0.5">${z.lbl}</div>`
+      }
     </div>`;
+  };
+
+  // ── Ortak başlık/satır etiketleri ────────────────────────
+  const colHeaders = `
+    <div></div>
+    <div style="text-align:center;font-size:9px;font-weight:700;color:var(--text2);padding:4px;background:rgba(16,185,129,0.08);border-radius:4px">
+      DÜŞÜK<br><span style="font-weight:400;font-size:8px;opacity:.7">Olasılık</span>
+    </div>
+    <div style="text-align:center;font-size:9px;font-weight:700;color:var(--text2);padding:4px;background:rgba(245,158,11,0.08);border-radius:4px">
+      ORTA<br><span style="font-weight:400;font-size:8px;opacity:.7">Olasılık</span>
+    </div>
+    <div style="text-align:center;font-size:9px;font-weight:700;color:var(--text2);padding:4px;background:rgba(239,68,68,0.08);border-radius:4px">
+      YÜKSEK<br><span style="font-weight:400;font-size:8px;opacity:.7">Olasılık</span>
+    </div>`;
+
+  const rowLabel = (icon, lbl, color) =>
+    `<div style="font-size:9px;font-weight:700;color:${color};text-align:right;padding-right:6px;line-height:1.4">
+      ${icon}<br><span style="font-weight:400;font-size:8px;color:var(--text3)">Etki</span>
+    </div>`;
+
+  const makeMatrix = (zonFn) => `
+    <div style="display:grid;grid-template-columns:56px 1fr 1fr 1fr;gap:5px;align-items:center">
+      ${colHeaders}
+      ${rowLabel('🔴 YÜK.','#f87171','#f87171')}${makeCell(3,0,zonFn)}${makeCell(3,1,zonFn)}${makeCell(3,2,zonFn)}
+      ${rowLabel('🟡 ORTA','#fbbf24','#fbbf24')}${makeCell(2,0,zonFn)}${makeCell(2,1,zonFn)}${makeCell(2,2,zonFn)}
+      ${rowLabel('🟢 DÜŞ.','#34d399','#34d399')}${makeCell(1,0,zonFn)}${makeCell(1,1,zonFn)}${makeCell(1,2,zonFn)}
+    </div>`;
+
+  // ── Legend ────────────────────────────────────────────────
+  const makeLegend = (items) => `
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px">
+      ${items.map(([bg,lbl]) => `
+        <span style="display:flex;align-items:center;gap:3px;font-size:9px;color:var(--text2)">
+          <span style="width:9px;height:9px;background:${bg};border-radius:2px;display:inline-block;flex-shrink:0"></span>${lbl}
+        </span>`).join('')}
+    </div>`;
+
+  const bigrLegend = makeLegend([
+    ['#DC2626','Çok Riskli'],['#EA580C','Riskli'],['#F59E0B','Orta Riskli'],['#10B981','Düşük Risk']
+  ]);
+  const isoLegend = makeLegend([
+    ['#DC2626','Kabul Edilemez'],['#EA580C','Önemli'],['#F59E0B','Tolere Edilebilir'],['#10B981','Kabul Edilebilir']
+  ]);
+
+  // ── Olasılık açıklaması ───────────────────────────────────
+  const olasikAciklama = `
+    <div style="margin-top:10px;font-size:9px;color:var(--text3);display:flex;gap:12px;flex-wrap:wrap">
+      <span>🟢 Düşük olasılık = kontrol uygulanıyor</span>
+      <span>🟡 Orta olasılık = kısmen uygulanıyor</span>
+      <span>🔴 Yüksek olasılık = uygulanmıyor</span>
+    </div>`;
+
+  document.getElementById('risk-matris').innerHTML = `
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px">
+      <div>
+        <div style="font-size:11px;font-weight:700;color:var(--text);margin-bottom:6px">
+          📋 BİGR Denetim Matrisi
+        </div>
+        ${bigrLegend}
+        ${makeMatrix(bigrZon)}
+      </div>
+      <div>
+        <div style="font-size:11px;font-weight:700;color:var(--text);margin-bottom:6px">
+          🌐 ISO 31000 Risk Matrisi
+        </div>
+        ${isoLegend}
+        ${makeMatrix(isoZon)}
+      </div>
+    </div>
+    ${olasikAciklama}`;
 }
 
 function buildKritikBulgular() {
@@ -1831,8 +1939,21 @@ function exportExcel() {
   // ── KAYDET ────────────────────────────────────────────────
   const dosya = (firmaAdi.replace(/[^\w\s]/g,'').trim()||'Rapor')
     +'_BilgiGuvenligi_GapAnalizi_'+new Date().toISOString().split('T')[0]+'.xlsx';
-  XLSX.writeFile(wb, dosya);
-  toast('✅ Excel raporu indirildi: '+dosya, 'success');
+  try {
+    const wbout = XLSX.write(wb, { bookType:'xlsx', bookSST:false, type:'binary' });
+    const buf = new ArrayBuffer(wbout.length);
+    const view = new Uint8Array(buf);
+    for (let i=0; i<wbout.length; i++) view[i] = wbout.charCodeAt(i) & 0xFF;
+    const blob = new Blob([buf], { type:'application/octet-stream' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = dosya; a.click();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+    toast('✅ Excel raporu indirildi: ' + dosya, 'success');
+  } catch(e) {
+    toast('❌ Excel hatası: ' + e.message, 'error');
+    console.error('Excel hatası:', e);
+  }
 }
 
 
