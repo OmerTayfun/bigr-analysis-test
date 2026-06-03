@@ -2212,7 +2212,6 @@ function pdfRapor() {
     <div style="display:flex;gap:16px;margin-top:10px;flex-wrap:wrap">
       <span style="font-size:10px;background:rgba(22,163,74,.15);color:#16A34A;padding:3px 10px;border-radius:8px">🟢 Düşük / Kabul Edilebilir</span>
       <span style="font-size:10px;background:rgba(202,138,4,.15);color:#CA8A04;padding:3px 10px;border-radius:8px">🟡 Orta / Tolere Edilebilir</span>
-      <span style="font-size:10px;background:rgba(234,88,12,.15);color:#EA580C;padding:3px 10px;border-radius:8px">🟠 Önemli</span>
       <span style="font-size:10px;background:rgba(220,38,38,.15);color:#DC2626;padding:3px 10px;border-radius:8px">🔴 Yüksek / Kabul Edilemez</span>
     </div>
   </div>`;
