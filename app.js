@@ -1340,6 +1340,7 @@ function renderOzet() {
   const evet   = all.filter(v=>v.c==='evet').length;
   const kismi  = all.filter(v=>v.c==='kismi').length;
   const hayir  = all.filter(v=>v.c==='hayir').length;
+  const kapsam = all.filter(v=>v.c==='kapsam').length;
   const total  = evet+kismi+hayir;
   const skor   = total > 0 ? Math.round(100*(evet+kismi*0.5)/total) : 0;
   const kapQ   = SORULAR_100.filter(q => STATE.cevaplar[q.id]);
