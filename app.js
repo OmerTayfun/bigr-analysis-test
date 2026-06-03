@@ -1514,8 +1514,8 @@ function buildRiskMatris() {
         <div style="font-size:11px;font-weight:700;color:var(--text);margin-bottom:8px">
           📋 BİGR Rehberi — 3×3 Risk Matrisi
         </div>
-        ${mat3()}
         ${guide3}
+        ${mat3()}
       </div>
       <div>
         <div style="font-size:11px;font-weight:700;color:var(--text);margin-bottom:8px">
