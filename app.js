@@ -1457,28 +1457,7 @@ function buildRiskMatris() {
     return g + `</div>`;
   };
 
-  // ── 5×5 matris ───────────────────────────────────────────
-  const mat5 = () => {
-    const rLbl = [
-      [5,'Kritik (5)','#f87171'],
-      [4,'Yüksek (4)','#fb923c'],
-      [3,'Orta (3)',  '#fbbf24'],
-      [2,'Düşük (2)', '#34d399'],
-      [1,'Çok Düşük (1)','#94a3b8'],
-    ];
-    const cLbl = ['ÇOK DÜŞÜK','DÜŞÜK','ORTA','YÜKSEK','ÇOK YÜKSEK'];
-    let g = `<div style="display:grid;grid-template-columns:70px 1fr 1fr 1fr 1fr 1fr;gap:3px;align-items:center">`;
-    g += `<div style="font-size:7px;color:var(--text3);text-align:center;line-height:1.4">ETKİ ↓<br>OLAS. →</div>`;
-    cLbl.forEach(l => g += `<div style="text-align:center;font-size:7px;font-weight:700;
-      color:var(--text2);padding:2px;background:rgba(255,255,255,0.04);border-radius:3px">${l}</div>`);
-    rLbl.forEach(([etki, lbl, color]) => {
-      g += `<div style="font-size:7px;font-weight:700;color:${color};text-align:right;padding-right:4px;line-height:1.3">${lbl}</div>`;
-      [1,2,3,4,5].forEach(olas => g += cell(etki*olas, n5(etki,olas), zone5(etki*olas), true));
-    });
-    return g + `</div>`;
-  };
-
-  // ── Okuma rehberleri ──────────────────────────────────────
+   // ── Okuma rehberleri ──────────────────────────────────────
   const guide3 = `
     <div style="margin-top:10px;padding:10px 12px;background:rgba(255,255,255,0.03);
       border-radius:7px;border-left:3px solid #10B981;font-size:9px;color:var(--text2);line-height:1.8">
@@ -1505,6 +1484,28 @@ function buildRiskMatris() {
       <span style="color:#EA580C">■</span> 10–14 Önemli &nbsp;
       <span style="color:#DC2626">■</span> 15–25 Kabul Edilemez
     </div>`;
+  // ── 5×5 matris ───────────────────────────────────────────
+  const mat5 = () => {
+    const rLbl = [
+      [5,'Kritik (5)','#f87171'],
+      [4,'Yüksek (4)','#fb923c'],
+      [3,'Orta (3)',  '#fbbf24'],
+      [2,'Düşük (2)', '#34d399'],
+      [1,'Çok Düşük (1)','#94a3b8'],
+    ];
+    const cLbl = ['ÇOK DÜŞÜK','DÜŞÜK','ORTA','YÜKSEK','ÇOK YÜKSEK'];
+    let g = `<div style="display:grid;grid-template-columns:70px 1fr 1fr 1fr 1fr 1fr;gap:3px;align-items:center">`;
+    g += `<div style="font-size:7px;color:var(--text3);text-align:center;line-height:1.4">ETKİ ↓<br>OLAS. →</div>`;
+    cLbl.forEach(l => g += `<div style="text-align:center;font-size:7px;font-weight:700;
+      color:var(--text2);padding:2px;background:rgba(255,255,255,0.04);border-radius:3px">${l}</div>`);
+    rLbl.forEach(([etki, lbl, color]) => {
+      g += `<div style="font-size:7px;font-weight:700;color:${color};text-align:right;padding-right:4px;line-height:1.3">${lbl}</div>`;
+      [1,2,3,4,5].forEach(olas => g += cell(etki*olas, n5(etki,olas), zone5(etki*olas), true));
+    });
+    return g + `</div>`;
+  };
+
+ 
 
   document.getElementById('risk-matris').innerHTML = `
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;align-items:start">
