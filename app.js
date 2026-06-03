@@ -1521,8 +1521,8 @@ function buildRiskMatris() {
         <div style="font-size:11px;font-weight:700;color:var(--text);margin-bottom:8px">
           🌐 ISO 31000 Uyarlaması — 5×5 Risk Matrisi
         </div>
-        ${mat5()}
         ${guide5}
+        ${mat5()}
       </div>
     </div>`;
 }
