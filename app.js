@@ -1512,7 +1512,7 @@ function buildRiskMatris() {
         </div>
         ${guide3}
         ${mat3()}
-        <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;justify-content:center">
+        <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;justify-content:center;width:100%">
           <div style="display:flex;align-items:center;gap:5px;background:rgba(16,185,129,0.12);border:1px solid #10B981;border-radius:6px;padding:4px 10px">
             <div style="width:8px;height:8px;border-radius:50%;background:#10B981"></div>
             <span style="font-size:9px;font-weight:700;color:#10B981">1–3 Düşük Risk</span>
@@ -1533,7 +1533,7 @@ function buildRiskMatris() {
         </div>
         ${guide5}
         ${mat5()}
-        <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;justify-content:center">
+        <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;justify-content:center;width:100%">
           <div style="display:flex;align-items:center;gap:5px;background:rgba(16,185,129,0.12);
             border:1px solid #10B981;border-radius:6px;padding:4px 10px">
             <div style="width:8px;height:8px;border-radius:50%;background:#10B981"></div>
