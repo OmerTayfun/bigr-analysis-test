@@ -1444,7 +1444,7 @@ function buildRiskMatris() {
 
    // ── Okuma rehberleri ──────────────────────────────────────
   const guide3 = `
-    <div style="margin-top:10px;padding:10px 12px;background:rgba(255,255,255,0.03);
+    <div style="margin-top:10px;margin-bottom:12px;padding:10px 12px;background:rgba(255,255,255,0.03);
       border-radius:7px;border-left:3px solid #10B981;font-size:9px;color:var(--text2);line-height:1.8">
       <div style="font-size:10px;font-weight:700;color:var(--text);margin-bottom:4px">📖 Nasıl Okunur?</div>
       <b>Dikey eksen (Etki):</b> Kontrolün kritikliği — BİGR rehberindeki ağırlık.<br>
@@ -1458,7 +1458,7 @@ function buildRiskMatris() {
     </div>`;
 
   const guide5 = `
-    <div style="margin-top:10px;padding:10px 12px;background:rgba(255,255,255,0.03);
+    <div style="margin-top:10px;margin-bottom:12px;padding:10px 12px;background:rgba(255,255,255,0.03);
       border-radius:7px;border-left:3px solid #6366f1;font-size:9px;color:var(--text2);line-height:1.8">
       <div style="font-size:10px;font-weight:700;color:var(--text);margin-bottom:4px">📖 Nasıl Okunur?</div>
       <b>ISO 31000 standardı</b> 5 seviyeli Etki × Olasılık matrisini öngörür. Maksimum skor 25.<br>
