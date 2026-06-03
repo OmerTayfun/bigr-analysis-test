@@ -1512,6 +1512,23 @@ function buildRiskMatris() {
         </div>
         ${guide3}
         ${mat3()}
+        <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap">
+          <div style="display:flex;align-items:center;gap:5px;background:rgba(16,185,129,0.12);
+            border:1px solid #10B981;border-radius:6px;padding:4px 10px">
+            <div style="width:8px;height:8px;border-radius:50%;background:#10B981"></div>
+            <span style="font-size:9px;font-weight:700;color:#10B981">1–3 Düşük Risk</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:5px;background:rgba(245,158,11,0.12);
+            border:1px solid #F59E0B;border-radius:6px;padding:4px 10px">
+            <div style="width:8px;height:8px;border-radius:50%;background:#F59E0B"></div>
+            <span style="font-size:9px;font-weight:700;color:#F59E0B">4–6 Orta Risk</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:5px;background:rgba(220,38,38,0.12);
+            border:1px solid #DC2626;border-radius:6px;padding:4px 10px">
+            <div style="width:8px;height:8px;border-radius:50%;background:#DC2626"></div>
+            <span style="font-size:9px;font-weight:700;color:#DC2626">7–9 Yüksek Risk</span>
+          </div>
+        </div>
       </div>
       <div>
         <div style="font-size:11px;font-weight:700;color:var(--text);margin-bottom:8px">
@@ -2358,7 +2375,7 @@ function pdfRapor() {
 
 <!-- ══ BULGULAR ══ -->
 <div class="sayfa sayfa-kiriliyor">
-  <div style="display:flex;align-items:center;gap:12px;margin-bottom:8px;padding-top:30px">
+  <div style="display:flex;align-items:center;gap:12px;margin-bottom:8px;padding-top:30px;page-break-after:avoid">
     <div style="width:5px;height:32px;background:#DC2626;border-radius:3px"></div>
     <div>
       <div style="font-size:20px;font-weight:800;color:#0D1B2E">Bulgular ve Tespitler</div>
@@ -2366,7 +2383,7 @@ function pdfRapor() {
     </div>
   </div>
   <!-- Risk renk açıklaması -->
-  <div style="display:flex;gap:12px;margin-bottom:20px;flex-wrap:wrap">
+  <div style="display:flex;gap:12px;margin-bottom:20px;flex-wrap:wrap;page-break-after:avoid">
     <span style="background:#FEE2E2;color:#DC2626;padding:4px 12px;border-radius:12px;font-size:11px;font-weight:700">🔴 Çok Riskli</span>
     <span style="background:#FEF3C7;color:#D97706;padding:4px 12px;border-radius:12px;font-size:11px;font-weight:700">🟡 Riskli</span>
     <span style="background:#EDE9FE;color:#7C3AED;padding:4px 12px;border-radius:12px;font-size:11px;font-weight:700">🟣 Orta Riskli</span>
