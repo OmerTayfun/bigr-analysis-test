@@ -1,33 +1,33 @@
 <!DOCTYPE html>
-<html lang="tr">
+<html lang="tr" data-theme="dark">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Bilgi Güvenliği Gap Analizi | BİGR &amp; KVKK</title>
+  <title>Bilgi Güvenliği Gap Analizi | BİGR & KVKK</title>
+  <!-- Theme init: before render to avoid flash -->
+  <script>(function(){var t=localStorage.getItem('grc-theme')||'dark';document.documentElement.setAttribute('data-theme',t);})();</script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 </head>
 <body>
 
+<!-- ══════════════ HEADER ══════════════ -->
 <header class="app-header">
   <div class="logo">
-    <div class="logo-mark">
-      <svg width="14" height="15" viewBox="0 0 14 15" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <path d="M7 0.5L0.75 3v4.75C0.75 11.5 3.5 14.9 7 16c3.5-1.1 6.25-4.5 6.25-8.25V3L7 0.5z" fill="currentColor"/>
-      </svg>
-    </div>
+    <div class="logo-mark">🛡</div>
     <div>
       <div class="logo-text">Bilgi Güvenliği Gap Analizi</div>
-      <div class="logo-sub">BİGR &amp; KVKK Uyumluluk Denetim Aracı</div>
+      <div class="logo-sub">BİGR & KVKK Uyumluluk Denetim Aracı</div>
     </div>
   </div>
 
-  <div class="proje-ayarlar">
-    <input type="text" id="proje-adi-input" placeholder="Firma Adı" onchange="updateProjeAdi(this.value)">
+  <div class="proje-ayarlar" style="display:flex;align-items:center;gap:10px;margin-left:16px;">
+    <input type="text" id="proje-adi-input" placeholder="Firma Adı"
+           onchange="updateProjeAdi(this.value)">
   </div>
 
   <div class="header-stats">
@@ -38,37 +38,42 @@
   </div>
 
   <div class="header-btns">
-    <button id="theme-toggle" class="btn btn-ghost" onclick="toggleTheme()" title="Tema değiştir"></button>
-    <button class="btn btn-ghost" onclick="showAPIKeyModal()" title="Gemini API Anahtarı">API</button>
-    <button class="btn btn-ghost" onclick="exportExcel()" title="Excel Raporu İndir">Excel</button>
-    <button class="btn btn-ghost" onclick="exportData()" title="JSON Yedek">JSON</button>
-    <button class="btn btn-ghost" onclick="document.getElementById('file-upload').click()">Yükle</button>
-    <input type="file" id="file-upload" style="display:none" accept=".json" onchange="importData(event)">
-    <button class="btn btn-ghost" onclick="resetAll()">Sıfırla</button>
-    <button class="btn btn-ghost" onclick="pdfRapor()">PDF</button>
+    <button class="btn btn-ghost" onclick="showAPIKeyModal()" title="Gemini API Anahtarı">🔑 API</button>
+    <button class="btn btn-ghost" onclick="exportExcel()" title="Excel Raporu">📊 Excel</button>
+    <button class="btn btn-ghost" onclick="exportData()" title="JSON Yedek">💾 JSON</button>
+    <div class="header-actions">
+      <button class="btn btn-ghost" onclick="document.getElementById('file-upload').click()">📂 Yükle</button>
+      <input type="file" id="file-upload" style="display:none" accept=".json" onchange="importData(event)">
+    </div>
+    <button class="btn btn-ghost" onclick="resetAll()">↺ Sıfırla</button>
+    <button class="btn btn-ghost" onclick="pdfRapor()">🖨 PDF</button>
+    <!-- Theme Toggle -->
+    <button class="btn-theme" id="theme-toggle" onclick="toggleTheme()" title="Tema değiştir">☀️</button>
   </div>
 </header>
 
+<!-- ══════════════ TABS ══════════════ -->
 <nav class="tabs">
   <div class="tab active" data-page="sorular" onclick="switchTab('sorular')">
-    Denetim Soruları <span class="tab-badge" id="badge-sorular">0/100</span>
+    📋 Denetim Soruları <span class="tab-badge" id="badge-sorular">0/100</span>
   </div>
   <div class="tab" data-page="rapor" onclick="switchTab('rapor')">
-    Bulgular <span class="tab-badge" id="badge-rapor">0</span>
+    📑 Bulgular <span class="tab-badge" id="badge-rapor">0</span>
   </div>
   <div class="tab" data-page="uyumlu" onclick="switchTab('uyumlu')">
-    Uyumluluk Kanıtları <span class="tab-badge" id="badge-uyumlu">0</span>
+    ✅ Uyumluluk Kanıtları <span class="tab-badge" id="badge-uyumlu">0</span>
   </div>
   <div class="tab" data-page="tedbirler" onclick="switchTab('tedbirler')">
-    1296 Tedbir <span class="tab-badge" id="badge-tedbirler">0/1296</span>
+    📋 1296 Tedbir <span class="tab-badge" id="badge-tedbirler">0/1296</span>
   </div>
   <div class="tab" data-page="ozet" onclick="switchTab('ozet')">
-    Yönetim Özeti
+    📊 Yönetim Özeti
   </div>
 </nav>
+
 <div class="progress-wrap"><div class="progress-fill" id="prog"></div></div>
 
-<!-- SAYFA 1: SORULAR -->
+<!-- ══════════════ SAYFA 1: SORULAR ══════════════ -->
 <main class="page active" id="page-sorular">
   <div class="layout">
     <aside class="sidebar" id="sidebar"></aside>
@@ -76,8 +81,8 @@
       <div class="q-nav">
         <div class="q-nav-info" id="q-nav-info">Soru 1 / 100</div>
         <div class="nav-arrows">
-          <button class="nav-btn" id="prev-btn" onclick="navigate(-1)" disabled>&#8592; Önceki</button>
-          <button class="nav-btn" id="next-btn" onclick="navigate(1)">Sonraki &#8594;</button>
+          <button class="nav-btn" id="prev-btn" onclick="navigate(-1)" disabled>← Önceki</button>
+          <button class="nav-btn" id="next-btn" onclick="navigate(1)">Sonraki →</button>
         </div>
       </div>
       <div class="section-label" id="q-section-label"></div>
@@ -86,11 +91,11 @@
   </div>
 </main>
 
-<!-- SAYFA 2: BULGULAR -->
+<!-- ══════════════ SAYFA 2: BULGULAR ══════════════ -->
 <main class="page" id="page-rapor">
   <div class="rapor-header-bar">
     <div>
-      <h1 class="rapor-baslik">Danışmanlık Görüşleri</h1>
+      <h1 class="rapor-baslik">📑 Danışmanlık Görüşleri</h1>
       <p class="rapor-sub">Hayır ve Kısmen cevaplanan kontroller için otomatik oluşturulan bulgular</p>
     </div>
     <select id="rapor-filter" onchange="renderRapor()">
@@ -102,18 +107,18 @@
     </select>
   </div>
   <div id="rapor-liste"></div>
-  <div id="rapor-bos" style="display:none;text-align:center;padding:4rem;color:var(--text2)">
-    <div class="empty-icon">&#10003;</div>
-    <div style="font-size:15px;font-weight:600;margin-top:1rem">Henüz bulgu yok</div>
-    <div style="font-size:13px;margin-top:.5rem;color:var(--text3)">Denetim sorularını yanıtladıkça bulgular burada görünecek</div>
+  <div id="rapor-bos" style="display:none;text-align:center;padding:5rem 2rem;color:var(--text2)">
+    <div style="font-size:2.5rem;margin-bottom:1rem;opacity:0.5">✅</div>
+    <div style="font-size:15px;font-weight:600;color:var(--text)">Henüz bulgu yok</div>
+    <div style="font-size:13px;margin-top:.5rem">Denetim sorularını yanıtladıkça bulgular burada görünecek</div>
   </div>
 </main>
 
-<!-- SAYFA 3: UYUMLULUK KANITLARI -->
+<!-- ══════════════ SAYFA 3: UYUMLULUK KANITLARI ══════════════ -->
 <main class="page" id="page-uyumlu">
   <div class="rapor-header-bar">
     <div>
-      <h1 class="rapor-baslik">Uyumluluk Kanıtları</h1>
+      <h1 class="rapor-baslik">✅ Uyumluluk Kanıtları</h1>
       <p class="rapor-sub">Evet olarak değerlendirilen kontroller ve danışman uygulama notları</p>
     </div>
     <div style="display:flex;gap:8px;align-items:center">
@@ -126,25 +131,26 @@
     </div>
   </div>
   <div id="uyumlu-liste"></div>
-  <div id="uyumlu-bos" style="display:none;text-align:center;padding:4rem;color:var(--text2)">
-    <div class="empty-icon">&#9776;</div>
-    <div style="font-size:15px;font-weight:600;margin-top:1rem">Henüz uyumlu kontrol yok</div>
-    <div style="font-size:13px;margin-top:.5rem;color:var(--text3)">Evet cevabı verdiğiniz kontroller burada görünecek</div>
+  <div id="uyumlu-bos" style="display:none;text-align:center;padding:5rem 2rem;color:var(--text2)">
+    <div style="font-size:2.5rem;margin-bottom:1rem;opacity:0.5">📋</div>
+    <div style="font-size:15px;font-weight:600;color:var(--text)">Henüz uyumlu kontrol yok</div>
+    <div style="font-size:13px;margin-top:.5rem">Evet cevabı verdiğiniz kontroller burada görünecek</div>
   </div>
 </main>
 
-<!-- SAYFA 4: 1296 TEDBİR -->
+<!-- ══════════════ SAYFA 4: 1296 TEDBİR ══════════════ -->
 <main class="page" id="page-tedbirler">
   <div class="rapor-header-bar">
     <div>
-      <h1 class="rapor-baslik">1296 Tedbir</h1>
+      <h1 class="rapor-baslik">📋 1296 Tedbir Tam Listesi</h1>
       <p class="rapor-sub">100 sorudan otomatik üretilen 1296 tedbirin tüm cevapları</p>
     </div>
-    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
-      <button id="btn-toplu-bulgu" class="btn btn-accent" onclick="tumKismenleriBulguUret()">
-        Toplu Bulgu Üret
+    <div style="display:flex;gap:7px;flex-wrap:wrap;align-items:center">
+      <button id="btn-toplu-bulgu" class="btn btn-ghost" onclick="tumKismenleriBulguUret()"
+              style="background:linear-gradient(135deg,#6366f1,#8b5cf6);color:#fff;border:none;font-weight:600">
+        📋 Toplu Bulgu Üret
       </button>
-      <button class="btn btn-ghost" onclick="bulgu1296Temizle()" style="font-size:11px">Temizle</button>
+      <button class="btn btn-ghost" onclick="bulgu1296Temizle()" style="font-size:11px">🗑 Temizle</button>
       <select id="t-cat-filter" onchange="render1296()">
         <option value="all">Tüm Kategoriler</option>
       </select>
@@ -155,8 +161,8 @@
         <option value="hayir">Uyumsuz</option>
         <option value="bos">Cevapsız</option>
       </select>
-      <input type="text" id="t-search" placeholder="Tedbir ara..." onkeyup="render1296()" class="search-input">
-      <span id="t-count" class="result-count">0 sonuç</span>
+      <input type="text" id="t-search" placeholder="🔍 Tedbir ara..." onkeyup="render1296()">
+      <span id="t-count" style="font-size:12px;color:var(--text3);font-family:'DM Mono',monospace">0 sonuç</span>
     </div>
   </div>
   <div id="t-stats" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;margin-bottom:1.5rem"></div>
@@ -178,7 +184,7 @@
   <div id="t-pagination" style="display:flex;gap:8px;justify-content:center;margin-top:1.5rem;flex-wrap:wrap"></div>
 </main>
 
-<!-- SAYFA 5: YÖNETİM ÖZETİ -->
+<!-- ══════════════ SAYFA 5: YÖNETİM ÖZETİ ══════════════ -->
 <main class="page" id="page-ozet">
   <div class="ozet-header">
     <div class="ozet-ana-baslik">BİLGİ GÜVENLİĞİ GAP ANALİZİ</div>
@@ -201,17 +207,23 @@
     <div id="risk-matris"></div>
   </div>
   <div class="chart-card">
-    <div class="chart-title">En Kritik Bulgular (İlk 25)</div>
+    <div class="chart-title">🔴 En Kritik Bulgular (İlk 25)</div>
     <div id="kritik-bulgular"></div>
   </div>
 </main>
 
-<!-- API KEY MODAL -->
+<!-- ══════════════ API KEY MODAL ══════════════ -->
 <div class="modal-overlay" id="api-modal">
   <div class="modal">
-    <h3>Gemini API Anahtarı</h3>
+    <h3>🔑 Google Gemini API Anahtarı</h3>
     <p>Gözlem notlarından profesyonel bulgu metni üretmek için Gemini API anahtarı gereklidir. Anahtar yalnızca tarayıcınızda saklanır.</p>
-    <p style="font-size:11px;color:var(--text3)">Ücretsiz anahtar: <a href="https://aistudio.google.com/apikey" target="_blank" style="color:var(--accent)">aistudio.google.com/apikey</a> — Kredi kartı gerekmez, günde 1500 istek.</p>
+    <p style="font-size:12px;color:var(--text3)">
+      Ücretsiz anahtar:
+      <a href="https://aistudio.google.com/apikey" target="_blank" style="color:var(--teal);text-decoration:none;font-weight:500">
+        aistudio.google.com/apikey
+      </a>
+      — Kredi kartı gerekmez, günde 1500 istek.
+    </p>
     <input type="password" id="api-key-input" class="modal-input" placeholder="AIzaSy...">
     <div class="modal-buttons">
       <button class="btn btn-ghost" onclick="clearAPIKey()">Sil</button>
@@ -223,29 +235,47 @@
 
 <div class="toast" id="toast"></div>
 
+<!-- ══════════════ SCRIPTS ══════════════ -->
 <script src="data.js"></script>
 <script src="app.js"></script>
 <script>
-(function() {
-  var THEME_KEY = 'bg_gap_theme';
-  var SUN = '&#9788;';
-  var MOON = '&#9790;';
-
-  function applyTheme(theme) {
-    document.documentElement.setAttribute('data-theme', theme);
-    var btn = document.getElementById('theme-toggle');
-    if (btn) btn.innerHTML = theme === 'light' ? MOON + ' Dark' : SUN + ' Light';
-    localStorage.setItem(THEME_KEY, theme);
+  // ── Theme System ──────────────────────────────────────────
+  function toggleTheme() {
+    var root = document.documentElement;
+    var current = root.getAttribute('data-theme') || 'dark';
+    var next = current === 'dark' ? 'light' : 'dark';
+    root.setAttribute('data-theme', next);
+    localStorage.setItem('grc-theme', next);
+    updateThemeBtn(next);
+    updateChartColors(next);
   }
 
-  window.toggleTheme = function() {
-    var current = document.documentElement.getAttribute('data-theme');
-    applyTheme(current === 'light' ? 'dark' : 'light');
-  };
+  function updateThemeBtn(theme) {
+    var btn = document.getElementById('theme-toggle');
+    if (btn) btn.textContent = theme === 'dark' ? '☀️' : '🌙';
+  }
 
-  var saved = localStorage.getItem(THEME_KEY) || 'dark';
-  applyTheme(saved);
-})();
+  function updateChartColors(theme) {
+    if (!window.Chart) return;
+    if (theme === 'light') {
+      Chart.defaults.color = '#476281';
+      Chart.defaults.borderColor = 'rgba(0,0,0,0.07)';
+    } else {
+      Chart.defaults.color = '#7a96b8';
+      Chart.defaults.borderColor = 'rgba(255,255,255,0.055)';
+    }
+    // Re-render summary if active
+    if (typeof STATE !== 'undefined' && STATE.activePage === 'ozet' && typeof renderOzet === 'function') {
+      renderOzet();
+    }
+  }
+
+  // Init on load
+  document.addEventListener('DOMContentLoaded', function() {
+    var t = localStorage.getItem('grc-theme') || 'dark';
+    updateThemeBtn(t);
+    updateChartColors(t);
+  });
 </script>
 </body>
 </html>
