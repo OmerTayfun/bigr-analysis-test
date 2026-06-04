@@ -1562,6 +1562,80 @@ function buildRiskMatris() {
     </div>`;
 }
 
+// Tedbir adını bulgu başlığına (olumsuz) çevirir
+// "Donanım Envanterinin Yönetimi" → "Donanım Envanteri Yönetilmiyor"
+function bulguBaslik(tedbir, isHayir) {
+  if (!tedbir) return tedbir;
+  const kismi = !isHayir;
+
+  // İki/üç kelimeli özel durumlar (önce kontrol et)
+  const ucKelime = tedbir.trim().split(/\s+/).slice(-3).join(' ');
+  const ikiKelime = tedbir.trim().split(/\s+/).slice(-2).join(' ');
+  const ikiDonusum = {
+    'Güvenliği ve İmhası': ['Güvenli Saklanmıyor ve İmha Edilmiyor', 'Güvenli Saklanma ve İmhası Yetersiz'],
+    'Entegre Edilmesi': ['Entegre Edilmemiş',    'Tam Entegre Edilmemiş'],
+    'Erişim Denetimleri': ['Erişim Denetimleri Uygulanmıyor', 'Erişim Denetimleri Yetersiz'],
+  };
+  // Üç kelime dene, sonra iki kelime
+  const eslesme = ikiDonusum[ucKelime] || ikiDonusum[ikiKelime];
+  const govdeLen = ikiDonusum[ucKelime] ? 3 : 2;
+  if (eslesme) {
+    const [h, k] = eslesme;
+    const govde = tedbir.trim().split(/\s+/).slice(0,-govdeLen).join(' ');
+    const govdeTemiz = govde.replace(/[''']?(n[ıiuü]n|[ıiuü]n|[ıiuü]|n[ıi]n)$/i, '').trim();
+    const prefix = govdeTemiz ? govdeTemiz + ' ' : '';
+    return prefix + (kismi ? k : h);
+  }
+
+  // Son kelime → olumsuz karşılığı
+  const donusum = {
+    'Yönetimi':        ['Yönetilmiyor',        'Yetersiz Yönetiliyor'],
+    'Yönetilmesi':     ['Yönetilmiyor',        'Yetersiz Yönetiliyor'],
+    'Kullanılması':    ['Kullanılmıyor',        'Yetersiz Kullanılıyor'],
+    'Kullanımı':       ['Kullanılmıyor',        'Yetersiz Kullanılıyor'],
+    'Tutulması':       ['Tutulmuyor',           'Yetersiz Tutuluyor'],
+    'Sağlanması':      ['Sağlanmıyor',          'Yeterince Sağlanamıyor'],
+    'Yapılması':       ['Yapılmıyor',           'Yeterince Yapılmıyor'],
+    'Alınması':        ['Alınmıyor',            'Yeterince Alınmıyor'],
+    'Güvenliği':       ['Güvenliği Sağlanmıyor','Güvenliği Yetersiz'],
+    'Edilmesi':        ['Edilmiyor',            'Yeterince Edilmiyor'],
+    'Engellenmesi':    ['Engellenmiyor',        'Yeterince Engellenemiyor'],
+    'Hazırlanması':    ['Hazırlanmamış',        'Yeterince Hazırlanmamış'],
+    'Verilmesi':       ['Verilmiyor',           'Yeterince Verilmiyor'],
+    'Belirlenmesi':    ['Belirlenmemiş',        'Yeterince Belirlenmemiş'],
+    'Oluşturulması':   ['Oluşturulmamış',       'Yeterince Oluşturulmamış'],
+    'Kontrolü':        ['Kontrolü Yapılmıyor',  'Kontrolü Yetersiz'],
+    'Tasarımı':        ['Tasarımı Yapılmamış',  'Tasarımı Yetersiz'],
+    'Yedekleme':       ['Yedekleme Yapılmıyor', 'Yedekleme Yetersiz'],
+    'İletimi':         ['İletimi Güvensiz',     'İletimi Yetersiz Güvenli'],
+    'Üniteleri':       ['Güvenli İmha Edilmiyor','İmhası Yetersiz'],
+    'Önlenmesi':       ['Önlenemiyor',          'Yeterince Önlenemiyor'],
+    'Saptanması':      ['Saptanamıyor',         'Yeterince Saptanamıyor'],
+    'Kaydedilmesi':    ['Kaydedilmiyor',        'Yeterince Kaydedilmiyor'],
+    'Koruması':        ['Koruması Yetersiz',    'Koruması Kısmen Yetersiz'],
+    'Uyumu':           ['Uyumu Sağlanmıyor',    'Uyumu Yetersiz'],
+    'Tanımlanması':    ['Tanımlanmamış',        'Yeterince Tanımlanmamış'],
+    'İzlenmesi':       ['İzlenmiyor',           'Yeterince İzlenmiyor'],
+    'Denetimleri':     ['Denetimleri Uygulanmıyor', 'Denetimleri Yetersiz'],
+    'İmhası':          ['Güvenli İmha Edilmiyor','İmhası Yetersiz Güvenli'],
+    'Entegre Edilmesi':['Entegre Edilmemiş',    'Tam Entegre Edilmemiş'],
+  };
+
+  const kelimeler = tedbir.trim().split(/\s+/);
+  const sonKelime = kelimeler[kelimeler.length - 1];
+
+  if (donusum[sonKelime]) {
+    const [hayirForm, kismiForm] = donusum[sonKelime];
+    const govde = kelimeler.slice(0, -1).join(' ');
+    // "...nin/nın/un/ün" gibi tamlama eklerini at
+    const govdeTemiz = govde.replace(/[''']?(n[ıiuü]n|[ıiuü]n|[ıiuü]|n[ıi]n)$/i, '').trim();
+    return govdeTemiz + ' ' + (kismi ? kismiForm : hayirForm);
+  }
+
+  // Eşleşme yoksa fallback: tedbir adı + " — Eksik"
+  return tedbir + (kismi ? ' — Kısmen Uygulanıyor' : ' — Uygulanmıyor');
+}
+
 function buildKritikBulgular() {
   const bulgular = SORULAR_100
     .filter(q => { const cv=STATE.cevaplar[q.id]; return cv && cv.c!=='evet' && cv.c!=='kapsam'; })
@@ -1593,7 +1667,7 @@ function buildKritikBulgular() {
           <div style="padding:10px 14px;display:flex;align-items:flex-start;gap:10px">
             <span class="kb-badge ${bdg}" style="flex-shrink:0;margin-top:2px">${rd?.label||'Riskli'}</span>
             <div style="flex:1;min-width:0">
-              <div class="kb-text">${q.tedbir}</div>
+              <div class="kb-text">${bulguBaslik(q.tedbir, cv.c==='hayir')}</div>
               <div class="kb-sub">${shortCat(q.altKat)} • ${cv.c==='hayir'?'❌ Uygulanmıyor':'🟡 Kısmen Uygulandı'} • ${q.tedbirNo}</div>
             </div>
             <span style="font-size:10px;color:var(--text3);flex-shrink:0;margin-top:2px">#${i+1}</span>
