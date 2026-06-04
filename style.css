@@ -7,36 +7,36 @@
 
 /* ── DARK THEME (default) ── */
 :root {
-  --bg:    #07111f;
-  --bg2:   #0d1b2e;
-  --bg3:   #152540;
-  --bg4:   #1d3152;
-  --teal:      #2dd4e8;
-  --teal-d:    #06b6d4;
-  --teal-soft: rgba(45,212,232,0.1);
-  --green:      #10b981;
-  --green-soft: rgba(16,185,129,0.12);
-  --amber:      #f59e0b;
-  --amber-soft: rgba(245,158,11,0.12);
-  --red:        #ef4444;
-  --red-soft:   rgba(239,68,68,0.12);
+  --bg:    #0e131c;
+  --bg2:   #141b27;
+  --bg3:   #1a2336;
+  --bg4:   #202c42;
+  --teal:      #60a5fa;
+  --teal-d:    #3b82f6;
+  --teal-soft: rgba(96,165,250,0.09);
+  --green:      #34d399;
+  --green-soft: rgba(52,211,153,0.10);
+  --amber:      #fbbf24;
+  --amber-soft: rgba(251,191,36,0.10);
+  --red:        #f87171;
+  --red-soft:   rgba(248,113,113,0.10);
   --gray:       #94a3b8;
-  --gray-soft:  rgba(148,163,184,0.1);
+  --gray-soft:  rgba(148,163,184,0.08);
   --purple:     #a78bfa;
-  --purple-soft:rgba(167,139,250,0.1);
-  --text:  #e2ecfa;
-  --text2: #7a96b8;
-  --text3: #3f5878;
-  --border:  rgba(255,255,255,0.055);
-  --border2: rgba(255,255,255,0.11);
-  --radius: 12px;
-  --gold:       #c09535;
-  --gold-light: #d4af55;
-  --shadow:    0 1px 3px rgba(0,0,0,0.5), 0 4px 16px rgba(0,0,0,0.3);
-  --shadow-lg: 0 8px 40px rgba(0,0,0,0.45);
-  --header-bg: rgba(7,17,31,0.94);
-  --header-border: rgba(255,255,255,0.055);
-  --input-bg: #0d1b2e;
+  --purple-soft:rgba(167,139,250,0.08);
+  --text:  #dce8f5;
+  --text2: #6b87a8;
+  --text3: #384f6a;
+  --border:  rgba(255,255,255,0.048);
+  --border2: rgba(255,255,255,0.09);
+  --radius: 10px;
+  --gold:       #94a3b8;
+  --gold-light: #b0c0d4;
+  --shadow:    0 1px 2px rgba(0,0,0,0.4), 0 4px 14px rgba(0,0,0,0.22);
+  --shadow-lg: 0 8px 36px rgba(0,0,0,0.38);
+  --header-bg: rgba(14,19,28,0.96);
+  --header-border: rgba(255,255,255,0.06);
+  --input-bg: #141b27;
 }
 
 /* ── LIGHT THEME ── */
@@ -114,15 +114,16 @@ body {
 .logo-mark {
   width: 34px;
   height: 34px;
-  background: linear-gradient(135deg, var(--teal), var(--teal-d));
-  border-radius: 9px;
+  background: linear-gradient(145deg, #1e3a5f, #2d5a8e);
+  border-radius: 8px;
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 16px;
-  box-shadow: 0 4px 14px var(--teal-soft);
+  box-shadow: 0 2px 8px rgba(30,58,95,0.5);
   flex-shrink: 0;
   transition: transform 0.2s;
+  border: 1px solid rgba(96,165,250,0.18);
 }
 
 .logo-mark:hover { transform: scale(1.07); }
@@ -673,24 +674,24 @@ body {
 /* ── DANIŞMAN KARTI (document style, always white) ── */
 .danisman-kart {
   background: #fff;
-  border: 1.5px solid var(--gold-light);
-  border-radius: 11px;
+  border: 1px solid rgba(96,165,250,0.22);
+  border-radius: 10px;
   margin-bottom: 1.5rem;
-  box-shadow: 0 4px 24px rgba(0,0,0,0.32);
+  box-shadow: 0 4px 20px rgba(0,0,0,0.28);
   overflow: hidden;
   page-break-inside: avoid;
   transition: box-shadow 0.2s;
 }
 
-.danisman-kart:hover { box-shadow: 0 8px 32px rgba(0,0,0,0.38); }
+.danisman-kart:hover { box-shadow: 0 8px 28px rgba(0,0,0,0.34); }
 
 .dk-header {
-  background: linear-gradient(135deg, #1a2438, #2a3a58);
+  background: linear-gradient(135deg, #111827, #1d2f4a);
   padding: 12px 18px;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  border-bottom: 3px solid var(--gold);
+  border-bottom: 2px solid rgba(96,165,250,0.2);
 }
 
 .dk-header-left {}
@@ -698,11 +699,12 @@ body {
 
 .dk-ustbaslik {
   font-size: 9px;
-  color: #c8a84b;
-  font-weight: 700;
+  color: #60a5fa;
+  font-weight: 600;
   text-transform: uppercase;
-  letter-spacing: 2px;
+  letter-spacing: 1.8px;
   margin-bottom: 2px;
+  opacity: 0.7;
 }
 
 .dk-baslik { font-size: 13px; font-weight: 700; color: #fff; }
@@ -750,7 +752,7 @@ body {
   letter-spacing: 0.8px;
   padding-bottom: 7px;
   margin-bottom: 9px;
-  border-bottom: 2px solid #c09535;
+  border-bottom: 2px solid #3b82f6;
   display: flex;
   align-items: center;
   gap: 5px;
@@ -801,8 +803,8 @@ body {
   flex-shrink: 0;
   width: 18px;
   height: 18px;
-  background: linear-gradient(135deg, #1a2438, #2d3a55);
-  color: #d4af4a;
+  background: #1e3a5f;
+  color: #93c5fd;
   font-size: 9px;
   font-weight: 700;
   border-radius: 50%;
@@ -815,8 +817,8 @@ body {
 .dk-oneri-text { font-size: 11px; color: #374151; line-height: 1.5; }
 
 .dk-footer {
-  background: #f8f5ed;
-  border-top: 1px solid rgba(212,175,74,0.2);
+  background: #f7f9fc;
+  border-top: 1px solid rgba(59,130,246,0.12);
   padding: 7px 14px;
   display: flex;
   align-items: center;
@@ -825,15 +827,16 @@ body {
   color: #6b7280;
 }
 
-.dk-footer-no { font-weight: 600; color: #1a2438; font-family: 'DM Mono', monospace; }
+.dk-footer-no { font-weight: 600; color: #1e3a5f; font-family: 'DM Mono', monospace; }
 
 .dk-ai-badge {
-  background: linear-gradient(135deg, #8b5cf6, #06b6d4);
-  color: #fff;
-  padding: 2px 7px;
-  border-radius: 10px;
+  background: #1e3a5f;
+  color: #93c5fd;
+  padding: 2px 8px;
+  border-radius: 4px;
   font-size: 9px;
-  font-weight: 700;
+  font-weight: 600;
+  letter-spacing: 0.5px;
 }
 
 /* ══════════════════════════════════════════
@@ -957,8 +960,8 @@ body {
    SAYFA 5: YÖNETİM ÖZETİ
    ══════════════════════════════════════════ */
 .ozet-header {
-  background: linear-gradient(135deg, #192236, #293c5a);
-  border: 1.5px solid var(--gold);
+  background: linear-gradient(135deg, #111827, #1a2a42);
+  border: 1px solid rgba(96,165,250,0.15);
   border-radius: var(--radius);
   padding: 1.75rem;
   margin-bottom: 1.25rem;
@@ -966,15 +969,15 @@ body {
 }
 
 .ozet-ana-baslik {
-  font-size: 20px;
-  font-weight: 800;
-  color: #d4af55;
-  letter-spacing: 3px;
+  font-size: 18px;
+  font-weight: 700;
+  color: #dce8f5;
+  letter-spacing: 2.5px;
   text-transform: uppercase;
 }
 
-.ozet-alt-baslik { font-size: 13px; color: #8fa8c8; margin-top: 5px; }
-.ozet-tarih      { font-size: 11px; color: #4f6a88; margin-top: 6px; font-style: italic; }
+.ozet-alt-baslik { font-size: 12px; color: #6b87a8; margin-top: 6px; letter-spacing: 0.3px; }
+.ozet-tarih      { font-size: 11px; color: #384f6a; margin-top: 6px; font-family: 'DM Mono', monospace; }
 
 .ozet-grid {
   display: grid;
