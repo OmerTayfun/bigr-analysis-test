@@ -7,7 +7,6 @@
   const SESSION_KEY = 'bg_gap_auth';
   const SESSION_TTL = 8 * 60 * 60 * 1000; // 8 saat
 
-  // Yetkili kullanıcılar — hash: sha256(username + ':' + password)
   const USERS = {
     'admin': '5730ed99bddc18fa466ee8cbbdbb362cc6bfd08d82aae6d0cba6fbdcecb8efbf'
   };
@@ -32,8 +31,7 @@
   }
 
   function showLoginScreen() {
-    document.body.style.display = 'none';
-
+    // body'yi gizlemiyoruz — overlay zaten fixed/fullscreen
     const overlay = document.createElement('div');
     overlay.id = 'auth-overlay';
     overlay.innerHTML = `
@@ -67,13 +65,8 @@
         }
         .auth-logo-text { font-size: 13px; font-weight: 700; color: #dce8f5; }
         .auth-logo-sub  { font-size: 10px; color: #384f6a; margin-top: 2px; }
-        .auth-title {
-          font-size: 15px; font-weight: 700; color: #dce8f5;
-          margin-bottom: 0.4rem;
-        }
-        .auth-sub {
-          font-size: 12px; color: #6b87a8; margin-bottom: 1.75rem;
-        }
+        .auth-title { font-size: 15px; font-weight: 700; color: #dce8f5; margin-bottom: 0.4rem; }
+        .auth-sub   { font-size: 12px; color: #6b87a8; margin-bottom: 1.75rem; }
         .auth-label {
           display: block; font-size: 11px; font-weight: 600;
           color: #6b87a8; text-transform: uppercase; letter-spacing: 0.6px;
@@ -111,10 +104,7 @@
           margin-bottom: 0.75rem; display: none;
           text-align: center;
         }
-        .auth-footer {
-          text-align: center; margin-top: 1.5rem;
-          font-size: 10px; color: #384f6a;
-        }
+        .auth-footer { text-align: center; margin-top: 1.5rem; font-size: 10px; color: #384f6a; }
       </style>
       <div class="auth-box">
         <div class="auth-logo">
@@ -135,15 +125,22 @@
         <div class="auth-footer">Oturum 8 saat sonra otomatik kapanır.</div>
       </div>
     `;
-    document.body.appendChild(overlay);
+
+    // Overlay'i doğrudan document.documentElement'e (html tag) ekle
+    // body henüz hazır olmayabilir, bu yüzden html'e ekliyoruz
+    (document.body || document.documentElement).appendChild(overlay);
 
     ['auth-user', 'auth-pass'].forEach(function(id) {
-      document.getElementById(id).addEventListener('keydown', function(e) {
+      var el = document.getElementById(id);
+      if (el) el.addEventListener('keydown', function(e) {
         if (e.key === 'Enter') window._authLogin();
       });
     });
 
-    setTimeout(function() { document.getElementById('auth-user').focus(); }, 50);
+    setTimeout(function() {
+      var el = document.getElementById('auth-user');
+      if (el) el.focus();
+    }, 100);
   }
 
   window._authLogin = async function () {
@@ -164,21 +161,28 @@
     var inputHash = await sha256(username + ':' + password);
     if (inputHash !== expectedHash) { showError(); return; }
 
+    // Başarılı giriş
     setSession(username);
-    document.getElementById('auth-overlay').remove();
-    document.body.style.display = '';
+    var ov = document.getElementById('auth-overlay');
+    if (ov) ov.remove();
 
     function showError() {
       err.style.display = 'block';
-      document.getElementById('auth-pass').value = '';
-      document.getElementById('auth-pass').focus();
+      var passEl = document.getElementById('auth-pass');
+      if (passEl) { passEl.value = ''; passEl.focus(); }
       btn.disabled = false;
       btn.textContent = 'Giriş Yap';
     }
   };
 
+  // Auth kontrolü: DOMContentLoaded bekleme — script yüklenince hemen çalış
   if (!isAuthenticated()) {
-    document.addEventListener('DOMContentLoaded', showLoginScreen);
+    // DOM hazır değilse bekle, hazırsa hemen göster
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', showLoginScreen);
+    } else {
+      showLoginScreen();
+    }
   }
 })();
 
