@@ -701,9 +701,6 @@ function buildDanismanKart(q) {
     : (q.kritiklik === 3 ? 'Kısmi uygulama, tam güvence sağlamamakta; kontrol etkinliği yetersiz kalmaktadır.'
      : 'Sürecin olgunlaşması için ek adım atılması gerekmektedir.');
 
-  // Hukuki Risk ve Yaptırım Verisi
-  let hukukiAks = mev ? mev : 'İlgili yasal mevzuat maddesi tanımlanmamıştır.';
-
   const isAI = cv.c === 'kismi' && cv.bulgu;
 
   // ── MEVZUAT KOLONU (3. KOLON) ──────────────────────────────────
@@ -780,13 +777,6 @@ const oneriLines = (q.oneri || '').split(/\n/).map(s => s.trim()).filter(s => s.
   </div>
     ${STATE.riskAnalizi[q.id] ? "" : buildRiskKategorileriHTML(q, cv)}
     
-    <div style="margin-top:6px;padding:7px 10px;background:rgba(96,165,250,0.08);border-radius:6px;border-left:3px solid #60a5fa">
-      <span class="dk-risk-label hukuki">Hukuki Risk</span>
-      <div class="dk-risk-text" style="font-size:12px;line-height:1.5;color:#dc2626;font-weight:700">
-  ⚠️ ${cv.c === 'hayir' ? 'Yüksek Uyumsuzluk Riski:' : 'Kısmi Uyumsuzluk Riski:'}
-  <div style="margin-top:4px;font-weight:500;color:#1e3a5f;white-space:pre-line;font-size:11px">${hukukiAks}</div>
-</div>
-    </div>
     <div style="margin-top:8px">
       <button id="risk-ai-btn-${q.id}" onclick="aiRiskAnaliziUret(${q.id})"
         style="background:linear-gradient(135deg,#6366f1,#8b5cf6);color:#fff;border:none;padding:5px 12px;border-radius:6px;cursor:pointer;font-size:10px;font-weight:600;width:100%">
