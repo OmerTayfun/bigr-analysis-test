@@ -305,11 +305,11 @@ function renderQuestion() {
           style="width:100%;min-height:85px;padding:9px;background:var(--bg);border:1px solid rgba(255,255,255,0.1);border-radius:7px;color:var(--text);font-size:13px;line-height:1.6;resize:vertical;font-family:inherit"
           placeholder="Gözlem notlarınızı buraya yazın...">${obs}</textarea>
         <div style="display:flex;gap:7px;margin-top:7px;justify-content:flex-end">
-          ${(sel !== 'evet' && sel !== 'kapsam') ? `<button class="btn-ai" id="ai-gen-btn" onclick="bulguUret()" ${!obs.trim() ? 'disabled' : ''}>📋 Bulgu Üret</button>` : ''}
+          ${(sel !== 'evet' && sel !== 'kapsam') ? `<button class="btn-ai" id="ai-gen-btn" onclick="bulguUret()" ${!obs.trim() ? 'disabled' : ''}>🤖 Bulgu Üret</button>` : ''}
         </div>
         ${bulgu ? `
         <div style="background:rgba(167,139,250,0.1);border:1px solid rgba(167,139,250,0.25);border-radius:7px;padding:.9rem;margin-top:.6rem">
-          <div style="font-size:11px;font-weight:600;color:#a78bfa;margin-bottom:.35rem">📋 Üretilen Bulgu</div>
+          <div style="font-size:11px;font-weight:600;color:#a78bfa;margin-bottom:.35rem">🤖 Üretilen Bulgu</div>
           <div style="font-size:12px;color:var(--text);line-height:1.6;white-space:pre-line">${bulgu}</div>
         </div>` : '<div id="bulgu-preview"></div>'}
       </div>` : ''}
@@ -408,7 +408,7 @@ Türkçe, 3-4 cümle, resmi denetim üslubunda bulgu metni yaz. Sadece metni yaz
     const pv = document.getElementById('bulgu-preview');
     if (pv) pv.innerHTML = `
       <div style="background:rgba(167,139,250,0.1);border:1px solid rgba(167,139,250,0.25);border-radius:7px;padding:.9rem;margin-top:.6rem">
-        <div style="font-size:11px;font-weight:600;color:#a78bfa;margin-bottom:.35rem">📋 Üretilen Bulgu</div>
+        <div style="font-size:11px;font-weight:600;color:#a78bfa;margin-bottom:.35rem">🤖 Üretilen Bulgu</div>
         <div style="font-size:12px;color:var(--text);line-height:1.6;white-space:pre-line">${text.trim()}</div>
       </div>`;
     toast('✅ Bulgu metni üretildi', 'success');
@@ -416,7 +416,7 @@ Türkçe, 3-4 cümle, resmi denetim üslubunda bulgu metni yaz. Sadece metni yaz
     toast('AI hatası: ' + e.message, 'error');
   } finally {
     btn.disabled = false;
-    btn.innerHTML = '📋 Bulgu Üret';
+    btn.innerHTML = '🤖 Bulgu Üret';
   }
 }
 
@@ -609,7 +609,7 @@ Sadece bu 4 başlık ve içeriklerini yaz, başka açıklama ekleme.`;
   } catch(e) {
     toast('AI hatası: ' + e.message, 'error');
   } finally {
-    if (btn) { btn.disabled = false; btn.innerHTML = '📋 Risk Analizi'; }
+    if (btn) { btn.disabled = false; btn.innerHTML = '🤖 AI Risk Analizi'; }
   }
 }
 
@@ -627,7 +627,7 @@ function renderRiskAIBox(qId) {
 
   let html = `<div style="margin-top:10px;border-top:1px solid rgba(0,0,0,0.1);padding-top:10px">
     <div style="font-size:9px;font-weight:700;color:#6366f1;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">
-      📋 Risk Değerlendirmesi
+      🤖 AI Risk Değerlendirmesi
       <button onclick="clearRiskAnalizi(${qId})" style="background:none;border:none;color:#94a3b8;cursor:pointer;font-size:9px;margin-left:8px;text-decoration:underline">Sil</button>
     </div>`;
 
@@ -667,7 +667,7 @@ function clearRiskAnalizi(qId) {
   const box = document.getElementById(`risk-ai-box-${qId}`);
   if (box) box.innerHTML = '';
   const btn = document.getElementById(`risk-ai-btn-${qId}`);
-  if (btn) btn.innerHTML = '📋 Risk Analizi';
+  if (btn) btn.innerHTML = '🤖 AI Risk Analizi';
 }
 
 function buildDanismanKart(q) {
@@ -790,7 +790,7 @@ const oneriLines = (q.oneri || '').split(/\n/).map(s => s.trim()).filter(s => s.
     <div style="margin-top:8px">
       <button id="risk-ai-btn-${q.id}" onclick="aiRiskAnaliziUret(${q.id})"
         style="background:linear-gradient(135deg,#6366f1,#8b5cf6);color:#fff;border:none;padding:5px 12px;border-radius:6px;cursor:pointer;font-size:10px;font-weight:600;width:100%">
-        ${STATE.riskAnalizi[q.id] ? '🔄 Yenile' : '📋 Risk Analizi'}
+        ${STATE.riskAnalizi[q.id] ? '🔄 Yenile' : '🤖 AI Risk Analizi'}
       </button>
     </div>
     <div id="risk-ai-box-${q.id}">
@@ -813,7 +813,7 @@ const oneriLines = (q.oneri || '').split(/\n/).map(s => s.trim()).filter(s => s.
   <div class="dk-footer">
     <span class="dk-footer-no">${q.tedbirNo} • S${q.id} / 100 • Kapsam: ${q.kapsananSayi} Tedbir</span>
     <div style="display:flex;gap:8px;align-items:center">
-      ${isAI ? '<span class="dk-ai-badge">Otomatik Analiz</span>' : ''}
+      ${isAI ? '<span class="dk-ai-badge">🤖 AI Bulgu</span>' : ''}
       <span>${cv.c === 'hayir' ? '❌ Uygulanmıyor' : '🟡 Kısmen Uygulanıyor'}</span>
     </div>
   </div>
@@ -1060,7 +1060,7 @@ function render1296() {
       const bulguMetni = cv === 'evet'
         ? `✅ <strong>${s.ta}</strong> tedbiri kurumda uygulanmaktadır.`
         : cached1296
-        ? (cached1296.kaynak === 'ai' ? `${cached1296.metin}` : cached1296.metin)
+        ? (cached1296.kaynak === 'ai' ? `🤖 ${cached1296.metin}` : cached1296.metin)
         : cv === 'hayir' ? sablonHayir
         : cv === 'kismi' ? sablonKismi
         : '';
@@ -1086,8 +1086,8 @@ function render1296() {
         ${cv !== 'bos' ? `
         <div id="b1296-${s.i}" style="display:none;padding:10px 16px 12px 16px;background:rgba(255,255,255,0.03);border-left:3px solid ${rs.left}">
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
-            ${bulguKaynak === 'ai' ? '<span style="font-size:9px;background:rgba(99,102,241,0.15);color:#818cf8;padding:2px 7px;border-radius:4px;font-weight:600">Otomatik</span>' : bulguKaynak === 'sablon' ? '<span style="font-size:9px;background:rgba(148,163,184,0.15);color:#94a3b8;padding:2px 7px;border-radius:4px;font-weight:600">📋 Şablon</span>' : ''}
-            ${(cv === 'kismi' || cv === 'hayir') && !cached1296 ? `<span style="font-size:9px;color:#6366f1;cursor:pointer;text-decoration:underline" onclick="event.stopPropagation();tekBulguUret(${s.i})">↺ Yenile</span>` : ''}
+            ${bulguKaynak === 'ai' ? '<span style="font-size:9px;background:rgba(99,102,241,0.15);color:#818cf8;padding:2px 7px;border-radius:4px;font-weight:600">🤖 AI Bulgu</span>' : bulguKaynak === 'sablon' ? '<span style="font-size:9px;background:rgba(148,163,184,0.15);color:#94a3b8;padding:2px 7px;border-radius:4px;font-weight:600">📋 Şablon</span>' : ''}
+            ${(cv === 'kismi' || cv === 'hayir') && !cached1296 ? `<span style="font-size:9px;color:#6366f1;cursor:pointer;text-decoration:underline" onclick="event.stopPropagation();tekBulguUret(${s.i})">🤖 AI ile yenile</span>` : ''}
           </div>
           <div style="font-size:11px;color:#cbd5e1;line-height:1.75">${bulguMetni}</div>
         </div>` : ''}
@@ -1285,7 +1285,7 @@ async function tumKismenleriBulguUret() {
       }
     });
     save(); render1296();
-    if (btn) { btn.disabled = false; btn.textContent = '📋 Toplu Bulgu Üret'; }
+    if (btn) { btn.disabled = false; btn.textContent = '🤖 Toplu Bulgu Üret'; }
     toast('✅ ' + sablonSayac + ' şablon bulgu üretildi', 'success');
     return;
   }
@@ -1309,7 +1309,7 @@ async function tumKismenleriBulguUret() {
   }
 
   render1296();
-  if (btn) { btn.disabled = false; btn.textContent = '📋 Toplu Bulgu Üret'; }
+  if (btn) { btn.disabled = false; btn.textContent = '🤖 Toplu Bulgu Üret'; }
   toast(`✅ ${aiSayac} AI + ${sablonSayac} şablon bulgu üretildi`, 'success');
 }
 
@@ -2384,7 +2384,7 @@ function pdfRapor() {
       </div>
       <div style="background:#F8FAFC;padding:8px 16px;border-top:1px solid #E2E8F0;display:flex;justify-content:space-between;align-items:center">
         <span style="font-size:10px;color:#94A3B8;font-family:monospace">${q.tedbirNo} • S${q.id}/100 • ${q.kapsananSayi} Tedbir Kapsamı</span>
-        <span style="font-size:10px;color:#6366F1">${STATE.bulgu1296?Object.entries(STATE.bulgu1296).filter(([k,v])=>SORULAR_1296.find(s=>s.i==k&&s.p==q.id)&&v.kaynak==='ai').length+' Otomatik':''}</span>
+        <span style="font-size:10px;color:#6366F1">${STATE.bulgu1296?Object.entries(STATE.bulgu1296).filter(([k,v])=>SORULAR_1296.find(s=>s.i==k&&s.p==q.id)&&v.kaynak==='ai').length+' AI Bulgu':''}</span>
       </div>
     </div>`;
   };
