@@ -2,6 +2,187 @@
 // Bilgi Güvenliği Gap Analizi v4 — Temiz Versiyon
 // ══════════════════════════════════════════════════════════════
 
+// ── AUTH ────────────────────────────────────────────────────
+(function () {
+  const SESSION_KEY = 'bg_gap_auth';
+  const SESSION_TTL = 8 * 60 * 60 * 1000; // 8 saat
+
+  // Yetkili kullanıcılar — hash: sha256(username + ':' + password)
+  const USERS = {
+    'admin': '5730ed99bddc18fa466ee8cbbdbb362cc6bfd08d82aae6d0cba6fbdcecb8efbf'
+  };
+
+  async function sha256(str) {
+    const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str));
+    return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
+  }
+
+  function isAuthenticated() {
+    try {
+      const s = JSON.parse(sessionStorage.getItem(SESSION_KEY) || 'null');
+      return s && s.exp > Date.now();
+    } catch { return false; }
+  }
+
+  function setSession(username) {
+    sessionStorage.setItem(SESSION_KEY, JSON.stringify({
+      user: username,
+      exp: Date.now() + SESSION_TTL
+    }));
+  }
+
+  function showLoginScreen() {
+    document.body.style.display = 'none';
+
+    const overlay = document.createElement('div');
+    overlay.id = 'auth-overlay';
+    overlay.innerHTML = `
+      <style>
+        #auth-overlay {
+          position: fixed; inset: 0; z-index: 99999;
+          background: #0e131c;
+          display: flex; align-items: center; justify-content: center;
+          font-family: 'Inter', -apple-system, sans-serif;
+        }
+        .auth-box {
+          background: #141b27;
+          border: 1px solid rgba(96,165,250,0.15);
+          border-radius: 12px;
+          padding: 2.5rem 2rem;
+          width: 100%;
+          max-width: 380px;
+          box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+        }
+        .auth-logo {
+          display: flex; align-items: center; gap: 10px;
+          margin-bottom: 2rem;
+        }
+        .auth-logo-mark {
+          width: 36px; height: 36px;
+          background: linear-gradient(145deg, #1e3a5f, #2d5a8e);
+          border-radius: 9px;
+          display: flex; align-items: center; justify-content: center;
+          border: 1px solid rgba(96,165,250,0.2);
+          color: #60a5fa; font-size: 16px;
+        }
+        .auth-logo-text { font-size: 13px; font-weight: 700; color: #dce8f5; }
+        .auth-logo-sub  { font-size: 10px; color: #384f6a; margin-top: 2px; }
+        .auth-title {
+          font-size: 15px; font-weight: 700; color: #dce8f5;
+          margin-bottom: 0.4rem;
+        }
+        .auth-sub {
+          font-size: 12px; color: #6b87a8; margin-bottom: 1.75rem;
+        }
+        .auth-label {
+          display: block; font-size: 11px; font-weight: 600;
+          color: #6b87a8; text-transform: uppercase; letter-spacing: 0.6px;
+          margin-bottom: 6px;
+        }
+        .auth-input {
+          width: 100%; padding: 10px 12px;
+          background: #0e131c; border: 1px solid rgba(255,255,255,0.08);
+          border-radius: 8px; color: #dce8f5;
+          font-size: 13px; font-family: inherit;
+          outline: none; margin-bottom: 1rem;
+          transition: border-color 0.15s, box-shadow 0.15s;
+          box-sizing: border-box;
+        }
+        .auth-input:focus {
+          border-color: #60a5fa;
+          box-shadow: 0 0 0 3px rgba(96,165,250,0.12);
+        }
+        .auth-btn {
+          width: 100%; padding: 11px;
+          background: #1e3a5f; color: #93c5fd;
+          border: 1px solid rgba(96,165,250,0.25);
+          border-radius: 8px; font-size: 13px; font-weight: 600;
+          cursor: pointer; font-family: inherit;
+          transition: background 0.15s, border-color 0.15s;
+          margin-top: 0.25rem;
+        }
+        .auth-btn:hover { background: #254d7a; border-color: rgba(96,165,250,0.4); }
+        .auth-btn:disabled { opacity: 0.5; cursor: default; }
+        .auth-error {
+          font-size: 12px; color: #f87171;
+          background: rgba(248,113,113,0.08);
+          border: 1px solid rgba(248,113,113,0.2);
+          border-radius: 6px; padding: 8px 12px;
+          margin-bottom: 0.75rem; display: none;
+          text-align: center;
+        }
+        .auth-footer {
+          text-align: center; margin-top: 1.5rem;
+          font-size: 10px; color: #384f6a;
+        }
+      </style>
+      <div class="auth-box">
+        <div class="auth-logo">
+          <div class="auth-logo-mark">&#128737;</div>
+          <div>
+            <div class="auth-logo-text">Bilgi Güvenliği Gap Analizi</div>
+            <div class="auth-logo-sub">BİGR &amp; KVKK Uyumluluk Denetim Aracı</div>
+          </div>
+        </div>
+        <div class="auth-title">Giriş Yap</div>
+        <div class="auth-sub">Bu araç yalnızca yetkili kullanıcılara açıktır.</div>
+        <div class="auth-error" id="auth-err">Kullanıcı adı veya şifre hatalı.</div>
+        <label class="auth-label" for="auth-user">Kullanıcı Adı</label>
+        <input class="auth-input" id="auth-user" type="text" placeholder="kullanıcı adı" autocomplete="username">
+        <label class="auth-label" for="auth-pass">Şifre</label>
+        <input class="auth-input" id="auth-pass" type="password" placeholder="••••••••" autocomplete="current-password">
+        <button class="auth-btn" id="auth-btn" onclick="window._authLogin()">Giriş Yap</button>
+        <div class="auth-footer">Oturum 8 saat sonra otomatik kapanır.</div>
+      </div>
+    `;
+    document.body.appendChild(overlay);
+
+    ['auth-user', 'auth-pass'].forEach(function(id) {
+      document.getElementById(id).addEventListener('keydown', function(e) {
+        if (e.key === 'Enter') window._authLogin();
+      });
+    });
+
+    setTimeout(function() { document.getElementById('auth-user').focus(); }, 50);
+  }
+
+  window._authLogin = async function () {
+    var btn = document.getElementById('auth-btn');
+    var err = document.getElementById('auth-err');
+    var username = document.getElementById('auth-user').value.trim().toLowerCase();
+    var password = document.getElementById('auth-pass').value;
+
+    btn.disabled = true;
+    btn.textContent = 'Doğrulanıyor...';
+    err.style.display = 'none';
+
+    await new Promise(function(r) { setTimeout(r, 600); });
+
+    var expectedHash = USERS[username];
+    if (!expectedHash) { showError(); return; }
+
+    var inputHash = await sha256(username + ':' + password);
+    if (inputHash !== expectedHash) { showError(); return; }
+
+    setSession(username);
+    document.getElementById('auth-overlay').remove();
+    document.body.style.display = '';
+
+    function showError() {
+      err.style.display = 'block';
+      document.getElementById('auth-pass').value = '';
+      document.getElementById('auth-pass').focus();
+      btn.disabled = false;
+      btn.textContent = 'Giriş Yap';
+    }
+  };
+
+  if (!isAuthenticated()) {
+    document.addEventListener('DOMContentLoaded', showLoginScreen);
+  }
+})();
+
+
 const STORAGE_KEY  = 'bg_gap_v4';
 const API_KEY_STOR = 'bg_gemini_key';
 const PUAN = { evet: 1, kismi: 0.5, hayir: 0 };
