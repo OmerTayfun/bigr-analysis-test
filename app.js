@@ -179,23 +179,23 @@
 // Bilgi Güvenliği Gap Analizi v4 — Temiz Versiyon
 // ══════════════════════════════════════════════════════════════
 
-const STORAGE_KEY  = 'bg_gap_v4';
-const API_KEY_STOR = 'bg_gemini_key';
-const PUAN = { evet: 1, kismi: 0.5, hayir: 0 };
-const PAGE_SIZE_1296 = 50;
+const STORAGE_KEY = 'bg_gap_v4';
+const API_KEY_STORAGE = 'bg_gemini_key';
+const SCORE_WEIGHTS = { evet: 1, kismi: 0.5, hayir: 0 };
+const PAGE_SIZE_MEASURES = 50;
 
 // STATE nesnesine riskCache ekleyelim
 const STATE = {
-  projeAdi: "Yeni Proje",
-  cevaplar: {},
-  cevaplar1296: {},
+  projectName: "Yeni Proje",
+  answers: {},
+  answers1296: {},
   riskCache: {},
-  currentIdx: 0,
+  currentIndex: 0,
   activeFilter: 'all',
-  activePage: 'sorular',
-  riskAnalizi: {},
-  bulgu1296: {},   // {tedbir_i: {metin, kaynak}} — hibrit cache
-  page1296: 0
+  activePage: 'questions',
+  riskAnalysis: {},
+  findings1296: {},   // {tedbir_i: {metin, kaynak}} — hibrit cache
+  currentPage1296: 0
 };
 
 const CATEGORIES = [...new Set(SORULAR_100.map(s => s.anaKat))];
@@ -204,15 +204,15 @@ const CATEGORIES = [...new Set(SORULAR_100.map(s => s.anaKat))];
 function save() {
   try {
     const toSave = {
-      projeAdi:     STATE.projeAdi,
-      cevaplar:     STATE.cevaplar,
-      cevaplar1296: STATE.cevaplar1296,
-      currentIdx:   STATE.currentIdx,
+      projectName:     STATE.projectName,
+      answers:     STATE.answers,
+      answers1296: STATE.answers1296,
+      currentIndex:   STATE.currentIndex,
       activeFilter: STATE.activeFilter,
       activePage:   STATE.activePage,
-      page1296:     STATE.page1296,
-      riskAnalizi:  STATE.riskAnalizi,
-      bulgu1296:    STATE.bulgu1296
+      currentPage1296:     STATE.currentPage1296,
+      riskAnalysis:  STATE.riskAnalysis,
+      findings1296:    STATE.findings1296
     };
     const key = isViewer() ? VIEWER_STORAGE_KEY : STORAGE_KEY;
     localStorage.setItem(key, JSON.stringify(toSave));
@@ -225,23 +225,23 @@ function load() {
     const r = localStorage.getItem(key);
     if (!r) return;
     const d = JSON.parse(r);
-    STATE.projeAdi    = d.projeAdi    || 'Yeni Proje';
-    STATE.cevaplar    = d.cevaplar    || {};
-    STATE.cevaplar1296= d.cevaplar1296|| {};
+    STATE.projectName    = d.projectName    || 'Yeni Proje';
+    STATE.answers    = d.answers    || {};
+    STATE.answers1296= d.answers1296|| {};
     STATE.riskCache   = {};
-    STATE.currentIdx  = d.currentIdx  || 0;
+    STATE.currentIndex  = d.currentIndex  || 0;
     STATE.activeFilter= d.activeFilter|| 'all';
-    STATE.activePage  = d.activePage  || 'sorular';
-    STATE.page1296    = d.page1296    || 0;
-    STATE.riskAnalizi = d.riskAnalizi || {};
-    STATE.bulgu1296   = d.bulgu1296   || {};
+    STATE.activePage  = d.activePage  || 'questions';
+    STATE.currentPage1296    = d.currentPage1296    || 0;
+    STATE.riskAnalysis = d.riskAnalysis || {};
+    STATE.findings1296   = d.findings1296   || {};
   } catch(e) { console.warn('Load hatası:', e); }
 }
 
 
 // ── ROL & VİEWER ─────────────────────────────────────────────
 const VIEWER_STORAGE_KEY  = 'bg_gap_viewer_v1';
-const VIEWER_ONAY_KEY     = 'bg_gap_onay_v1';
+const VIEWER_APPROVAL_KEY     = 'bg_gap_onay_v1';
 
 function getRole() {
   try {
@@ -253,7 +253,7 @@ function isAdmin()  { return getRole() === 'admin'; }
 function isViewer() { return getRole() === 'viewer'; }
 
 // ── UTILS ─────────────────────────────────────────────────────
-function shortCat(c) { return c.replace(/^\d+\.\d+\.\s*/, ''); }
+function shortCategory(c) { return c.replace(/^\d+\.\d+\.\s*/, ''); }
 
 function toast(msg, type='') {
   const t = document.getElementById('toast');
@@ -262,13 +262,13 @@ function toast(msg, type='') {
   setTimeout(() => t.classList.remove('visible'), 3000);
 }
 
-function critBadge(k) {
+function criticalityBadge(k) {
   if (k===3) return `<span class="badge badge-red">🔴 Yüksek</span>`;
   if (k===2) return `<span class="badge badge-amber">🟡 Orta</span>`;
   return `<span class="badge badge-gray">⚪ Düşük</span>`;
 }
 
-function lkp(type, id) {
+function lookup(type, id) {
   return (id >= 0 && LOOKUPS[type]) ? (LOOKUPS[type][id] || '') : '';
 }
 
@@ -276,26 +276,26 @@ function cevapLabel(c) {
   return { evet:'Tamamen Uygulanıyor', kismi:'Kısmen Uygulanıyor', hayir:'Uygulanmıyor', kapsam:'Kapsam Dışı' }[c] || '—';
 }
 
-function riskDurumu(q, cevap) {
+function getRiskStatus(q, cevap) {
   const k = q.kritiklik;
-  if (cevap === 'evet') return null;
+  if (cevap === 'compliant') return null;
   if (cevap === 'kapsam') return null;
-  if (cevap === 'hayir') {
-    if (k===3) return { label:'Çok Riskli', cls:'dk-risk-cok-riskli', skor:12 };
-    if (k===2) return { label:'Riskli',     cls:'dk-risk-riskli',     skor:8  };
-    return            { label:'Orta Riskli',cls:'dk-risk-orta',       skor:4  };
+  if (cevap === 'noncompliant') {
+    if (k===3) return { label:'Çok Riskli', cls:'fc-risk-critical', skor:12 };
+    if (k===2) return { label:'Riskli',     cls:'fc-risk-high',     skor:8  };
+    return            { label:'Orta Riskli',cls:'fc-risk-medium',       skor:4  };
   }
-  if (cevap === 'kismi') {
-    if (k===3) return { label:'Riskli',     cls:'dk-risk-riskli', skor:6 };
-    if (k===2) return { label:'Orta Riskli',cls:'dk-risk-orta',   skor:3 };
-    return            { label:'Orta Riskli',cls:'dk-risk-orta',   skor:2 };
+  if (cevap === 'partial') {
+    if (k===3) return { label:'Riskli',     cls:'fc-risk-high', skor:6 };
+    if (k===2) return { label:'Orta Riskli',cls:'fc-risk-medium',   skor:3 };
+    return            { label:'Orta Riskli',cls:'fc-risk-medium',   skor:2 };
   }
   return null;
 }
 
-function propagate1296(q100, cevap) {
+function propagateAnswers(q100, cevap) {
   SORULAR_1296.forEach(s => {
-    if (s.p === q100.id) STATE.cevaplar1296[s.i] = cevap;
+    if (s.p === q100.id) STATE.answers1296[s.i] = cevap;
   });
 }
 
@@ -304,10 +304,10 @@ function switchTab(name) {
   STATE.activePage = name;
   document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.page === name));
   document.querySelectorAll('.page').forEach(p => p.classList.toggle('active', p.id === 'page-' + name));
-  if (name === 'rapor')     renderRapor();
-  if (name === 'uyumlu')    renderUyumlu();
-  if (name === 'tedbirler') { initTedbirFilters(); render1296(); }
-  if (name === 'ozet')      renderOzet();
+  if (name === 'findings')   renderFindings();
+  if (name === 'compliance')    renderCompliance();
+  if (name === 'measures') { initMeasureFilters(); renderMeasures(); }
+  if (name === 'summary')      renderSummary();
 }
 // app.js
 
@@ -322,33 +322,33 @@ function importData(event) {
       const importedState = JSON.parse(e.target.result);
 
       // Sadece bilinen alanları aktar (riskCache hariç)
-      STATE.projeAdi    = importedState.projeAdi    || 'Yeni Proje';
-      STATE.cevaplar    = importedState.cevaplar    || {};
-      STATE.cevaplar1296= importedState.cevaplar1296|| {};
+      STATE.projectName    = importedState.projectName    || 'Yeni Proje';
+      STATE.answers    = importedState.answers    || {};
+      STATE.answers1296= importedState.answers1296|| {};
       STATE.riskCache   = {};
-      STATE.currentIdx  = importedState.currentIdx  || 0;
+      STATE.currentIndex  = importedState.currentIndex  || 0;
       STATE.activeFilter= importedState.activeFilter|| 'all';
-      STATE.activePage  = importedState.activePage  || 'sorular';
-      STATE.page1296    = importedState.page1296    || 0;
+      STATE.activePage  = importedState.activePage  || 'questions';
+      STATE.currentPage1296    = importedState.currentPage1296    || 0;
 
       // Firma adını input'a yaz
-      const projeInput = document.getElementById('proje-adi-input');
-      if (projeInput) projeInput.value = STATE.projeAdi;
+      const nameInput = document.getElementById("project-name-input");
+      if (nameInput) nameInput.value = STATE.projectName;
 
       save();
       buildSidebar();
       renderQuestion();
       updateStats();
       
-      toast(`✅ "${STATE.projeAdi || 'Dosya'}" başarıyla yüklendi!`);
+      toast(`✅ "${STATE.projectName || 'Dosya'}" başarıyla yüklendi!`);
     } catch (err) {
       toast('❌ Dosya okunamadı, format hatalı!', 'error');
     }
   };
   reader.readAsText(file);
 }
-function updateProjeAdi(yeniIsim) {
-  STATE.projeAdi = yeniIsim;
+function updateProjectName(yeniIsim) {
+  STATE.projectName = yeniIsim;
   STATE.tarih = new Date().toLocaleDateString();
   save();
   toast(`✅ Proje ismi "${yeniIsim}" olarak kaydedildi.`);
@@ -360,56 +360,56 @@ function updateProjeAdi(yeniIsim) {
 function buildSidebar() {
   const sb = document.getElementById('sidebar');
   let h = `<div class="sidebar-title">Kategoriler</div>`;
-  h += `<div class="cat-item active" onclick="filterCat('all',this)">
-    <div class="cat-label">📋 Tüm Sorular</div>
-    <div class="cat-badge">${SORULAR_100.length}</div>
+  h += `<div class="category-item active" onclick="filterCategory('all',this)">
+    <div class="category-label">📋 Tüm Sorular</div>
+    <div class="category-badge">${SORULAR_100.length}</div>
   </div>`;
   CATEGORIES.forEach((c, i) => {
     const count    = SORULAR_100.filter(s => s.anaKat === c).length;
     const hasBulgu = SORULAR_100.filter(s => s.anaKat === c).some(s => {
-      const cv = STATE.cevaplar[s.id];
+      const cv = STATE.answers[s.id];
       return cv && (cv.c === 'hayir' || cv.c === 'kismi');
     });
-    h += `<div class="cat-item ${hasBulgu ? 'has-bulgu' : ''}" onclick="filterCat('${c.replace(/'/g,"\\'")}',this)" id="cat-${i}" title="${c}">
-      <div class="cat-label">${shortCat(c)}</div>
-      <div class="cat-badge">${count}</div>
+    h += `<div class="category-item ${hasBulgu ? 'has-bulgu' : ''}" onclick="filterCategory('${c.replace(/'/g,"\\'")}',this)" id="cat-${i}" title="${c}">
+      <div class="category-label">${shortCategory(c)}</div>
+      <div class="category-badge">${count}</div>
     </div>`;
   });
   sb.innerHTML = h;
 }
 
-function filterCat(cat, el) {
+function filterCategory(cat, el) {
   STATE.activeFilter = cat;
-  document.querySelectorAll('.cat-item').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.category-item').forEach(b => b.classList.remove('active'));
   el.classList.add('active');
-  const list = filteredList();
-  if (list.length) STATE.currentIdx = SORULAR_100.indexOf(list[0]);
+  const list = filteredQuestionList();
+  if (list.length) STATE.currentIndex = SORULAR_100.indexOf(list[0]);
   renderQuestion();
   save();
 }
 
-function filteredList() {
+function filteredQuestionList() {
   return STATE.activeFilter === 'all'
     ? SORULAR_100
     : SORULAR_100.filter(s => s.anaKat === STATE.activeFilter);
 }
 
 function navigate(dir) {
-  const list = filteredList();
-  const pos  = list.findIndex(s => s === SORULAR_100[STATE.currentIdx]);
+  const list = filteredQuestionList();
+  const pos  = list.findIndex(s => s === SORULAR_100[STATE.currentIndex]);
   const np   = pos + dir;
 
   // İleri giderken cevap kontrolü
   if (dir === 1) {
-    const mevcutQ = SORULAR_100[STATE.currentIdx];
-    if (!STATE.cevaplar[mevcutQ.id]) {
+    const mevcutQ = SORULAR_100[STATE.currentIndex];
+    if (!STATE.answers[mevcutQ.id]) {
       toast('⚠️ Lütfen önce bu soruyu yanıtlayın', 'error');
       return;
     }
   }
 
   if (np >= 0 && np < list.length) {
-    STATE.currentIdx = SORULAR_100.indexOf(list[np]);
+    STATE.currentIndex = SORULAR_100.indexOf(list[np]);
     renderQuestion();
     save();
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -418,24 +418,24 @@ function navigate(dir) {
 
 function renderQuestion() {
   try {
-  const q   = SORULAR_100[STATE.currentIdx];
-  const list = filteredList();
+  const q   = SORULAR_100[STATE.currentIndex];
+  const list = filteredQuestionList();
   const pos  = list.findIndex(s => s === q);
 
-  document.getElementById('q-nav-info').textContent  = `Soru ${pos + 1} / ${list.length}`;
+  document.getElementById('question-nav-info').textContent  = `Soru ${pos + 1} / ${list.length}`;
   document.getElementById('prev-btn').disabled        = pos <= 0;
   document.getElementById('next-btn').disabled        = pos >= list.length - 1;
-  document.getElementById('q-section-label').textContent = q.altKat;
+  document.getElementById('question-section-label').textContent = q.altKat;
 
-  const cv    = STATE.cevaplar[q.id] || null;
+  const cv    = STATE.answers[q.id] || null;
   const sel   = cv ? cv.c   : null;
   const obs   = cv ? (cv.obs   || '') : '';
   const bulgu = cv ? (cv.bulgu || '') : '';
 
-  const mev  = lkp('mev',  q.mev);
-  const iso1 = lkp('iso1', q.iso1);
-  const iso2 = lkp('iso2', q.iso2);
-  const iso3 = lkp('iso3', q.iso3);
+  const mev  = lookup('mev',  q.mev);
+  const iso1 = lookup('iso1', q.iso1);
+  const iso2 = lookup('iso2', q.iso2);
+  const iso3 = lookup('iso3', q.iso3);
 
   let refsHTML = '<div class="q-refs">';
   if (iso1) refsHTML += `<span class="ref-item"><span class="ref-label">ISO 27001:2022</span><span class="ref-value">${iso1.replace(/\n/g,', ')}</span></span>`;
@@ -456,32 +456,32 @@ function renderQuestion() {
                     : sel==='kapsam'? 'Bu kontrolün neden kapsam dışı olduğunu açıklayın.'
                     : 'Kontrolün neden uygulanmadığını, tespit edilen eksikliği yazın.';
 
-  document.getElementById('q-area').innerHTML = `
+  document.getElementById('question-area').innerHTML = `
     <div class="q-card">
       <div class="q-meta">
         <span class="q-num">${q.tedbirNo} • S${q.id}</span>
-        ${critBadge(q.kritiklik)}
+        ${criticalityBadge(q.kritiklik)}
         <span class="q-tedbir-label" title="${q.tedbir}">${q.tedbir}</span>
       </div>
       <div class="q-text">${q.soru}</div>
       ${refsHTML}
       <div class="answer-row">
-        <button class="ans ${sel==='evet'  ? 'sel-evet'  : ''}" onclick="setCevap('evet')">
+        <button class="ans ${sel==='evet'  ? 'sel-evet'  : ''}" onclick="setAnswer('evet')">
           <span class="ans-icon">✅</span>
           <span class="ans-label">Evet</span>
           <span class="ans-desc">Tamamen uygulanıyor</span>
         </button>
-        <button class="ans ${sel==='kismi' ? 'sel-kismi' : ''}" onclick="setCevap('kismi')">
+        <button class="ans ${sel==='kismi' ? 'sel-kismi' : ''}" onclick="setAnswer('kismi')">
           <span class="ans-icon">🟡</span>
           <span class="ans-label">Kısmen</span>
           <span class="ans-desc">Eksik veya kısmi uygulama</span>
         </button>
-        <button class="ans ${sel==='hayir' ? 'sel-hayir' : ''}" onclick="setCevap('hayir')">
+        <button class="ans ${sel==='hayir' ? 'sel-hayir' : ''}" onclick="setAnswer('hayir')">
           <span class="ans-icon">❌</span>
           <span class="ans-label">Hayır</span>
           <span class="ans-desc">Uygulanmıyor</span>
         </button>
-        <button class="ans ${sel==='kapsam' ? 'sel-kapsam' : ''}" onclick="setCevap('kapsam')">
+        <button class="ans ${sel==='kapsam' ? 'sel-kapsam' : ''}" onclick="setAnswer('kapsam')">
           <span class="ans-icon">⬜</span>
           <span class="ans-label">Kapsam Dışı</span>
           <span class="ans-desc">Bu kontrol geçerli değil</span>
@@ -491,41 +491,41 @@ function renderQuestion() {
       <div style="margin-top:1rem;padding:1.25rem;border-radius:10px;border:1px solid ${borderColor};background:${bgColor}">
         <div style="font-size:12px;font-weight:600;margin-bottom:5px;color:${panelColor}">${panelTitle}</div>
         <div style="font-size:12px;color:#94a3b8;margin-bottom:7px">${panelDesc}</div>
-        <textarea id="kismi-obs"
+        <textarea id="observation-input"
           style="width:100%;min-height:85px;padding:9px;background:var(--bg);border:1px solid rgba(255,255,255,0.1);border-radius:7px;color:var(--text);font-size:13px;line-height:1.6;resize:vertical;font-family:inherit"
           placeholder="Gözlem notlarınızı buraya yazın...">${obs}</textarea>
         <div style="display:flex;gap:7px;margin-top:7px;justify-content:flex-end">
-          ${(sel !== 'evet' && sel !== 'kapsam' && isAdmin()) ? `<button class="btn-ai" id="ai-gen-btn" onclick="bulguUret()" ${!obs.trim() ? 'disabled' : ''}>📋 Bulgu Üret</button>` : ''}
+          ${(sel !== 'evet' && sel !== 'kapsam' && isAdmin()) ? `<button class="btn-ai" id="generate-finding-btn" onclick="generateFinding()" ${!obs.trim() ? 'disabled' : ''}>📋 Bulgu Üret</button>` : ''}
         </div>
         ${bulgu ? `
         <div style="background:rgba(167,139,250,0.1);border:1px solid rgba(167,139,250,0.25);border-radius:7px;padding:.9rem;margin-top:.6rem">
           <div style="font-size:11px;font-weight:600;color:#a78bfa;margin-bottom:.35rem">📋 Üretilen Bulgu</div>
           <div style="font-size:12px;color:var(--text);line-height:1.6;white-space:pre-line">${bulgu}</div>
-        </div>` : '<div id="bulgu-preview"></div>'}
+        </div>` : '<div id="finding-preview"></div>'}
       </div>` : ''}
     </div>`;
 
-  const ta = document.getElementById('kismi-obs');
+  const ta = document.getElementById('observation-input');
   if (ta) {
     ta.addEventListener('input', () => {
-      if (!STATE.cevaplar[q.id]) STATE.cevaplar[q.id] = { c: sel, obs: '', bulgu: '' };
-      STATE.cevaplar[q.id].obs = ta.value;
+      if (!STATE.answers[q.id]) STATE.answers[q.id] = { c: sel, obs: '', bulgu: '' };
+      STATE.answers[q.id].obs = ta.value;
       save();
-      const btn = document.getElementById('ai-gen-btn');
+      const btn = document.getElementById('generate-finding-btn');
       if (btn) btn.disabled = !ta.value.trim();
     });
   }
   } catch(err) {
     console.error('renderQuestion hatası:', err);
-    const qa = document.getElementById('q-area');
+    const qa = document.getElementById('question-area');
     if (qa) qa.innerHTML = '<div style="padding:2rem;color:#f87171">⚠️ Soru yüklenirken hata: ' + err.message + '</div>';
   }
 }
 
 // ── setCevap ─────────────────────────────────────────────────
-function setCevap(val) {
-  const q           = SORULAR_100[STATE.currentIdx];
-  const mevcut      = STATE.cevaplar[q.id] || {};
+function setAnswer(val) {
+  const q           = SORULAR_100[STATE.currentIndex];
+  const mevcut      = STATE.answers[q.id] || {};
   const oncekiCevap = mevcut.c || null;
   const obsTemizle  = oncekiCevap && oncekiCevap !== val;
 
@@ -533,41 +533,41 @@ function setCevap(val) {
     ? `${q.tedbir} kontrolü kurumun mevcut yapısı ve faaliyet kapsamı itibarıyla bu denetim döneminde kapsam dışında değerlendirilmiştir.`
     : '';
 
-  STATE.cevaplar[q.id] = {
+  STATE.answers[q.id] = {
     c:     val,
     obs:   obsTemizle ? otomatikNot : (mevcut.obs || otomatikNot),
     bulgu: obsTemizle ? '' : (val === 'evet' ? '' : (mevcut.bulgu || ''))
   };
 
-  propagate1296(q, val);
+  propagateAnswers(q, val);
   save();
   updateStats();
   buildSidebar();
   renderQuestion();
 
   // Viewer: 100 soru tamamlandıysa bekleme ekranı göster
-  if (isViewer() && Object.keys(STATE.cevaplar).length >= 100) {
-    viewerExport(); // otomatik kaydet
-    setTimeout(() => showViewerBekleme(), 400);
+  if (isViewer() && Object.keys(STATE.answers).length >= 100) {
+    exportViewerAnswers(); // otomatik kaydet
+    setTimeout(() => showViewerWaitingScreen(), 400);
   }
 }
 
 // ── bulguUret ─────────────────────────────────────────────────
-async function bulguUret() {
-  const q  = SORULAR_100[STATE.currentIdx];
-  const ta = document.getElementById('kismi-obs');
+async function generateFinding() {
+  const q  = SORULAR_100[STATE.currentIndex];
+  const ta = document.getElementById('observation-input');
   if (!ta || !ta.value.trim()) { toast('Gözlem metni boş olamaz', 'error'); return; }
 
-  const apiKey = localStorage.getItem(API_KEY_STOR);
+  const apiKey = localStorage.getItem(API_KEY_STORAGE);
   if (!apiKey) { showAPIKeyModal(); return; }
 
   const obs  = ta.value.trim();
-  const btn  = document.getElementById('ai-gen-btn');
+  const btn  = document.getElementById('generate-finding-btn');
   btn.disabled = true;
   btn.innerHTML = '<span class="loader"></span> Üretiliyor...';
 
-  const mev  = lkp('mev',  q.mev);
-  const iso1 = lkp('iso1', q.iso1);
+  const mev  = lookup('mev',  q.mev);
+  const iso1 = lookup('iso1', q.iso1);
 
   const prompt = `Sen kıdemli bir BİGR ve KVKK baş denetçisisin. Aşağıdaki denetim kontrolü için danışman gözlemine dayalı profesyonel bulgu metni yaz.
 
@@ -598,10 +598,10 @@ Türkçe, 3-4 cümle, resmi denetim üslubunda bulgu metni yaz. Sadece metni yaz
     const data = await resp.json();
     const text = data.candidates?.[0]?.content?.parts?.map(p => p.text).join('\n') || '';
 
-    STATE.cevaplar[q.id].bulgu = text.trim();
+    STATE.answers[q.id].bulgu = text.trim();
     save();
 
-    const pv = document.getElementById('bulgu-preview');
+    const pv = document.getElementById('finding-preview');
     if (pv) pv.innerHTML = `
       <div style="background:rgba(167,139,250,0.1);border:1px solid rgba(167,139,250,0.25);border-radius:7px;padding:.9rem;margin-top:.6rem">
         <div style="font-size:11px;font-weight:600;color:#a78bfa;margin-bottom:.35rem">📋 Üretilen Bulgu</div>
@@ -618,7 +618,7 @@ Türkçe, 3-4 cümle, resmi denetim üslubunda bulgu metni yaz. Sadece metni yaz
 
 // ── updateStats ───────────────────────────────────────────────
 function updateStats() {
-  const all    = Object.values(STATE.cevaplar);
+  const all    = Object.values(STATE.answers);
   // YENİ
 const evet   = all.filter(v => v.c === 'evet').length;
 const kismi  = all.filter(v => v.c === 'kismi').length;
@@ -627,45 +627,45 @@ const kapsam = all.filter(v => v.c === 'kapsam').length;
 const total  = evet + kismi + hayir + kapsam;  // sayaca dahil
 const skorBaz = evet + kismi + hayir;           // puana dahil değil
 const skor   = skorBaz > 0 ? Math.round(100*(evet + kismi*0.5)/skorBaz) : null;
-  const c1296  = Object.keys(STATE.cevaplar1296).length;
+  const c1296  = Object.keys(STATE.answers1296).length;
 
-  document.getElementById('h-evet').textContent   = evet;
-  document.getElementById('h-kismi').textContent  = kismi;
-  document.getElementById('h-hayir').textContent  = hayir;
+  document.getElementById('h-compliant').textContent   = evet;
+  document.getElementById('h-partial').textContent  = kismi;
+  document.getElementById('h-noncompliant').textContent  = hayir;
   document.getElementById('h-score').textContent  = skor !== null ? skor + '%' : '—';
-  document.getElementById('prog').style.width     = Math.round(100*total/100) + '%';
-  document.getElementById('badge-sorular').textContent   = total + '/100';
-  document.getElementById('badge-rapor').textContent     = (hayir + kismi) + ' Bulgu';
-  document.getElementById('badge-uyumlu').textContent    = evet;
-  document.getElementById('badge-tedbirler').textContent = c1296 + '/1296';
+  document.getElementById('progress-bar').style.width     = Math.round(100*total/100) + '%';
+  document.getElementById('badge-questions').textContent   = total + '/100';
+  document.getElementById('badge-findings').textContent     = (hayir + kismi) + ' Bulgu';
+  document.getElementById('badge-compliance').textContent    = evet;
+  document.getElementById('badge-measures').textContent = c1296 + '/1296';
 }
 
 // ══════════════════════════════════════════════════════════════
 // SAYFA 2: BULGULAR
 // ══════════════════════════════════════════════════════════════
 
-function renderRapor() {
-  const filter = document.getElementById('rapor-filter')?.value || 'all';
+function renderFindings() {
+  const filter = document.getElementById('findings-filter')?.value || 'all';
   let sorular = SORULAR_100.filter(q => {
-    const cv = STATE.cevaplar[q.id];
+    const cv = STATE.answers[q.id];
     if (!cv || cv.c === 'evet' || cv.c === 'kapsam') return false;
-    if (filter === 'hayir')     return cv.c === 'hayir';
-    if (filter === 'kismi')     return cv.c === 'kismi';
-    if (filter === 'cokriskli') return riskDurumu(q, cv.c)?.label === 'Çok Riskli';
-    if (filter === 'riskli')    return riskDurumu(q, cv.c)?.label === 'Riskli';
+    if (filter === 'noncompliant')     return cv.c === 'hayir';
+    if (filter === 'partial')     return cv.c === 'kismi';
+    if (filter === 'critical') return getRiskStatus(q, cv.c)?.label === 'Çok Riskli';
+    if (filter === 'risky')    return getRiskStatus(q, cv.c)?.label === 'Riskli';
     return true;
   });
 
   sorular.sort((a, b) =>
-    (riskDurumu(b, STATE.cevaplar[b.id].c)?.skor || 0) -
-    (riskDurumu(a, STATE.cevaplar[a.id].c)?.skor || 0)
+    (getRiskStatus(b, STATE.answers[b.id].c)?.skor || 0) -
+    (getRiskStatus(a, STATE.answers[a.id].c)?.skor || 0)
   );
 
-  const liste = document.getElementById('rapor-liste');
-  const bos   = document.getElementById('rapor-bos');
+  const liste = document.getElementById('findings-list');
+  const bos   = document.getElementById('findings-empty');
   if (!sorular.length) { liste.innerHTML = ''; bos.style.display = 'block'; return; }
   bos.style.display = 'none';
-  liste.innerHTML = sorular.map(q => buildDanismanKart(q)).join('');
+  liste.innerHTML = sorular.map(q => buildFindingCard(q)).join('');
 }
 function buildRiskKategorileriHTML(q, cv) {
   const k = q.kritiklik;
@@ -741,26 +741,26 @@ function buildRiskKategorileriHTML(q, cv) {
 // AI RİSK ANALİZİ
 // ══════════════════════════════════════════════════════════════
 
-async function aiRiskAnaliziUret(qId) {
+async function generateRiskAnalysis(qId) {
   const q  = SORULAR_100.find(s => s.id === qId);
-  const cv = STATE.cevaplar[qId];
+  const cv = STATE.answers[qId];
   if (!q || !cv) return;
 
   // Cache kontrolü
-  if (STATE.riskAnalizi[qId]) {
-    document.getElementById(`risk-ai-box-${qId}`).innerHTML = renderRiskAIBox(qId);
+  if (STATE.riskAnalysis[qId]) {
+    document.getElementById(`risk-ai-box-${qId}`).innerHTML = renderRiskAnalysisBox(qId);
     return;
   }
 
-  const apiKey = localStorage.getItem(API_KEY_STOR);
+  const apiKey = localStorage.getItem(API_KEY_STORAGE);
   if (!apiKey) { showAPIKeyModal(); return; }
 
   const btn = document.getElementById(`risk-ai-btn-${qId}`);
   if (btn) { btn.disabled = true; btn.innerHTML = '<span class="loader"></span>'; }
 
   const tespitMetni = cv.bulgu || cv.obs || `"${q.tedbir}" tedbiri uygulanmamaktadır.`;
-  const mev  = lkp('mev',  q.mev);
-  const iso1 = lkp('iso1', q.iso1);
+  const mev  = lookup('mev',  q.mev);
+  const iso1 = lookup('iso1', q.iso1);
 
   const prompt = `Sen kıdemli bir bilgi güvenliği danışmanısın. Aşağıdaki denetim bulgusuna göre yönetimin anlayacağı sade ve net dilde risk analizi yaz.
 
@@ -796,11 +796,11 @@ Sadece bu 4 başlık ve içeriklerini yaz, başka açıklama ekleme.`;
     const data = await resp.json();
     const text = data.candidates?.[0]?.content?.parts?.map(p => p.text).join('\n') || '';
 
-    STATE.riskAnalizi[qId] = text.trim();
+    STATE.riskAnalysis[qId] = text.trim();
     save();
 
     const box = document.getElementById(`risk-ai-box-${qId}`);
-    if (box) box.innerHTML = renderRiskAIBox(qId);
+    if (box) box.innerHTML = renderRiskAnalysisBox(qId);
     toast('✅ Risk analizi üretildi', 'success');
   } catch(e) {
     toast('AI hatası: ' + e.message, 'error');
@@ -809,8 +809,8 @@ Sadece bu 4 başlık ve içeriklerini yaz, başka açıklama ekleme.`;
   }
 }
 
-function renderRiskAIBox(qId) {
-  const text = STATE.riskAnalizi[qId];
+function renderRiskAnalysisBox(qId) {
+  const text = STATE.riskAnalysis[qId];
   if (!text) return '';
 
   // Metni kategorilere böl
@@ -824,7 +824,7 @@ function renderRiskAIBox(qId) {
   let html = `<div style="margin-top:10px;border-top:1px solid rgba(0,0,0,0.1);padding-top:10px">
     <div style="font-size:9px;font-weight:700;color:#6366f1;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">
       📋 Risk Değerlendirmesi
-      <button onclick="clearRiskAnalizi(${qId})" style="background:none;border:none;color:#94a3b8;cursor:pointer;font-size:9px;margin-left:8px;text-decoration:underline">Sil</button>
+      <button onclick="clearRiskAnalysis(${qId})" style="background:none;border:none;color:#94a3b8;cursor:pointer;font-size:9px;margin-left:8px;text-decoration:underline">Sil</button>
     </div>`;
 
   // Satırları parse et
@@ -857,8 +857,8 @@ function renderRiskAIBox(qId) {
   return html;
 }
 
-function clearRiskAnalizi(qId) {
-  delete STATE.riskAnalizi[qId];
+function clearRiskAnalysis(qId) {
+  delete STATE.riskAnalysis[qId];
   save();
   const box = document.getElementById(`risk-ai-box-${qId}`);
   if (box) box.innerHTML = '';
@@ -866,13 +866,13 @@ function clearRiskAnalizi(qId) {
   if (btn) btn.innerHTML = '📋 Risk Analizi';
 }
 
-function buildDanismanKart(q) {
-  const cv  = STATE.cevaplar[q.id];
-  const rd  = riskDurumu(q, cv.c);
-  const mev = lkp('mev', q.mev);
-  const iso1= lkp('iso1', q.iso1);
-  const iso2= lkp('iso2', q.iso2);
-  const iso3= lkp('iso3', q.iso3);
+function buildFindingCard(q) {
+  const cv  = STATE.answers[q.id];
+  const rd  = getRiskStatus(q, cv.c);
+  const mev = lookup('mev', q.mev);
+  const iso1= lookup('iso1', q.iso1);
+  const iso2= lookup('iso2', q.iso2);
+  const iso3= lookup('iso3', q.iso3);
 
   // ── 1. KOLON: SAF TESPİTLER METNİ ──────────────────────────────
   let tespitMetni = '';
@@ -904,8 +904,8 @@ function buildDanismanKart(q) {
 
   // Özgün uyumsuzluk yorumu (mevRef)
   if (q.mevRef) {
-    mevzuatHTML += `<div class="dk-mev-item" style="margin-bottom:10px">
-  <div class="dk-mev-baslik" style="margin-bottom:6px">⚠️ Uyumsuzluk Riski</div>
+    mevzuatHTML += `<div class="fc-legal-item" style="margin-bottom:10px">
+  <div class="fc-legal-title" style="margin-bottom:6px">⚠️ Uyumsuzluk Riski</div>
   <div style="font-size:11px;line-height:1.65;color:var(--text-secondary,#94a3b8);background:rgba(96,165,250,0.06);border-left:3px solid rgba(96,165,250,0.4);padding:8px 10px;border-radius:0 6px 6px 0">
     ${q.mevRef}
   </div>
@@ -913,9 +913,9 @@ function buildDanismanKart(q) {
   }
 
   if (mev) {
-    mevzuatHTML += `<div class="dk-mev-item">
-  <div class="dk-mev-baslik">📜 Yasal Dayanak</div>
-  <div class="dk-mev-text">
+    mevzuatHTML += `<div class="fc-legal-item">
+  <div class="fc-legal-title">📜 Yasal Dayanak</div>
+  <div class="fc-legal-text">
     ${mev.split('\n').filter(s => s.trim()).map(s => 
       `<div style="display:flex;gap:6px;margin-bottom:5px">
         <span style="color:#92400e;font-weight:700;flex-shrink:0">•</span>
@@ -926,15 +926,15 @@ function buildDanismanKart(q) {
 </div>`;
   }
   if (iso1 || iso2 || iso3) {
-    mevzuatHTML += `<div class="dk-mev-item"><div class="dk-mev-baslik">🏷 Standart Referanslar</div><div>`;
+    mevzuatHTML += `<div class="fc-legal-item"><div class="fc-legal-title">🏷 Standart Referanslar</div><div>`;
     if (iso1) iso1.split('\n').filter(Boolean).forEach(v => {
-      mevzuatHTML += `<span class="dk-mev-iso">ISO 27001:2022 ${v.trim()}</span>`;
+      mevzuatHTML += `<span class="fc-legal-iso">ISO 27001:2022 ${v.trim()}</span>`;
     });
     if (iso2) iso2.split('\n').filter(Boolean).forEach(v => {
-      mevzuatHTML += `<span class="dk-mev-iso">ISO 27701 ${v.trim()}</span>`;
+      mevzuatHTML += `<span class="fc-legal-iso">ISO 27701 ${v.trim()}</span>`;
     });
     if (iso3) iso3.split('\n').filter(Boolean).forEach(v => {
-      mevzuatHTML += `<span class="dk-mev-iso">ISO 20000 ${v.trim()}</span>`;
+      mevzuatHTML += `<span class="fc-legal-iso">ISO 20000 ${v.trim()}</span>`;
     });
     mevzuatHTML += `</div></div>`;
   }
@@ -947,68 +947,68 @@ const oneriLines = (q.oneri || '').split(/\n/).map(s => s.trim()).filter(s => s.
   let oneriHTML = '';
   if (oneriLines.length > 0) {
     oneriLines.slice(0, 6).forEach((line, i) => {
-      oneriHTML += `<div class="dk-oneri-item">
-        <div class="dk-oneri-no">${i + 1}</div>
-        <div class="dk-oneri-text">${line}</div>
+      oneriHTML += `<div class="fc-recommendation-item">
+        <div class="fc-recommendation-no">${i + 1}</div>
+        <div class="fc-recommendation-text">${line}</div>
       </div>`;
     });
   } else {
-    oneriHTML = `<div class="dk-oneri-item">
-      <div class="dk-oneri-no">1</div>
-      <div class="dk-oneri-text">${q.oneri || 'Kontrol mekanizması oluşturularak dokümante edilmelidir.'}</div>
+    oneriHTML = `<div class="fc-recommendation-item">
+      <div class="fc-recommendation-no">1</div>
+      <div class="fc-recommendation-text">${q.oneri || 'Kontrol mekanizması oluşturularak dokümante edilmelidir.'}</div>
     </div>`;
   }
 
   return `
-<div class="danisman-kart" id="kart-${q.id}">
-  <div class="dk-header">
-    <div class="dk-header-left">
-      <div class="dk-ustbaslik">Danışmanlık Görüşü</div>
-      <div class="dk-baslik">${q.altKat} — ${q.tedbir}</div>
+<div class="finding-card" id="card-${q.id}">
+  <div class="fc-header">
+    <div class="fc-header-left">
+      <div class="fc-supertitle">Danışmanlık Görüşü</div>
+      <div class="fc-title">${q.altKat} — ${q.tedbir}</div>
     </div>
-    <div class="dk-header-right">
-      <span class="dk-risk-badge ${rd?.cls || 'dk-risk-orta'}">${rd?.label || 'Orta Riskli'}</span>
+    <div class="fc-header-right">
+      <span class="fc-risk-badge ${rd?.cls || 'fc-risk-medium'}">${rd?.label || 'Orta Riskli'}</span>
     </div>
   </div>
 
-  <div class="dk-body">
-  <div class="dk-kolon">
-    <div class="dk-kolon-baslik"><span class="dk-kolon-baslik-icon">🔍</span> Tespitler</div>
-    <div class="dk-tespit-text">${tespitMetni}</div>
+  <div class="fc-body">
+  <div class="fc-column">
+    <div class="fc-column-title"><span class="fc-column-icon">🔍</span> Tespitler</div>
+    <div class="fc-finding-text">${tespitMetni}</div>
   </div>
 
-  <div class="dk-kolon">
+  <div class="fc-column">
   <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
-    <div class="dk-kolon-baslik" style="margin-bottom:0"><span class="dk-kolon-baslik-icon">⚠️</span> Risk Analizi</div>
+    <div class="fc-column-title" style="margin-bottom:0"><span class="fc-column-icon">⚠️</span> Risk Analizi</div>
     <span style="background:#92400e;color:#fef3c7;font-size:9px;font-weight:700;padding:3px 8px;border-radius:4px">KRİTİKLİK (${q.kritiklik * 4} PUAN)</span>
   </div>
-    ${STATE.riskAnalizi[q.id] ? "" : buildRiskKategorileriHTML(q, cv)}
+    ${STATE.riskAnalysis[q.id] ? "" : buildRiskKategorileriHTML(q, cv)}
     
     <div style="margin-top:8px">
-      <button id="risk-ai-btn-${q.id}" onclick="aiRiskAnaliziUret(${q.id})"
+      <button id="risk-ai-btn-${q.id}" onclick="generateRiskAnalysis(${q.id})"
         style="background:linear-gradient(135deg,#6366f1,#8b5cf6);color:#fff;border:none;padding:5px 12px;border-radius:6px;cursor:pointer;font-size:10px;font-weight:600;width:100%">
-        ${STATE.riskAnalizi[q.id] ? '🔄 Yenile' : '📋 Risk Analizi'}
+        ${STATE.riskAnalysis[q.id] ? '🔄 Yenile' : '📋 Risk Analizi'}
       </button>
     </div>
     <div id="risk-ai-box-${q.id}">
-      ${STATE.riskAnalizi[q.id] ? renderRiskAIBox(q.id) : ''}
+      ${STATE.riskAnalysis[q.id] ? renderRiskAnalysisBox(q.id) : ''}
     </div>
   </div>
 
-  <div class="dk-kolon">
-    <div class="dk-kolon-baslik"><span class="dk-kolon-baslik-icon">⚖️</span> Mevzuat Uyumu</div>
+  <div class="fc-column">
+    <div class="fc-column-title"><span class="fc-column-icon">⚖️</span> Mevzuat Uyumu</div>
     ${mevzuatHTML}
   </div>
 
-  <div class="dk-kolon">
-    <div class="dk-kolon-baslik"><span class="dk-kolon-baslik-icon">💡</span> İyileştirme Önerileri</div>
+  <div class="fc-column">
+    <div class="fc-column-title"><span class="fc-column-icon">💡</span> İyileştirme Önerileri</div>
     ${oneriHTML}
   </div>
 
   </div>
 
-  <div class="dk-footer">
-    <span class="dk-footer-no">${q.tedbirNo} • S${q.id} / 100 • Kapsam: ${q.kapsananSayi} Tedbir</span>
+  <div class="fc-footer">
+    <span class="fc-footer-ref">${q.tedbirNo} • S${q.id} / 100 • Kapsam: ${q.kapsananSayi} Tedbir</span>
     <div style="display:flex;gap:8px;align-items:center">
       
       <span>${cv.c === 'hayir' ? '❌ Uygulanmıyor' : '🟡 Kısmen Uygulanıyor'}</span>
@@ -1021,19 +1021,19 @@ const oneriLines = (q.oneri || '').split(/\n/).map(s => s.trim()).filter(s => s.
 // SAYFA 3: UYUMLULUK KANITLARI
 // ══════════════════════════════════════════════════════════════
 
-function renderUyumlu() {
-  const filter = document.getElementById('uyumlu-filter')?.value || 'all';
+function renderCompliance() {
+  const filter = document.getElementById('compliance-filter')?.value || 'all';
   let sorular = SORULAR_100.filter(q => {
-    const cv = STATE.cevaplar[q.id];
-    if (filter === 'kapsam') return cv && cv.c === 'kapsam';
+    const cv = STATE.answers[q.id];
+    if (filter === 'outofscope') return cv && cv.c === 'kapsam';
     if (!cv || cv.c !== 'evet') return false;
-    if (filter === 'notlu')  return cv.obs && cv.obs.trim();
-    if (filter === 'notsuz') return !cv.obs || !cv.obs.trim();
+    if (filter === 'noted')  return cv.obs && cv.obs.trim();
+    if (filter === 'unnoted') return !cv.obs || !cv.obs.trim();
     return true;
   });
 
-  const liste = document.getElementById('uyumlu-liste');
-  const bos   = document.getElementById('uyumlu-bos');
+  const liste = document.getElementById('compliance-list');
+  const bos   = document.getElementById('compliance-empty');
 
   if (!sorular.length) {
     liste.innerHTML = '';
@@ -1042,8 +1042,8 @@ function renderUyumlu() {
   }
   bos.style.display = 'none';
 
-  const notlu = sorular.filter(q => STATE.cevaplar[q.id]?.obs?.trim()).length;
-  const ozet = filter === 'kapsam'
+  const notlu = sorular.filter(q => STATE.answers[q.id]?.obs?.trim()).length;
+  const ozet = filter === 'outofscope'
     ? `${sorular.length} kapsam dışı kontrol`
     : `${sorular.length} uyumlu kontrol &nbsp;•&nbsp; ${notlu} tanesi uygulama notu içeriyor &nbsp;•&nbsp; ${sorular.reduce((s,q) => s+q.kapsananSayi, 0).toLocaleString('tr-TR')} tedbir kapsanıyor`;
   let html = `<div style="font-size:13px;color:var(--text2);margin-bottom:1.25rem">${ozet}</div>`;
@@ -1051,11 +1051,11 @@ function renderUyumlu() {
   html += '<div style="display:flex;flex-direction:column;gap:1rem">';
 
   sorular.forEach(q => {
-    const cv   = STATE.cevaplar[q.id];
+    const cv   = STATE.answers[q.id];
     const obs  = (cv.obs || '').trim();
 
     // Kapsam dışı için ayrı kart
-    if (filter === 'kapsam') {
+    if (filter === 'outofscope') {
       html += `
       <div style="background:var(--bg2);border:1px solid rgba(148,163,184,0.2);border-radius:10px;overflow:hidden;border-left:4px solid #94a3b8">
         <div style="padding:12px 18px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap">
@@ -1074,9 +1074,9 @@ function renderUyumlu() {
       </div>`;
       return;
     }
-    const iso1 = lkp('iso1', q.iso1);
-    const iso2 = lkp('iso2', q.iso2);
-    const mev  = lkp('mev',  q.mev);
+    const iso1 = lookup('iso1', q.iso1);
+    const iso2 = lookup('iso2', q.iso2);
+    const mev  = lookup('mev',  q.mev);
     const kritikRenk  = q.kritiklik===3 ? '#f87171' : q.kritiklik===2 ? '#fbbf24' : '#94a3b8';
     const kritikLabel = q.kritiklik===3 ? '🔴 Yüksek' : q.kritiklik===2 ? '🟡 Orta' : '⚪ Düşük';
 
@@ -1103,7 +1103,7 @@ function renderUyumlu() {
       <div style="display:grid;grid-template-columns:${obs ? '1fr 1fr' : '1fr'};gap:0">
         <div style="padding:14px 18px;${obs ? 'border-right:1px solid rgba(16,185,129,0.1)' : ''}">
           <div style="font-size:10px;font-weight:600;color:#34d399;text-transform:uppercase;letter-spacing:.6px;margin-bottom:8px">📋 Kapsam & Referanslar</div>
-          <div style="font-size:12px;color:var(--text2);margin-bottom:8px">${shortCat(q.altKat)}</div>
+          <div style="font-size:12px;color:var(--text2);margin-bottom:8px">${shortCategory(q.altKat)}</div>
           ${isoHTML ? `<div style="margin-bottom:8px">${isoHTML}</div>` : ''}
           ${mev ? `<div style="font-size:11px;color:var(--text3);margin-top:6px;line-height:1.5;padding:7px 10px;background:var(--bg3);border-radius:6px">${mev}</div>` : ''}
           <div style="margin-top:10px"><span style="font-size:11px;color:#34d399">📊 ${q.kapsananSayi} tedbiri kapsıyor</span></div>
@@ -1132,30 +1132,30 @@ function renderUyumlu() {
 // SAYFA 4: 1296 TEDBİR
 // ══════════════════════════════════════════════════════════════
 
-function initTedbirFilters() {
-  const catSel = document.getElementById('t-cat-filter');
+function initMeasureFilters() {
+  const catSel = document.getElementById('measures-cat-filter');
   if (catSel && catSel.options.length <= 1) {
     CATEGORIES.forEach(c => {
       const opt = document.createElement('option');
       opt.value = c;
-      opt.textContent = shortCat(c);
+      opt.textContent = shortCategory(c);
       catSel.appendChild(opt);
     });
   }
 }
 
-function getFiltered1296() {
-  const cat    = document.getElementById('t-cat-filter')?.value || 'all';
-  const cevap  = document.getElementById('t-cevap-filter')?.value || 'all';
-  const search = (document.getElementById('t-search')?.value || '').toLowerCase().trim();
+function getFilteredMeasures() {
+  const cat    = document.getElementById('measures-cat-filter')?.value || 'all';
+  const cevap  = document.getElementById('measures-answer-filter')?.value || 'all';
+  const search = (document.getElementById('measures-search')?.value || '').toLowerCase().trim();
 
   return SORULAR_1296.filter(s => {
     if (cat !== 'all' && s.ak !== cat) return false;
-    const cv = STATE.cevaplar1296[s.i];
-    if (cevap === 'evet'  && cv !== 'evet')  return false;
-    if (cevap === 'kismi' && cv !== 'kismi') return false;
-    if (cevap === 'hayir' && cv !== 'hayir') return false;
-    if (cevap === 'bos'   && cv)             return false;
+    const cv = STATE.answers1296[s.i];
+    if (cevap === 'compliant'  && cv !== 'evet')  return false;
+    if (cevap === 'partial' && cv !== 'kismi') return false;
+    if (cevap === 'noncompliant' && cv !== 'hayir') return false;
+    if (cevap === 'unanswered'   && cv)             return false;
     if (search && !(
       s.q?.toLowerCase().includes(search) ||
       s.ta?.toLowerCase().includes(search) ||
@@ -1165,16 +1165,16 @@ function getFiltered1296() {
   });
 }
 
-function render1296() {
-  const filtered = getFiltered1296();
+function renderMeasures() {
+  const filtered = getFilteredMeasures();
   const total    = filtered.length;
-  const page     = STATE.page1296;
-  const start    = page * PAGE_SIZE_1296;
-  const slice    = filtered.slice(start, start + PAGE_SIZE_1296);
+  const page     = STATE.currentPage1296;
+  const start    = page * PAGE_SIZE_MEASURES;
+  const slice    = filtered.slice(start, start + PAGE_SIZE_MEASURES);
 
-  document.getElementById('t-count').textContent = total.toLocaleString('tr-TR') + ' sonuç';
+  document.getElementById('measures-count').textContent = total.toLocaleString('tr-TR') + ' sonuç';
 
-  const allC = Object.values(STATE.cevaplar1296);
+  const allC = Object.values(STATE.answers1296);
   const st = {
     evet:   allC.filter(c=>c==='evet').length,
     kismi:  allC.filter(c=>c==='kismi').length,
@@ -1182,19 +1182,19 @@ function render1296() {
     kapsam: allC.filter(c=>c==='kapsam').length,
     bos:    SORULAR_1296.length - allC.length
   };
-  document.getElementById('t-stats').innerHTML = `
-    <div class="t-stats-kart"><div class="val" style="color:var(--green)">${st.evet}</div><div class="lbl">Uyumlu</div></div>
-    <div class="t-stats-kart"><div class="val" style="color:var(--amber)">${st.kismi}</div><div class="lbl">Kısmen</div></div>
-    <div class="t-stats-kart"><div class="val" style="color:var(--red)">${st.hayir}</div><div class="lbl">Uyumsuz</div></div>
-    <div class="t-stats-kart"><div class="val" style="color:var(--gray)">${st.kapsam}</div><div class="lbl">Kapsam Dışı</div></div>
-    <div class="t-stats-kart"><div class="val" style="color:var(--gray)">${st.bos}</div><div class="lbl">Cevapsız</div></div>
-    <div class="t-stats-kart"><div class="val" style="color:var(--teal)">${SORULAR_1296.length - st.bos}</div><div class="lbl">Cevaplanan</div></div>`;
+  document.getElementById('measures-stats').innerHTML = `
+    <div class="measures-stat-card"><div class="val" style="color:var(--green)">${st.evet}</div><div class="lbl">Uyumlu</div></div>
+    <div class="measures-stat-card"><div class="val" style="color:var(--amber)">${st.kismi}</div><div class="lbl">Kısmen</div></div>
+    <div class="measures-stat-card"><div class="val" style="color:var(--red)">${st.hayir}</div><div class="lbl">Uyumsuz</div></div>
+    <div class="measures-stat-card"><div class="val" style="color:var(--gray)">${st.kapsam}</div><div class="lbl">Kapsam Dışı</div></div>
+    <div class="measures-stat-card"><div class="val" style="color:var(--gray)">${st.bos}</div><div class="lbl">Cevapsız</div></div>
+    <div class="measures-stat-card"><div class="val" style="color:var(--teal)">${SORULAR_1296.length - st.bos}</div><div class="lbl">Cevaplanan</div></div>`;
 
-  const wrap = document.querySelector('.t-tablo-wrap');
+  const wrap = document.querySelector('.measures-table-wrap');
 
   if (!slice.length) {
     if (wrap) wrap.innerHTML = `<div style="padding:3rem;text-align:center;color:var(--text2)">Bu filtrelere uygun tedbir bulunamadı.</div>`;
-    document.getElementById('t-pagination').innerHTML = '';
+    document.getElementById('measures-pagination').innerHTML = '';
     return;
   }
 
@@ -1226,17 +1226,17 @@ function render1296() {
   let html = '<div style="display:flex;flex-direction:column;gap:1.25rem">';
 
   Object.entries(groups).forEach(([anaKat, items]) => {
-    const cE = items.filter(s=>STATE.cevaplar1296[s.i]==='evet').length;
-    const cK = items.filter(s=>STATE.cevaplar1296[s.i]==='kismi').length;
-    const cH = items.filter(s=>STATE.cevaplar1296[s.i]==='hayir').length;
-    const cB = items.filter(s=>!STATE.cevaplar1296[s.i]).length;
+    const cE = items.filter(s=>STATE.answers1296[s.i]==='evet').length;
+    const cK = items.filter(s=>STATE.answers1296[s.i]==='kismi').length;
+    const cH = items.filter(s=>STATE.answers1296[s.i]==='hayir').length;
+    const cB = items.filter(s=>!STATE.answers1296[s.i]).length;
     const n  = items.length;
     const skor = n > cB ? Math.round(100*(cE+cK*0.5)/(n-cB)) : 0;
     const skorRenk = skor>=70?'#10b981':skor>=40?'#f59e0b':skor>0?'#ef4444':'#475569';
 
     html += `<div style="background:var(--bg2);border:1px solid var(--border);border-radius:10px;overflow:hidden">
       <div style="background:linear-gradient(135deg,var(--bg3),var(--bg2));padding:12px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
-        <div style="font-size:13px;font-weight:700;color:var(--text)">${shortCat(anaKat)}</div>
+        <div style="font-size:13px;font-weight:700;color:var(--text)">${shortCategory(anaKat)}</div>
         <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
           <span style="font-size:11px;color:var(--green)">✅ ${cE}</span>
           <span style="font-size:11px;color:var(--amber)">🟡 ${cK}</span>
@@ -1249,7 +1249,7 @@ function render1296() {
       <div style="display:flex;flex-direction:column">`;
 
     items.forEach((s, idx) => {
-      const cv  = STATE.cevaplar1296[s.i] || 'bos';
+      const cv  = STATE.answers1296[s.i] || 'bos';
       const rs  = rowStyle[cv];
       const cr  = cevapRenk[cv];
       const parentQ    = SORULAR_100.find(q => q.id === s.p);
@@ -1258,7 +1258,7 @@ function render1296() {
       const bgHover    = cv==='bos' ? (isDark ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.02)') : rs.bg.replace('0.04','0.08').replace('0.05','0.09');
 
       // Cache'den oku, yoksa şablon üret
-      const cached1296 = STATE.bulgu1296[s.i];
+      const cached1296 = STATE.findings1296[s.i];
       const sablonKismi = `🟡 <strong>${s.ta}</strong> kapsamında kısmi uygulama tespit edilmiştir.${parentQ?.obs ? ' ' + parentQ.obs + '.' : ''} Söz konusu tedbirin eksiksiz uygulanabilmesi için gerekli süreç ve kontrol mekanizmalarının oluşturulması gerekmektedir.`;
       const sablonHayir = `❌ Yapılan incelemede <strong>${s.ta}</strong> kapsamındaki gereklilikler kurumda uygulanmamaktadır. ${altKatKisa} alanında tanımlı bir süreç veya kontrol mekanizması bulunmamaktadır. Bu durum BİGR rehberinin ${s.tn} numaralı tedbir maddesine doğrudan aykırılık teşkil etmektedir.`;
 
@@ -1277,7 +1277,7 @@ function render1296() {
         <div style="display:grid;grid-template-columns:90px 160px 180px 1fr 130px 70px;gap:0;background:${rs.bg};border-left:3px solid ${rs.left};cursor:${cv!=='bos'?'pointer':'default'}"
           onmouseover="this.style.background='${bgHover}'"
           onmouseout="this.style.background='${rs.bg}'"
-          ${cv !== 'bos' ? `onclick="const b=document.getElementById('b1296-${s.i}');if(b){b.style.display=b.style.display==='block'?'none':'block'}"` : ''}>
+          ${cv !== 'bos' ? `onclick="const b=document.getElementById('mfinding-${s.i}');if(b){b.style.display=b.style.display==='block'?'none':'block'}"` : ''}>
           <div style="padding:10px 12px;display:flex;align-items:center"><span style="font-size:10px;font-family:monospace;color:var(--teal);font-weight:600">${s.tn}</span></div>
           <div style="padding:10px 8px;display:flex;align-items:center"><span style="font-size:10px;color:var(--text3);line-height:1.35">${altKatKisa}</span></div>
           <div style="padding:10px 8px;display:flex;align-items:center"><span style="font-size:11px;color:var(--text2);font-weight:500;line-height:1.4">${s.ta}</span></div>
@@ -1291,10 +1291,10 @@ function render1296() {
           </div>
         </div>
         ${cv !== 'bos' ? `
-        <div id="b1296-${s.i}" style="display:none;padding:10px 16px 12px 16px;background:${bulguKaynak==='ai'?'rgba(99,102,241,0.06)':'var(--bg3)'};border-left:3px solid ${bulguKaynak==='ai'?'#6366f1':rs.left}">
+        <div id="mfinding-${s.i}" style="display:none;padding:10px 16px 12px 16px;background:${bulguKaynak==='ai'?'rgba(99,102,241,0.06)':'var(--bg3)'};border-left:3px solid ${bulguKaynak==='ai'?'#6366f1':rs.left}">
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
             ${bulguKaynak==='ai' ? `<span style="font-size:9px;color:#818cf8;font-weight:600;letter-spacing:0.3px">✦ </span>` : `<span></span>`}
-            ${(cv === 'kismi' || cv === 'hayir') ? `<span style="font-size:9px;color:#6366f1;cursor:pointer;text-decoration:underline;opacity:0.85" onclick="event.stopPropagation();tekBulguUret(${s.i})">↺ Yenile</span>` : ''}
+            ${(cv === 'kismi' || cv === 'hayir') ? `<span style="font-size:9px;color:#6366f1;cursor:pointer;text-decoration:underline;opacity:0.85" onclick="event.stopPropagation();generateSingleFinding(${s.i})">↺ Yenile</span>` : ''}
           </div>
           <div style="font-size:11px;color:var(--text);line-height:1.75">${bulguMetni}</div>
         </div>` : ''}
@@ -1307,21 +1307,21 @@ function render1296() {
   html += '</div>';
   if (wrap) wrap.innerHTML = html;
 
-  const totalPages = Math.ceil(total / PAGE_SIZE_1296);
+  const totalPages = Math.ceil(total / PAGE_SIZE_MEASURES);
   let pgHtml = '';
   if (totalPages > 1) {
-    if (page > 0) pgHtml += `<button class="pg-btn" onclick="goPage1296(${page-1})">← Önceki</button>`;
+    if (page > 0) pgHtml += `<button class="page-btn" onclick="goToPage1296(${page-1})">← Önceki</button>`;
     const pArr = totalPages <= 7
       ? Array.from({length:totalPages},(_,i)=>i)
       : [0,...(page>2?['...']:[]),...Array.from({length:3},(_,i)=>Math.min(Math.max(page-1+i,1),totalPages-2)).filter((v,i,a)=>a.indexOf(v)===i),...(page<totalPages-3?['...']:[]),totalPages-1];
     pArr.forEach(p => {
       if (p==='...') pgHtml += `<span style="padding:6px 4px;color:var(--text3)">…</span>`;
-      else pgHtml += `<button class="pg-btn ${p===page?'active':''}" onclick="goPage1296(${p})">${p+1}</button>`;
+      else pgHtml += `<button class="page-btn ${p===page?'active':''}" onclick="goToPage1296(${p})">${p+1}</button>`;
     });
-    if (page < totalPages-1) pgHtml += `<button class="pg-btn" onclick="goPage1296(${page+1})">Sonraki →</button>`;
-    pgHtml += `<span style="font-size:12px;color:var(--text2);margin-left:8px">${start+1}–${Math.min(start+PAGE_SIZE_1296,total)} / ${total}</span>`;
+    if (page < totalPages-1) pgHtml += `<button class="page-btn" onclick="goToPage1296(${page+1})">Sonraki →</button>`;
+    pgHtml += `<span style="font-size:12px;color:var(--text2);margin-left:8px">${start+1}–${Math.min(start+PAGE_SIZE_MEASURES,total)} / ${total}</span>`;
   }
-  const pgEl = document.getElementById('t-pagination');
+  const pgEl = document.getElementById('measures-pagination');
   pgEl.innerHTML = pgHtml;
   pgEl.style.display = totalPages > 1 ? 'flex' : 'none';
 }
@@ -1331,8 +1331,8 @@ function render1296() {
 // 1296 HİBRİT BULGU SİSTEMİ
 // ══════════════════════════════════════════════════════════════
 
-function sablonBulgu1296(s, parentQ) {
-  const cv = STATE.cevaplar1296[s.i];
+function templateFinding(s, parentQ) {
+  const cv = STATE.answers1296[s.i];
   const altKatKisa = s.altk.replace(/^\d+\.\d+\.\d+\.\s*/,'').replace(/^\d+\.\d+\.\s*/,'');
   if (cv === 'kismi') {
     return `${s.ta} kapsamında kısmi uygulama tespit edilmiştir.${parentQ?.obs ? ' ' + parentQ.obs + '.' : ''} Söz konusu tedbirin eksiksiz uygulanabilmesi için gerekli süreç ve kontrol mekanizmalarının oluşturulması gerekmektedir.`;
@@ -1343,19 +1343,19 @@ function sablonBulgu1296(s, parentQ) {
   return '';
 }
 
-async function tekBulguUret(tedbirIdx) {
+async function generateSingleFinding(tedbirIdx) {
   const s = SORULAR_1296.find(x => x.i === tedbirIdx);
   if (!s) return;
   const parentQ = SORULAR_100.find(q => q.id === s.p);
-  const cv = STATE.cevaplar1296[s.i];
+  const cv = STATE.answers1296[s.i];
   if (!cv || cv === 'evet' || cv === 'bos') return;
 
-  const apiKey = localStorage.getItem(API_KEY_STOR);
+  const apiKey = localStorage.getItem(API_KEY_STORAGE);
   if (!apiKey) {
     // API yoksa şablon kullan
-    STATE.bulgu1296[s.i] = { metin: sablonBulgu1296(s, parentQ), kaynak: 'sablon' };
+    STATE.findings1296[s.i] = { metin: templateFinding(s, parentQ), kaynak: 'sablon' };
     save();
-    render1296();
+    renderMeasures();
     return;
   }
 
@@ -1385,24 +1385,24 @@ Kurallar:
     const data = await resp.json();
     const text = data.candidates?.[0]?.content?.parts?.map(p=>p.text).join('') || '';
     if (text.trim()) {
-      STATE.bulgu1296[s.i] = { metin: text.trim(), kaynak: 'ai' };
+      STATE.findings1296[s.i] = { metin: text.trim(), kaynak: 'ai' };
     } else {
       throw new Error('boş');
     }
   } catch(e) {
-    STATE.bulgu1296[s.i] = { metin: sablonBulgu1296(s, parentQ), kaynak: 'sablon' };
+    STATE.findings1296[s.i] = { metin: templateFinding(s, parentQ), kaynak: 'sablon' };
   }
   save();
-  render1296();
+  renderMeasures();
 }
 
 // Batch: 5'li gruplar halinde API isteği
-async function batchBulguUret(tedbirListesi, apiKey) {
+async function batchGenerateFindings(tedbirListesi, apiKey) {
   if (!tedbirListesi.length) return;
 
   const items = tedbirListesi.map((s, idx) => {
     const parentQ = SORULAR_100.find(q => q.id === s.p);
-    const cv = STATE.cevaplar1296[s.i];
+    const cv = STATE.answers1296[s.i];
     const obs = parentQ?.obs || '';
     const oneri = (parentQ?.oneri || '').substring(0, 150);
     return '[' + (idx+1) + '] Tedbir: ' + s.ta + ' (' + s.tn + ') | Soru: ' + s.q +
@@ -1442,40 +1442,40 @@ async function batchBulguUret(tedbirListesi, apiKey) {
       const myPart = parts[0];
       const myMatch = myPart.match(new RegExp('\[' + num + '\]([\s\S]+)'));
       if (myMatch && myMatch[1].trim()) {
-        STATE.bulgu1296[s.i] = { metin: myMatch[1].trim(), kaynak: 'ai' };
-      } else if (!STATE.bulgu1296[s.i]) {
+        STATE.findings1296[s.i] = { metin: myMatch[1].trim(), kaynak: 'ai' };
+      } else if (!STATE.findings1296[s.i]) {
         const parentQ = SORULAR_100.find(q => q.id === s.p);
-        STATE.bulgu1296[s.i] = { metin: sablonBulgu1296(s, parentQ), kaynak: 'sablon' };
+        STATE.findings1296[s.i] = { metin: templateFinding(s, parentQ), kaynak: 'sablon' };
       }
     });
     return true;
   } catch(e) {
     tedbirListesi.forEach(s => {
-      if (!STATE.bulgu1296[s.i]) {
+      if (!STATE.findings1296[s.i]) {
         const parentQ = SORULAR_100.find(q => q.id === s.p);
-        STATE.bulgu1296[s.i] = { metin: sablonBulgu1296(s, parentQ), kaynak: 'sablon' };
+        STATE.findings1296[s.i] = { metin: templateFinding(s, parentQ), kaynak: 'sablon' };
       }
     });
     return false;
   }
 }
 
-async function tumKismenleriBulguUret() {
-  const apiKey = localStorage.getItem(API_KEY_STOR);
+async function generateAllFindings() {
+  const apiKey = localStorage.getItem(API_KEY_STORAGE);
   const BATCH_SIZE = 5;
 
   const kismenler = SORULAR_1296.filter(s =>
-  STATE.cevaplar1296[s.i] === 'kismi'
+  STATE.answers1296[s.i] === 'kismi'
 );
   if (!kismenler.length) { toast('Kısmen veya Hayır cevaplı tedbir yok', 'error'); return; }
 
   const bekleyenler = kismenler.filter(s =>
-    !STATE.bulgu1296[s.i] || STATE.bulgu1296[s.i].kaynak === 'sablon'
+    !STATE.findings1296[s.i] || STATE.findings1296[s.i].kaynak === 'sablon'
   );
   const toplam = bekleyenler.length;
   if (toplam === 0) { toast('Tüm AI bulgular zaten üretilmiş ✅', 'success'); return; }
 
-  const btn = document.getElementById('btn-toplu-bulgu');
+  const btn = document.getElementById('btn-bulk-findings');
   let tamamlanan = 0, aiSayac = 0, sablonSayac = 0;
 
   const guncelle = () => {
@@ -1485,13 +1485,13 @@ async function tumKismenleriBulguUret() {
 
   if (!apiKey) {
     bekleyenler.forEach(s => {
-      if (!STATE.bulgu1296[s.i]) {
+      if (!STATE.findings1296[s.i]) {
         const parentQ = SORULAR_100.find(q => q.id === s.p);
-        STATE.bulgu1296[s.i] = { metin: sablonBulgu1296(s, parentQ), kaynak: 'sablon' };
+        STATE.findings1296[s.i] = { metin: templateFinding(s, parentQ), kaynak: 'sablon' };
         sablonSayac++;
       }
     });
-    save(); render1296();
+    save(); renderMeasures();
     if (btn) { btn.disabled = false; btn.textContent = '📋 Toplu Bulgu Üret'; }
     toast('✅ Bulgular üretildi', 'success');
     return;
@@ -1499,11 +1499,11 @@ async function tumKismenleriBulguUret() {
 
   for (let i = 0; i < bekleyenler.length; i += BATCH_SIZE) {
     const grup = bekleyenler.slice(i, i + BATCH_SIZE);
-    const oncekiAi = Object.values(STATE.bulgu1296).filter(b => b.kaynak === 'ai').length;
+    const oncekiAi = Object.values(STATE.findings1296).filter(b => b.kaynak === 'ai').length;
 
-    await batchBulguUret(grup, apiKey);
+    await batchGenerateFindings(grup, apiKey);
 
-    const yeniAi = Object.values(STATE.bulgu1296).filter(b => b.kaynak === 'ai').length;
+    const yeniAi = Object.values(STATE.findings1296).filter(b => b.kaynak === 'ai').length;
     aiSayac += yeniAi - oncekiAi;
     sablonSayac += grup.length - (yeniAi - oncekiAi);
     tamamlanan += grup.length;
@@ -1515,22 +1515,22 @@ async function tumKismenleriBulguUret() {
     }
   }
 
-  render1296();
+  renderMeasures();
   if (btn) { btn.disabled = false; btn.textContent = '📋 Toplu Bulgu Üret'; }
   toast(`✅ Bulgular üretildi`, 'success');
 }
 
-function bulgu1296Temizle() {
+function clearFindings1296() {
   if (!confirm('Tüm 1296 tedbir bulgularını temizlemek istiyor musunuz?')) return;
-  STATE.bulgu1296 = {};
+  STATE.findings1296 = {};
   save();
-  render1296();
+  renderMeasures();
   toast('✅ 1296 bulgular temizlendi');
 }
 
-function goPage1296(p) {
-  STATE.page1296 = p;
-  render1296();
+function goToPage1296(p) {
+  STATE.currentPage1296 = p;
+  renderMeasures();
 }
 
 // ══════════════════════════════════════════════════════════════
@@ -1539,35 +1539,35 @@ function goPage1296(p) {
 
 let pieChart = null, barChart = null;
 
-function renderOzet() {
-  document.getElementById('ozet-tarih').textContent =
+function renderSummary() {
+  document.getElementById('summary-date').textContent =
     new Date().toLocaleDateString('tr-TR', { day:'2-digit', month:'long', year:'numeric' }) + ' tarihi itibarıyla';
 
-  const all    = Object.values(STATE.cevaplar);
+  const all    = Object.values(STATE.answers);
   const evet   = all.filter(v=>v.c==='evet').length;
   const kismi  = all.filter(v=>v.c==='kismi').length;
   const hayir  = all.filter(v=>v.c==='hayir').length;
   const kapsam = all.filter(v=>v.c==='kapsam').length;
   const total  = evet+kismi+hayir;
   const skor   = total > 0 ? Math.round(100*(evet+kismi*0.5)/total) : 0;
-  const kapQ   = SORULAR_100.filter(q => STATE.cevaplar[q.id]);
+  const kapQ   = SORULAR_100.filter(q => STATE.answers[q.id]);
 
-  document.getElementById('ozet-grid').innerHTML = `
-    <div class="ozet-kart"><div class="ozet-kart-val" style="color:var(--teal)">${skor}%</div><div class="ozet-kart-lbl">Genel Uyum Skoru</div><div class="ozet-kart-sub">${total}/100 yanıtlandı</div></div>
-    <div class="ozet-kart"><div class="ozet-kart-val" style="color:var(--green)">${evet}</div><div class="ozet-kart-lbl">Uyumlu</div><div class="ozet-kart-sub">${kapQ.filter(q=>STATE.cevaplar[q.id].c==='evet').reduce((s,q)=>s+q.kapsananSayi,0)} tedbir</div></div>
-    <div class="ozet-kart"><div class="ozet-kart-val" style="color:var(--amber)">${kismi}</div><div class="ozet-kart-lbl">Kısmen</div><div class="ozet-kart-sub">${kapQ.filter(q=>STATE.cevaplar[q.id].c==='kismi').reduce((s,q)=>s+q.kapsananSayi,0)} tedbir</div></div>
-    <div class="ozet-kart"><div class="ozet-kart-val" style="color:var(--red)">${hayir}</div><div class="ozet-kart-lbl">Uyumsuz</div><div class="ozet-kart-sub">${kapQ.filter(q=>STATE.cevaplar[q.id].c==='hayir').reduce((s,q)=>s+q.kapsananSayi,0)} tedbir</div></div>
-    <div class="ozet-kart"><div class="ozet-kart-val" style="color:#94A3B8">${kapsam}</div><div class="ozet-kart-lbl">Kapsam Dışı</div><div class="ozet-kart-sub">${kapQ.filter(q=>STATE.cevaplar[q.id].c==='kapsam').reduce((s,q)=>s+q.kapsananSayi,0)} tedbir</div></div>
-    <div class="ozet-kart"><div class="ozet-kart-val" style="color:var(--purple)">${kismi+hayir}</div><div class="ozet-kart-lbl">Toplam Bulgu</div><div class="ozet-kart-sub">Raporda yer alan</div></div>
-    <div class="ozet-kart"><div class="ozet-kart-val" style="color:var(--teal)">${Object.keys(STATE.cevaplar1296).length}</div><div class="ozet-kart-lbl">1296 Tedbir</div><div class="ozet-kart-sub">Cevaplanan</div></div>`;
+  document.getElementById('summary-grid').innerHTML = `
+    <div class="summary-card"><div class="summary-card-val" style="color:var(--teal)">${skor}%</div><div class="summary-card-lbl">Genel Uyum Skoru</div><div class="summary-card-sub">${total}/100 yanıtlandı</div></div>
+    <div class="summary-card"><div class="summary-card-val" style="color:var(--green)">${evet}</div><div class="summary-card-lbl">Uyumlu</div><div class="summary-card-sub">${kapQ.filter(q=>STATE.answers[q.id].c==='evet').reduce((s,q)=>s+q.kapsananSayi,0)} tedbir</div></div>
+    <div class="summary-card"><div class="summary-card-val" style="color:var(--amber)">${kismi}</div><div class="summary-card-lbl">Kısmen</div><div class="summary-card-sub">${kapQ.filter(q=>STATE.answers[q.id].c==='kismi').reduce((s,q)=>s+q.kapsananSayi,0)} tedbir</div></div>
+    <div class="summary-card"><div class="summary-card-val" style="color:var(--red)">${hayir}</div><div class="summary-card-lbl">Uyumsuz</div><div class="summary-card-sub">${kapQ.filter(q=>STATE.answers[q.id].c==='hayir').reduce((s,q)=>s+q.kapsananSayi,0)} tedbir</div></div>
+    <div class="summary-card"><div class="summary-card-val" style="color:#94A3B8">${kapsam}</div><div class="summary-card-lbl">Kapsam Dışı</div><div class="summary-card-sub">${kapQ.filter(q=>STATE.answers[q.id].c==='kapsam').reduce((s,q)=>s+q.kapsananSayi,0)} tedbir</div></div>
+    <div class="summary-card"><div class="summary-card-val" style="color:var(--purple)">${kismi+hayir}</div><div class="summary-card-lbl">Toplam Bulgu</div><div class="summary-card-sub">Raporda yer alan</div></div>
+    <div class="summary-card"><div class="summary-card-val" style="color:var(--teal)">${Object.keys(STATE.answers1296).length}</div><div class="summary-card-lbl">1296 Tedbir</div><div class="summary-card-sub">Cevaplanan</div></div>`;
 
-  buildPie(evet, kismi, hayir);
-  buildBar();
-  buildRiskMatris();
-  buildKritikBulgular();
+  buildPieChart(evet, kismi, hayir);
+  buildBarChart();
+  buildRiskMatrix();
+  buildCriticalFindingsList();
 }
 
-function buildPie(e, k, h) {
+function buildPieChart(e, k, h) {
   if (pieChart) pieChart.destroy();
   pieChart = new Chart(document.getElementById('chart-pie'), {
     type: 'doughnut',
@@ -1576,12 +1576,12 @@ function buildPie(e, k, h) {
   });
 }
 
-function buildBar() {
-  const labels = CATEGORIES.map(c => shortCat(c).substring(0,25));
+function buildBarChart() {
+  const labels = CATEGORIES.map(c => shortCategory(c).substring(0,25));
   const data   = CATEGORIES.map(cat => {
-    const qs = SORULAR_100.filter(q => q.anaKat===cat && STATE.cevaplar[q.id]);
+    const qs = SORULAR_100.filter(q => q.anaKat===cat && STATE.answers[q.id]);
     if (!qs.length) return 0;
-    return Math.round(100 * qs.reduce((s,q) => s+(PUAN[STATE.cevaplar[q.id].c]||0), 0) / qs.length);
+    return Math.round(100 * qs.reduce((s,q) => s+(SCORE_WEIGHTS[STATE.answers[q.id].c]||0), 0) / qs.length);
   });
   const colors = data.map(d => d>=70?'#10b981':d>=40?'#f59e0b':d>0?'#ef4444':'#475569');
   const h = Math.max(300, CATEGORIES.length*32+60);
@@ -1601,11 +1601,11 @@ function buildBar() {
   });
 }
 
-function buildRiskMatris() {
+function buildRiskMatrix() {
   // ── Veri toplama ─────────────────────────────────────────
   const m = { '3-hayir':0,'3-kismi':0,'2-hayir':0,'2-kismi':0,'1-hayir':0,'1-kismi':0 };
   SORULAR_100.forEach(q => {
-    const cv = STATE.cevaplar[q.id];
+    const cv = STATE.answers[q.id];
     if (!cv || cv.c === 'evet' || cv.c === 'kapsam') return;
     const key = `${q.kritiklik}-${cv.c}`;
     if (key in m) m[key]++;
@@ -1713,7 +1713,7 @@ function buildRiskMatris() {
 
  
 
-  document.getElementById('risk-matris').innerHTML = `
+  document.getElementById('risk-matrix').innerHTML = `
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;align-items:start">
       <div>
         <div style="font-size:11px;font-weight:700;color:var(--text);margin-bottom:8px">
@@ -1768,13 +1768,13 @@ function buildRiskMatris() {
     </div>`;
 }
 
-function buildKritikBulgular() {
+function buildCriticalFindingsList() {
   const bulgular = SORULAR_100
-    .filter(q => { const cv=STATE.cevaplar[q.id]; return cv && cv.c!=='evet' && cv.c!=='kapsam'; })
-    .map(q => ({ q, cv:STATE.cevaplar[q.id], rd:riskDurumu(q,STATE.cevaplar[q.id].c) }))
+    .filter(q => { const cv=STATE.answers[q.id]; return cv && cv.c!=='evet' && cv.c!=='kapsam'; })
+    .map(q => ({ q, cv:STATE.answers[q.id], rd:getRiskStatus(q,STATE.answers[q.id].c) }))
     .sort((a,b) => (b.rd?.skor||0)-(a.rd?.skor||0))
     .slice(0,25);
-  document.getElementById('kritik-bulgular').innerHTML = bulgular.length
+  document.getElementById('critical-findings').innerHTML = bulgular.length
     ? bulgular.map(({q,cv,rd},i) => {
         const isCr = rd?.label==='Çok Riskli';
         const isR  = rd?.label==='Riskli';
@@ -1797,10 +1797,10 @@ function buildKritikBulgular() {
         <div style="border:1px solid ${bdr}33;border-left:4px solid ${bdr};border-radius:8px;
           margin-bottom:12px;overflow:hidden;background:${bg}">
           <div style="padding:10px 14px;display:flex;align-items:flex-start;gap:10px">
-            <span class="kb-badge ${bdg}" style="flex-shrink:0;margin-top:2px">${rd?.label||'Riskli'}</span>
+            <span class="critical-badge ${bdg}" style="flex-shrink:0;margin-top:2px">${rd?.label||'Riskli'}</span>
             <div style="flex:1;min-width:0">
-              <div class="kb-text">${q.tedbir}</div>
-              <div class="kb-sub">${shortCat(q.altKat)} • ${cv.c==='hayir'?'❌ Uygulanmıyor':'🟡 Kısmen Uygulandı'} • ${q.tedbirNo}</div>
+              <div class="critical-text">${q.tedbir}</div>
+              <div class="critical-sub">${shortCategory(q.altKat)} • ${cv.c==='hayir'?'❌ Uygulanmıyor':'🟡 Kısmen Uygulandı'} • ${q.tedbirNo}</div>
             </div>
             <span style="font-size:10px;color:var(--text3);flex-shrink:0;margin-top:2px">#${i+1}</span>
           </div>
@@ -1823,8 +1823,8 @@ function exportExcel() {
 
   const wb = XLSX.utils.book_new();
   const tarih = new Date().toLocaleDateString('tr-TR');
-  const firmaAdi = STATE.projeAdi || 'Kurum Adı';
-  const all = Object.values(STATE.cevaplar);
+  const firmaAdi = STATE.projectName || 'Kurum Adı';
+  const all = Object.values(STATE.answers);
   const evet  = all.filter(v => v.c === 'evet').length;
   const kismi = all.filter(v => v.c === 'kismi').length;
   const hayir = all.filter(v => v.c === 'hayir').length;
@@ -1998,11 +1998,11 @@ function exportExcel() {
 
   CATEGORIES.forEach((cat, idx) => {
     const qs = SORULAR_100.filter(q => q.anaKat===cat);
-    const ce = qs.filter(q=>STATE.cevaplar[q.id]?.c==='evet').length;
-    const ck = qs.filter(q=>STATE.cevaplar[q.id]?.c==='kismi').length;
-    const ch = qs.filter(q=>STATE.cevaplar[q.id]?.c==='hayir').length;
-    const cc = qs.filter(q=>STATE.cevaplar[q.id]?.c==='kapsam').length;
-    const ct = qs.filter(q=>STATE.cevaplar[q.id]).length;
+    const ce = qs.filter(q=>STATE.answers[q.id]?.c==='evet').length;
+    const ck = qs.filter(q=>STATE.answers[q.id]?.c==='kismi').length;
+    const ch = qs.filter(q=>STATE.answers[q.id]?.c==='hayir').length;
+    const cc = qs.filter(q=>STATE.answers[q.id]?.c==='kapsam').length;
+    const ct = qs.filter(q=>STATE.answers[q.id]).length;
     const cs = ct>0 ? Math.round(100*(ce+ck*0.5)/ct) : 0;
     const rf = idx%2===0 ? ACK : BYZ;
     const sf = cs>=70?YSA:cs>=40?SAA:cs>0?KIA:GRA;
@@ -2010,7 +2010,7 @@ function exportExcel() {
     const durum = cs>=70?'✅ İyi':cs>=40?'⚠️ Dikkat':cs>0?'❌ Kritik':'— Değerlendirilmedi';
     const tSay = qs.reduce((s,q)=>s+(q.kapsananSayi||0),0);
 
-    S1(0,R, C(shortCat(cat), F.normal, rf, SOL, B_İNCE));
+    S1(0,R, C(shortCategory(cat), F.normal, rf, SOL, B_İNCE));
     S1(1,R, C(ce, {name:'Calibri',sz:10,bold:true,color:{rgb:YSL}}, rf, ORTA, B_İNCE));
     S1(2,R, C(ck, {name:'Calibri',sz:10,bold:true,color:{rgb:SAR}}, rf, ORTA, B_İNCE));
     S1(3,R, C(ch, {name:'Calibri',sz:10,bold:true,color:{rgb:KIR}}, rf, ORTA, B_İNCE));
@@ -2057,12 +2057,12 @@ function exportExcel() {
   }); R2++;
 
   const bulgular = SORULAR_100
-    .filter(q => { const cv=STATE.cevaplar[q.id]; return cv&&(cv.c==='hayir'||cv.c==='kismi'); })
-    .sort((a,b) => (riskDurumu(b,STATE.cevaplar[b.id].c)?.skor||0)-(riskDurumu(a,STATE.cevaplar[a.id].c)?.skor||0));
+    .filter(q => { const cv=STATE.answers[q.id]; return cv&&(cv.c==='hayir'||cv.c==='kismi'); })
+    .sort((a,b) => (getRiskStatus(b,STATE.answers[b.id].c)?.skor||0)-(getRiskStatus(a,STATE.answers[a.id].c)?.skor||0));
 
   bulgular.forEach((q,i) => {
-    const cv = STATE.cevaplar[q.id];
-    const rd = riskDurumu(q, cv.c);
+    const cv = STATE.answers[q.id];
+    const rd = getRiskStatus(q, cv.c);
     const rfBg  = rd?.label==='Çok Riskli'?KIA : rd?.label==='Riskli'?SAA : MOA;
     const rfFont= rd?.label==='Çok Riskli'?F.kirmizB : rd?.label==='Riskli'?F.sariB : F.morB;
     const sepBg = rd?.label==='Çok Riskli'?'FECACA' : rd?.label==='Riskli'?'FDE68A' : 'DDD6FE';
@@ -2081,7 +2081,7 @@ function exportExcel() {
 
     S2(0,R2, C(i+1, F.kucuk, rfBg, ORTA, leftBorder));
     S2(1,R2, C(q.tedbirNo, F.mono, rfBg, ORTA, B_İNCE));
-    S2(2,R2, C(shortCat(q.altKat), F.kucuk, rfBg, SOL, B_İNCE));
+    S2(2,R2, C(shortCategory(q.altKat), F.kucuk, rfBg, SOL, B_İNCE));
     S2(3,R2, C(q.tedbir, {name:'Calibri',sz:10,bold:true,color:{rgb:'0F172A'}}, rfBg, SOL, B_İNCE));
     S2(4,R2, C(cevapLabel, rfFont, rfBg, ORTA, B_İNCE));
     S2(5,R2, C(rd?.label||'Orta Riskli', rfFont, {fgColor:{rgb:sepBg}}&&rfBg, ORTA, B_İNCE));
@@ -2114,8 +2114,8 @@ function exportExcel() {
     S3(i,R3, C(h, {name:'Calibri',sz:10,bold:true,color:{rgb:'ECFDF5'}}, '065F46', ORTA, B_İNCE));
   }); R3++;
 
-  SORULAR_100.filter(q=>STATE.cevaplar[q.id]?.c==='evet').forEach((q,i) => {
-    const cv = STATE.cevaplar[q.id];
+  SORULAR_100.filter(q=>STATE.answers[q.id]?.c==='evet').forEach((q,i) => {
+    const cv = STATE.answers[q.id];
     const rf = i%2===0 ? YSA : 'F0FDF4';
     const kritBg = q.kritiklik===3?KIA:q.kritiklik===2?SAA:YSA;
     const kritFont = q.kritiklik===3?F.kirmizB:q.kritiklik===2?F.sariB:F.yesilB;
@@ -2123,7 +2123,7 @@ function exportExcel() {
 
     S3(0,R3, C(i+1, F.kucuk, rf, ORTA, B_İNCE));
     S3(1,R3, C(q.tedbirNo, {name:'Courier New',sz:9,bold:true,color:{rgb:YSL_KOY}}, rf, ORTA, B_İNCE));
-    S3(2,R3, C(shortCat(q.altKat), F.kucuk, rf, SOL, B_İNCE));
+    S3(2,R3, C(shortCategory(q.altKat), F.kucuk, rf, SOL, B_İNCE));
     S3(3,R3, C(q.tedbir, {name:'Calibri',sz:10,bold:true,color:{rgb:YSL_KOY}}, rf, SOL, B_İNCE));
     S3(4,R3, C(kritLabel, kritFont, kritBg, ORTA, B_İNCE));
     S3(5,R3, C(q.kapsananSayi||0, {name:'Calibri',sz:10,bold:true,color:{rgb:YSL}}, rf, ORTA, B_İNCE));
@@ -2132,17 +2132,17 @@ function exportExcel() {
   });
 
   // Kapsam dışı bölümü
-  const kapsamDisi = SORULAR_100.filter(q=>STATE.cevaplar[q.id]?.c==='kapsam');
+  const kapsamDisi = SORULAR_100.filter(q=>STATE.answers[q.id]?.c==='kapsam');
   if (kapsamDisi.length) {
     R3++;
     S3(0,R3, C('KAPSAM DIŞI KONTROLLER', F.altbaslik, '374151', ORTA, B_İNCE));
     for(let c=1;c<=6;c++) S3(c,R3,BOŞ('374151')); R3++;
     kapsamDisi.forEach((q,i) => {
-      const cv = STATE.cevaplar[q.id];
+      const cv = STATE.answers[q.id];
       const rf = i%2===0?GRA:'F8FAFC';
       S3(0,R3,C(i+1,F.kucuk,rf,ORTA,B_İNCE));
       S3(1,R3,C(q.tedbirNo,F.mono,rf,ORTA,B_İNCE));
-      S3(2,R3,C(shortCat(q.altKat),F.kucuk,rf,SOL,B_İNCE));
+      S3(2,R3,C(shortCategory(q.altKat),F.kucuk,rf,SOL,B_İNCE));
       S3(3,R3,C(q.tedbir,{name:'Calibri',sz:10,bold:true,color:{rgb:GRI}},rf,SOL,B_İNCE));
       S3(4,R3,C('⬜ Kapsam Dışı',F.griN,rf,ORTA,B_İNCE));
       S3(5,R3,C('—',F.kucuk,rf,ORTA,B_İNCE));
@@ -2174,8 +2174,8 @@ function exportExcel() {
 
   let mevcatGrup = '';
   SORULAR_1296.forEach(s => {
-    const cv  = STATE.cevaplar1296[s.i]||'';
-    const bulguObj = STATE.bulgu1296[s.i];
+    const cv  = STATE.answers1296[s.i]||'';
+    const bulguObj = STATE.findings1296[s.i];
     const bulguText = bulguObj ? bulguObj.metin : '';
     const pQ  = SORULAR_100.find(q=>q.id===s.p);
     const alk = s.altk.replace(/^\d+\.\d+\.\d+\.\s*/,'').replace(/^\d+\.\d+\.\s*/,'');
@@ -2183,7 +2183,7 @@ function exportExcel() {
     // Kategori başlık satırı
     if (s.ak !== mevcatGrup) {
       mevcatGrup = s.ak;
-      S4(0,R4, C('▶  '+shortCat(s.ak), {name:'Calibri',sz:10,bold:true,color:{rgb:ALT}}, ORT, SOL, B_İNCE));
+      S4(0,R4, C('▶  '+shortCategory(s.ak), {name:'Calibri',sz:10,bold:true,color:{rgb:ALT}}, ORT, SOL, B_İNCE));
       for(let c=1;c<=7;c++) S4(c,R4,BOŞ(ORT));
       R4++;
     }
@@ -2235,19 +2235,19 @@ function exportExcel() {
 
 function showAPIKeyModal() {
   document.getElementById('api-modal').classList.add('visible');
-  document.getElementById('api-key-input').value = localStorage.getItem(API_KEY_STOR) || '';
+  document.getElementById('api-key-input').value = localStorage.getItem(API_KEY_STORAGE) || '';
 }
 function saveAPIKey() {
   const k = document.getElementById('api-key-input').value.trim();
   if (!k) { toast('Boş olamaz', 'error'); return; }
-  if (k.length < 10) { toast('Geçersiz anahtar', 'error'); return; }  localStorage.setItem(API_KEY_STOR, k);
+  if (k.length < 10) { toast('Geçersiz anahtar', 'error'); return; }  localStorage.setItem(API_KEY_STORAGE, k);
   closeAPIModal();
   toast('✅ API anahtarı kaydedildi', 'success');
 }
 function closeAPIModal() { document.getElementById('api-modal').classList.remove('visible'); }
 function clearAPIKey() {
   if (!confirm('API anahtarını silmek istediğinize emin misiniz?')) return;
-  localStorage.removeItem(API_KEY_STOR);
+  localStorage.removeItem(API_KEY_STORAGE);
   document.getElementById('api-key-input').value = '';
   toast('API anahtarı silindi');
 }
@@ -2256,20 +2256,20 @@ function resetAll() {
   if (!confirm('Tüm cevaplar, bulgular ve yapay zeka analizleri silinecek. Emin misiniz?')) return;
   
   // Tüm durum (state) verilerini fabrikasyon ayarlarına döndürüyoruz
-  STATE.cevaplar     = {};
-  STATE.cevaplar1296 = {};
-  STATE.currentIdx   = 0;         // 🎯 1. sorudan başlamasını sağlıyoruz
-  STATE.page1296     = 0;         // Sayfa 2'deki listeleme sayfasını sıfırlıyoruz
-  STATE.activePage   = 'sorular'; // Kullanıcıyı doğrudan Soru Formu sekmesine yönlendiriyoruz
+  STATE.answers     = {};
+  STATE.answers1296 = {};
+  STATE.currentIndex   = 0;         // 🎯 1. sorudan başlamasını sağlıyoruz
+  STATE.currentPage1296     = 0;         // Sayfa 2'deki listeleme sayfasını sıfırlıyoruz
+  STATE.activePage   = 'questions'; // Kullanıcıyı doğrudan Soru Formu sekmesine yönlendiriyoruz
   STATE.activeFilter = 'all';     // Filtreleri temizliyoruz
   
   // Yeni eklediğimiz yapay zeka havuzları varsa onları da temizleyelim
   if (STATE.aiNotes) STATE.aiNotes = {};
   if (STATE.riskCache) STATE.riskCache = {};
-  STATE.riskAnalizi = {};
-  STATE.bulgu1296  = {};
-  STATE.projeAdi = 'Yeni Proje';
-  const pi = document.getElementById('proje-adi-input');
+  STATE.riskAnalysis = {};
+  STATE.findings1296  = {};
+  STATE.projectName = 'Yeni Proje';
+  const pi = document.getElementById("project-name-input");
   if (pi) pi.value = '';
 
   // LocalStorage'ı tamamen temizleyip yeni temiz durumu kaydediyoruz
@@ -2278,7 +2278,7 @@ function resetAll() {
 
   // Arayüzü (UI) güncel durumla yeniden çiziyoruz
   buildSidebar();
-  switchTab('sorular'); // Sekme geçişini tetikleyerek UI'ı tazeleyelim
+  switchTab('questions'); // Sekme geçişini tetikleyerek UI'ı tazeleyelim
   renderQuestion();
   updateStats();
   
@@ -2294,14 +2294,14 @@ function exportData() {
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = `${STATE.projeAdi.replace(/\s+/g, '_')}_GapAnalizi.json`;
+  a.download = `${STATE.projectName.replace(/\s+/g, '_')}_GapAnalizi.json`;
   a.click();
 }
 
-function pdfRaporHTML(danismanNotu) {
-  const firmaAdi = STATE.projeAdi || 'Kurum Adı';
+function buildPdfReportHTML(danismanNotu) {
+  const firmaAdi = STATE.projectName || 'Kurum Adı';
   const tarih = new Date().toLocaleDateString('tr-TR', { day:'2-digit', month:'long', year:'numeric' });
-  const all = Object.values(STATE.cevaplar);
+  const all = Object.values(STATE.answers);
   const evet  = all.filter(v=>v.c==='evet').length;
   const kismi = all.filter(v=>v.c==='kismi').length;
   const hayir = all.filter(v=>v.c==='hayir').length;
@@ -2316,21 +2316,21 @@ function pdfRaporHTML(danismanNotu) {
   // ── Kategori verileri ──────────────────────────────────────
   const katData = CATEGORIES.map(cat => {
     const qs = SORULAR_100.filter(q=>q.anaKat===cat);
-    const ce = qs.filter(q=>STATE.cevaplar[q.id]?.c==='evet').length;
-    const ck = qs.filter(q=>STATE.cevaplar[q.id]?.c==='kismi').length;
-    const ch = qs.filter(q=>STATE.cevaplar[q.id]?.c==='hayir').length;
-    const ct = qs.filter(q=>STATE.cevaplar[q.id]).length;
+    const ce = qs.filter(q=>STATE.answers[q.id]?.c==='evet').length;
+    const ck = qs.filter(q=>STATE.answers[q.id]?.c==='kismi').length;
+    const ch = qs.filter(q=>STATE.answers[q.id]?.c==='hayir').length;
+    const ct = qs.filter(q=>STATE.answers[q.id]).length;
     const cs = ct>0?Math.round(100*(ce+ck*0.5)/ct):0;
-    return { ad:shortCat(cat), ce, ck, ch, ct, cs };
+    return { ad:shortCategory(cat), ce, ck, ch, ct, cs };
   }).filter(k=>k.ct>0);
 
   // ── Bulgular ──────────────────────────────────────────────
   const bulgular = SORULAR_100
-    .filter(q=>{ const cv=STATE.cevaplar[q.id]; return cv&&(cv.c==='hayir'||cv.c==='kismi'); })
-    .sort((a,b)=>(riskDurumu(b,STATE.cevaplar[b.id].c)?.skor||0)-(riskDurumu(a,STATE.cevaplar[a.id].c)?.skor||0));
+    .filter(q=>{ const cv=STATE.answers[q.id]; return cv&&(cv.c==='hayir'||cv.c==='kismi'); })
+    .sort((a,b)=>(getRiskStatus(b,STATE.answers[b.id].c)?.skor||0)-(getRiskStatus(a,STATE.answers[a.id].c)?.skor||0));
 
   // ── Uyumlular ─────────────────────────────────────────────
-  const uyumlular = SORULAR_100.filter(q=>STATE.cevaplar[q.id]?.c==='evet');
+  const uyumlular = SORULAR_100.filter(q=>STATE.answers[q.id]?.c==='evet');
 
   // ── YARDIMCI ──────────────────────────────────────────────
   const riskBadge = (rd) => {
@@ -2358,7 +2358,7 @@ function pdfRaporHTML(danismanNotu) {
   for(let e=1;e<=5;e++) for(let o=1;o<=5;o++) matris5[`${e}_${o}`]=[];
 
   SORULAR_100.forEach(q=>{
-    const cv=STATE.cevaplar[q.id];
+    const cv=STATE.answers[q.id];
     if(!cv||cv.c==='evet'||cv.c==='kapsam') return;
     const k=q.kritiklik; // 1-3
     // BİGR 3x3
@@ -2443,8 +2443,8 @@ function pdfRaporHTML(danismanNotu) {
 
   // ── EN KRİTİK 25 BULGU (PDF) ────────────────────────────────
   const kritik25 = SORULAR_100
-    .filter(q=>{ const cv=STATE.cevaplar[q.id]; return cv&&cv.c!=='evet'&&cv.c!=='kapsam'; })
-    .map(q=>({ q, cv:STATE.cevaplar[q.id], rd:riskDurumu(q,STATE.cevaplar[q.id].c) }))
+    .filter(q=>{ const cv=STATE.answers[q.id]; return cv&&cv.c!=='evet'&&cv.c!=='kapsam'; })
+    .map(q=>({ q, cv:STATE.answers[q.id], rd:getRiskStatus(q,STATE.answers[q.id].c) }))
     .sort((a,b)=>(b.rd?.skor||0)-(a.rd?.skor||0))
     .slice(0,25);
 
@@ -2481,7 +2481,7 @@ function pdfRaporHTML(danismanNotu) {
           return `<tr style="background:${i%2===0?rbg:'#FFFFFF'};border-bottom:1px solid #E2E8F0;border-left:3px solid ${bdr}">
             <td style="padding:9px 10px;font-size:11px;color:#6B7280;font-weight:700;vertical-align:top">${i+1}</td>
             <td style="padding:9px 10px;vertical-align:top">${rbadge}<br><span style="font-size:9px;color:#94A3B8;display:block;margin-top:3px">Skor: ${rd?.skor||0}</span></td>
-            <td style="padding:9px 10px;vertical-align:top"><div style="font-size:11px;font-weight:700;color:#0F172A;margin-bottom:3px">${q.tedbir}</div><div style="font-size:10px;color:#64748B">${shortCat(q.altKat)} • ${q.tedbirNo}</div></td>
+            <td style="padding:9px 10px;vertical-align:top"><div style="font-size:11px;font-weight:700;color:#0F172A;margin-bottom:3px">${q.tedbir}</div><div style="font-size:10px;color:#64748B">${shortCategory(q.altKat)} • ${q.tedbirNo}</div></td>
             <td style="padding:9px 10px;vertical-align:top">${oneriCol}</td>
             <td style="padding:9px 10px;text-align:center;vertical-align:top"><span style="font-size:10px">${cv.c==='hayir'?'❌':'🟡'}</span><div style="font-size:9px;color:#64748B;margin-top:2px">${cv.c==='hayir'?'Uygulanmıyor':'Kısmen'}</div></td>
           </tr>`;
@@ -2490,12 +2490,12 @@ function pdfRaporHTML(danismanNotu) {
     </table>
   </div>`;
   const bulguKart = (q, idx) => {
-    const cv  = STATE.cevaplar[q.id];
-    const rd  = riskDurumu(q, cv.c);
-    const mev = lkp('mev', q.mev);
-    const iso1= lkp('iso1', q.iso1);
-    const iso2= lkp('iso2', q.iso2);
-    const iso3= lkp('iso3', q.iso3);
+    const cv  = STATE.answers[q.id];
+    const rd  = getRiskStatus(q, cv.c);
+    const mev = lookup('mev', q.mev);
+    const iso1= lookup('iso1', q.iso1);
+    const iso2= lookup('iso2', q.iso2);
+    const iso3= lookup('iso3', q.iso3);
     const rBorder = rd?.label==='Çok Riskli'?'#DC2626':rd?.label==='Riskli'?'#D97706':'#7C3AED';
     const rBg     = rd?.label==='Çok Riskli'?'#FFF5F5':rd?.label==='Riskli'?'#FFFBEB':'#FAF5FF';
 
@@ -2504,9 +2504,9 @@ function pdfRaporHTML(danismanNotu) {
       : cv.obs ? `"${q.tedbir}" alanında kısmi uygulama tespit edilmiştir. ${cv.obs}` : `"${q.tedbir}" alanında kısmi uygulama tespit edilmiştir.`);
 
     const riskKatHTML = (() => {
-      if(STATE.riskAnalizi[q.id]) {
+      if(STATE.riskAnalysis[q.id]) {
         // AI metnini kategori kartlarına böl (renderRiskAIBox ile aynı mantık)
-        const aiText = STATE.riskAnalizi[q.id];
+        const aiText = STATE.riskAnalysis[q.id];
         const pdfKatlar = [
           { key: 'STRATEJİK RİSK',  icon: '⚡', renk: '#DC2626' },
           { key: 'OPERASYONEL RİSK', icon: '🔧', renk: '#EA580C' },
@@ -2759,7 +2759,7 @@ function pdfRaporHTML(danismanNotu) {
     </thead>
     <tbody>
       ${uyumlular.map((q,i)=>{
-        const cv=STATE.cevaplar[q.id];
+        const cv=STATE.answers[q.id];
         const bg=i%2===0?'#F0FDF4':'#FFFFFF';
         const kBg=q.kritiklik===3?'#FEE2E2':q.kritiklik===2?'#FEF3C7':'#D1FAE5';
         const kFg=q.kritiklik===3?'#DC2626':q.kritiklik===2?'#D97706':'#059669';
@@ -2767,7 +2767,7 @@ function pdfRaporHTML(danismanNotu) {
         return `<tr style="background:${bg};border-bottom:1px solid #D1FAE5">
           <td style="padding:9px 12px;font-size:11px;color:#6B7280">${i+1}</td>
           <td style="padding:9px 12px;font-size:11px;font-family:monospace;font-weight:700;color:#065F46">${q.tedbirNo}</td>
-          <td style="padding:9px 12px;font-size:11px;color:#374151">${shortCat(q.altKat)}</td>
+          <td style="padding:9px 12px;font-size:11px;color:#374151">${shortCategory(q.altKat)}</td>
           <td style="padding:9px 12px;font-size:12px;font-weight:600;color:#064E3B">${q.tedbir}</td>
           <td style="padding:9px 12px;text-align:center"><span style="background:${kBg};color:${kFg};font-size:10px;padding:2px 8px;border-radius:8px;font-weight:700">${kLbl}</span></td>
           <td style="padding:9px 12px;font-size:11px;color:#374151;font-style:italic">${cv.obs||'—'}</td>
@@ -2818,8 +2818,8 @@ function pdfRaporHTML(danismanNotu) {
   return finalHtml;
 }
 
-function pdfRapor() {
-  const html = pdfRaporHTML();
+function exportPdfReport() {
+  const html = buildPdfReportHTML();
   const w = window.open('', '_blank');
   w.document.write(html);
   w.document.close();
@@ -2850,9 +2850,9 @@ function applyViewerUI() {
   if (headerBtns) {
     headerBtns.innerHTML = `
       <button id="theme-toggle" class="btn btn-ghost" onclick="toggleTheme()" title="Tema değiştir"></button>
-      <button class="btn btn-ghost" onclick="viewerExport()" title="Cevaplarımı Kaydet">💾 Kaydet</button>
-      <button class="btn btn-ghost" onclick="document.getElementById('onay-upload').click()" title="Raporumu Görüntüle" style="color:var(--teal)">📄 Raporumu Gör</button>
-      <input type="file" id="onay-upload" style="display:none" accept=".json" onchange="viewerOnayImport(event)">
+      <button class="btn btn-ghost" onclick="exportViewerAnswers()" title="Cevaplarımı Kaydet">💾 Kaydet</button>
+      <button class="btn btn-ghost" onclick="document.getElementById('approval-upload').click()" title="Raporumu Görüntüle" style="color:var(--teal)">📄 Raporumu Gör</button>
+      <input type="file" id="approval-upload" style="display:none" accept=".json" onchange="importApprovalReport(event)">
     `;
     // Temayı yeniden uygula
     const saved = localStorage.getItem('bg_gap_theme') || 'dark';
@@ -2869,7 +2869,7 @@ function applyViewerUI() {
   if (logoSub) logoSub.textContent = 'Uyumluluk Değerlendirme Anketi';
 
   // Proje adı input'u gizle (viewer görmesine gerek yok)
-  const projeAyar = document.querySelector('.proje-ayarlar');
+  const projeAyar = document.querySelector('.project-settings');
   if (projeAyar) projeAyar.style.display = 'none';
 }
 
@@ -2882,26 +2882,26 @@ function applyAdminUI() {
   const viewerBtns = document.createElement('div');
   viewerBtns.style.cssText = 'display:flex;gap:6px;align-items:center;padding-right:8px;border-right:1px solid var(--border);margin-right:2px';
   viewerBtns.innerHTML = `
-    <button class="btn btn-ghost" onclick="adminViewerImport()" title="Müşteri cevaplarını yükle" style="color:var(--teal);border-color:var(--teal)">
+    <button class="btn btn-ghost" onclick="importClientData()" title="Müşteri cevaplarını yükle" style="color:var(--teal);border-color:var(--teal)">
       👤 Müşteri Verisi
     </button>
-    <button class="btn btn-ghost" onclick="adminOnayVer()" title="Raporu müşteriye sun" style="color:var(--green);border-color:var(--green)" id="btn-onay">
+    <button class="btn btn-ghost" onclick="approveReport()" title="Raporu müşteriye sun" style="color:var(--green);border-color:var(--green)" id="btn-approve">
       ✅ Raporu Onayla
     </button>
-    <input type="file" id="viewer-upload" style="display:none" accept=".json" onchange="adminViewerImportFile(event)">
+    <input type="file" id="client-data-upload" style="display:none" accept=".json" onchange="loadClientDataFile(event)">
   `;
   headerBtns.insertBefore(viewerBtns, headerBtns.firstChild);
 }
 
 // ── VİEWER FONKSİYONLARI ─────────────────────────────────────
 
-function viewerExport() {
+function exportViewerAnswers() {
   const data = {
-    _tip: 'viewer_cevaplar',
+    _type: 'viewer_answers',
     _tarih: new Date().toISOString(),
-    projeAdi: STATE.projeAdi,
-    cevaplar: STATE.cevaplar,
-    cevaplar1296: STATE.cevaplar1296
+    projectName: STATE.projectName,
+    answers: STATE.answers,
+    answers1296: STATE.answers1296
   };
   const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
   const url  = URL.createObjectURL(blob);
@@ -2913,13 +2913,13 @@ function viewerExport() {
   toast('✅ Cevaplarınız kaydedildi');
 }
 
-function showViewerBekleme() {
+function showViewerWaitingScreen() {
   // Sayfa 1 (sorular) görünür, üstüne bilgi banner'ı ekle
   const main = document.getElementById('page-sorular');
   if (!main) return;
 
   // Tamamlanma durumunu kontrol et
-  const total = Object.keys(STATE.cevaplar).length;
+  const total = Object.keys(STATE.answers).length;
 
   if (total >= 100) {
     // Tüm sorular cevaplandı — bekleme mesajı göster
@@ -2952,7 +2952,7 @@ function showViewerBekleme() {
           Rapor hazırlandığında bu sayfa otomatik olarak güncellenecektir.<br>
           Sayfayı açık tutmanıza gerek yok — tekrar giriş yaptığınızda görüntüleyebilirsiniz.
         </div>
-        <button onclick="document.getElementById('viewer-bekleme-banner').remove()" 
+        <button onclick="document.getElementById('viewer-waiting-banner').remove()" 
           style="margin-top:1.5rem;background:none;border:1px solid var(--border);color:var(--text3);padding:8px 20px;border-radius:8px;cursor:pointer;font-size:12px">
           ← Cevaplarıma Dön
         </button>
@@ -2965,9 +2965,9 @@ function showViewerBekleme() {
   }
 }
 
-function showViewerRapor(raporHtml) {
+function showApprovedReport(raporHtml) {
   // Mevcut overlay varsa kaldır
-  const mevcut = document.getElementById('viewer-rapor-overlay');
+  const mevcut = document.getElementById('approved-report-overlay');
   if (mevcut) mevcut.remove();
 
   // Tam ekran overlay
@@ -2992,24 +2992,24 @@ function showViewerRapor(raporHtml) {
       </div>
       <div style="display:flex;gap:8px">
         <button onclick="
-          const frm=document.getElementById('rapor-iframe');
+          const frm=document.getElementById('report-iframe');
           if(frm){frm.contentWindow.print();}
         " style="background:#1e3a5f;color:#93c5fd;border:1px solid rgba(96,165,250,0.3);padding:6px 14px;border-radius:6px;cursor:pointer;font-size:12px;font-weight:600">
           🖨️ Yazdır / PDF
         </button>
-        <button onclick="document.getElementById('viewer-rapor-overlay').remove();renderQuestion();"
+        <button onclick="document.getElementById('approved-report-overlay').remove();renderQuestion();"
           style="background:rgba(255,255,255,0.08);color:#94a3b8;border:1px solid rgba(255,255,255,0.1);padding:6px 14px;border-radius:6px;cursor:pointer;font-size:12px">
           ✕ Kapat
         </button>
       </div>
     </div>
-    <iframe id="rapor-iframe" style="flex:1;border:none;width:100%;height:100%"></iframe>
+    <iframe id="report-iframe" style="flex:1;border:none;width:100%;height:100%"></iframe>
   `;
 
   document.body.appendChild(overlay);
 
   // iframe'e HTML yaz
-  const iframe = document.getElementById('rapor-iframe');
+  const iframe = document.getElementById('report-iframe');
   iframe.onload = () => {}; // hazır
   const doc = iframe.contentDocument || iframe.contentWindow.document;
   doc.open();
@@ -3019,37 +3019,37 @@ function showViewerRapor(raporHtml) {
 
 // ── ADMİN FONKSİYONLARI ──────────────────────────────────────
 
-function adminViewerImport() {
-  document.getElementById('viewer-upload')?.click();
+function importClientData() {
+  document.getElementById('client-data-upload')?.click();
 }
 
-function adminViewerImportFile(event) {
+function loadClientDataFile(event) {
   const file = event.target.files[0];
   if (!file) return;
   const reader = new FileReader();
   reader.onload = e => {
     try {
       const d = JSON.parse(e.target.result);
-      if (d._tip !== 'viewer_cevaplar') throw new Error('Geçersiz dosya');
+      if (d._type !== 'viewer_answers') throw new Error('Geçersiz dosya');
 
       // Viewer verilerini STATE'e yükle (admin'in mevcut verisi korunur — ayrı key'e yaz)
       localStorage.setItem('bg_gap_viewer_imported', e.target.result);
 
       // Admin STATE'ini viewer cevaplarıyla güncelle (analiz için)
-      STATE.cevaplar     = d.cevaplar     || {};
-      STATE.cevaplar1296 = d.cevaplar1296 || {};
-      STATE.projeAdi     = d.projeAdi     || STATE.projeAdi;
+      STATE.answers     = d.answers     || {};
+      STATE.answers1296 = d.answers1296 || {};
+      STATE.projectName     = d.projectName     || STATE.projectName;
 
-      const projeInput = document.getElementById('proje-adi-input');
-      if (projeInput) projeInput.value = STATE.projeAdi;
+      const nameInput = document.getElementById("project-name-input");
+      if (nameInput) nameInput.value = STATE.projectName;
 
       save();
       buildSidebar();
       updateStats();
       renderQuestion();
-      switchTab('rapor');
+      switchTab('findings');
 
-      toast(`✅ Müşteri cevapları yüklendi — ${Object.keys(STATE.cevaplar).length} soru`, 'success');
+      toast(`✅ Müşteri cevapları yüklendi — ${Object.keys(STATE.answers).length} soru`, 'success');
     } catch(err) {
       toast('❌ Dosya geçersiz: ' + err.message, 'error');
     }
@@ -3058,8 +3058,8 @@ function adminViewerImportFile(event) {
   event.target.value = '';
 }
 
-function adminOnayVer() {
-  const skorBaz = Object.values(STATE.cevaplar).filter(v => ['evet','kismi','hayir'].includes(v.c)).length;
+function approveReport() {
+  const skorBaz = Object.values(STATE.answers).filter(v => ['evet','kismi','hayir'].includes(v.c)).length;
   if (skorBaz === 0) {
     toast('⚠️ Önce müşteri verisi yüklenmeli', 'error');
     return;
@@ -3070,11 +3070,11 @@ function adminOnayVer() {
   if (not === null) return; // iptal
 
   // Mevcut PDF HTML'ini danışman notuyla üret
-  const raporHtml = pdfRaporHTML(not.trim() || null);
+  const raporHtml = buildPdfReportHTML(not.trim() || null);
 
   // localStorage'a yaz — viewer aynı tarayıcıda hemen görebilir
   try {
-    localStorage.setItem(VIEWER_ONAY_KEY, raporHtml);
+    localStorage.setItem(VIEWER_APPROVAL_KEY, raporHtml);
   } catch(e) {
     // localStorage dolu olabilir (büyük rapor) — sadece dosya indir
     console.warn('localStorage yazılamadı:', e);
@@ -3085,14 +3085,14 @@ function adminOnayVer() {
   const url  = URL.createObjectURL(blob);
   const a    = document.createElement('a');
   a.href     = url;
-  a.download = `rapor_${(STATE.projeAdi||'kurum').replace(/\s/g,'_')}_${new Date().toLocaleDateString('tr-TR').replace(/\./g,'-')}.html`;
+  a.download = `rapor_${(STATE.projectName||'kurum').replace(/\s/g,'_')}_${new Date().toLocaleDateString('tr-TR').replace(/\./g,'-')}.html`;
   a.click();
   URL.revokeObjectURL(url);
 
   toast('✅ Rapor onaylandı ve indirildi — müşteriye iletin', 'success');
 }
 
-function viewerOnayImport(event) {
+function importApprovalReport(event) {
   const file = event.target.files[0];
   if (!file) return;
   const reader = new FileReader();
@@ -3108,8 +3108,8 @@ function viewerOnayImport(event) {
         throw new Error('Bu dosya geçerli bir rapor dosyası değil');
       }
       // localStorage'a kaydet (sonraki girişte de açılsın)
-      try { localStorage.setItem(VIEWER_ONAY_KEY, icerik); } catch(e) {}
-      showViewerRapor(icerik);
+      try { localStorage.setItem(VIEWER_APPROVAL_KEY, icerik); } catch(e) {}
+      showApprovedReport(icerik);
       toast('✅ Raporunuz yüklendi');
     } catch(err) {
       toast('❌ ' + err.message, 'error');
@@ -3132,33 +3132,33 @@ document.addEventListener('DOMContentLoaded', () => {
   updateStats();
 
   // Firma adını input'a yükle
-  const projeInput = document.getElementById('proje-adi-input');
-  if (projeInput && STATE.projeAdi && STATE.projeAdi !== 'Yeni Proje') {
-    projeInput.value = STATE.projeAdi;
+  const nameInput = document.getElementById("project-name-input");
+  if (nameInput && STATE.projectName && STATE.projectName !== 'Yeni Proje') {
+    nameInput.value = STATE.projectName;
   }
 
   if (isViewer()) {
     // Viewer: onay var mı kontrol et
-    const onay = localStorage.getItem(VIEWER_ONAY_KEY);
+    const onay = localStorage.getItem(VIEWER_APPROVAL_KEY);
     if (onay) {
       // Eski JSON formatı mı yoksa yeni HTML mi?
       const isHtml = onay.trimStart().startsWith('<');
       if (isHtml) {
-        showViewerRapor(onay);
+        showApprovedReport(onay);
       } else {
         // Eski JSON kaydı — temizle, bekleme ekranına düş
-        localStorage.removeItem(VIEWER_ONAY_KEY);
-        showViewerBekleme();
-        switchTab('sorular');
+        localStorage.removeItem(VIEWER_APPROVAL_KEY);
+        showViewerWaitingScreen();
+        switchTab('questions');
         renderQuestion();
       }
     } else {
-      showViewerBekleme();
-      switchTab('sorular');
+      showViewerWaitingScreen();
+      switchTab('questions');
       renderQuestion();
     }
   } else {
-    if (STATE.activePage !== 'sorular') {
+    if (STATE.activePage !== 'questions') {
       switchTab(STATE.activePage);
     } else {
       renderQuestion();
@@ -3169,7 +3169,7 @@ document.addEventListener('DOMContentLoaded', () => {
       if (idx >= 0) {
         const el = document.getElementById(`cat-${idx}`);
         if (el) {
-          document.querySelectorAll('.cat-item').forEach(b => b.classList.remove('active'));
+          document.querySelectorAll('.category-item').forEach(b => b.classList.remove('active'));
           el.classList.add('active');
         }
       }
