@@ -225,16 +225,19 @@ function load() {
     const r = localStorage.getItem(key);
     if (!r) return;
     const d = JSON.parse(r);
-    STATE.projectName    = d.projectName    || 'Yeni Proje';
-    STATE.answers    = d.answers    || {};
-    STATE.answers1296= d.answers1296|| {};
+    STATE.projectName = d.projectName || d.projeAdi || 'Yeni Proje';
+    STATE.answers = d.answers || d.cevaplar || {};
+    STATE.answers1296 = d.answers1296 || d.cevaplar1296 || {};
     STATE.riskCache   = {};
-    STATE.currentIndex  = d.currentIndex  || 0;
+    STATE.currentIndex = d.currentIndex || d.currentIdx || 0;
     STATE.activeFilter= d.activeFilter|| 'all';
     STATE.activePage  = d.activePage  || 'questions';
-    STATE.currentPage1296    = d.currentPage1296    || 0;
-    STATE.riskAnalysis = d.riskAnalysis || {};
-    STATE.findings1296   = d.findings1296   || {};
+    // Normalize legacy activePage values from old format
+    const PAGE_MAP = { sorular:"questions", rapor:"findings", uyumlu:"compliance", tedbirler:"measures", ozet:"summary" };
+    if (PAGE_MAP[STATE.activePage]) STATE.activePage = PAGE_MAP[STATE.activePage];
+    STATE.currentPage1296 = d.currentPage1296 || d.page1296 || 0;
+    STATE.riskAnalysis = d.riskAnalysis || d.riskAnalizi || {};
+    STATE.findings1296 = d.findings1296 || d.bulgu1296 || {};
   } catch(e) { console.warn('Load hatası:', e); }
 }
 
@@ -278,14 +281,14 @@ function cevapLabel(c) {
 
 function getRiskStatus(q, cevap) {
   const k = q.kritiklik;
-  if (cevap === 'compliant') return null;
+  if (cevap === 'evet') return null;
   if (cevap === 'kapsam') return null;
-  if (cevap === 'noncompliant') {
+  if (cevap === 'hayir') {
     if (k===3) return { label:'Çok Riskli', cls:'fc-risk-critical', skor:12 };
     if (k===2) return { label:'Riskli',     cls:'fc-risk-high',     skor:8  };
     return            { label:'Orta Riskli',cls:'fc-risk-medium',       skor:4  };
   }
-  if (cevap === 'partial') {
+  if (cevap === 'kismi') {
     if (k===3) return { label:'Riskli',     cls:'fc-risk-high', skor:6 };
     if (k===2) return { label:'Orta Riskli',cls:'fc-risk-medium',   skor:3 };
     return            { label:'Orta Riskli',cls:'fc-risk-medium',   skor:2 };
@@ -322,14 +325,14 @@ function importData(event) {
       const importedState = JSON.parse(e.target.result);
 
       // Sadece bilinen alanları aktar (riskCache hariç)
-      STATE.projectName    = importedState.projectName    || 'Yeni Proje';
-      STATE.answers    = importedState.answers    || {};
-      STATE.answers1296= importedState.answers1296|| {};
+      STATE.projectName    = importedState.projectName    || importedState.projeAdi    || 'Yeni Proje';
+      STATE.answers    = importedState.answers    || importedState.cevaplar    || {};
+      STATE.answers1296= importedState.answers1296|| importedState.cevaplar1296|| {};
       STATE.riskCache   = {};
-      STATE.currentIndex  = importedState.currentIndex  || 0;
+      STATE.currentIndex  = importedState.currentIndex  || importedState.currentIdx  || 0;
       STATE.activeFilter= importedState.activeFilter|| 'all';
       STATE.activePage  = importedState.activePage  || 'questions';
-      STATE.currentPage1296    = importedState.currentPage1296    || 0;
+      STATE.currentPage1296 = importedState.currentPage1296 || importedState.page1296 || 0;
 
       // Firma adını input'a yaz
       const nameInput = document.getElementById("project-name-input");
@@ -2834,7 +2837,7 @@ function exportPdfReport() {
 
 function applyViewerUI() {
   // Sekmeleri gizle — sadece Sorular kalır
-  ['rapor','uyumlu','tedbirler','ozet'].forEach(tab => {
+  ['findings','compliance','measures','summary'].forEach(tab => {
     const el = document.querySelector(`.tab[data-page="${tab}"]`);
     if (el) el.style.display = 'none';
   });
@@ -2898,7 +2901,7 @@ function applyAdminUI() {
 function exportViewerAnswers() {
   const data = {
     _type: 'viewer_answers',
-    _tarih: new Date().toISOString(),
+    _date: new Date().toISOString(),
     projectName: STATE.projectName,
     answers: STATE.answers,
     answers1296: STATE.answers1296
@@ -2907,7 +2910,7 @@ function exportViewerAnswers() {
   const url  = URL.createObjectURL(blob);
   const a    = document.createElement('a');
   a.href     = url;
-  a.download = `viewer_cevaplar_${new Date().toLocaleDateString('tr-TR').replace(/\./g,'-')}.json`;
+  a.download = `viewer_answers_${new Date().toLocaleDateString('tr-TR').replace(/\./g,'-')}.json`;
   a.click();
   URL.revokeObjectURL(url);
   toast('✅ Cevaplarınız kaydedildi');
@@ -2915,7 +2918,7 @@ function exportViewerAnswers() {
 
 function showViewerWaitingScreen() {
   // Sayfa 1 (sorular) görünür, üstüne bilgi banner'ı ekle
-  const main = document.getElementById('page-sorular');
+  const main = document.getElementById('page-questions');
   if (!main) return;
 
   // Tamamlanma durumunu kontrol et
@@ -2972,7 +2975,7 @@ function showApprovedReport(raporHtml) {
 
   // Tam ekran overlay
   const overlay = document.createElement('div');
-  overlay.id = 'viewer-rapor-overlay';
+  overlay.id = 'approved-report-overlay';
   overlay.style.cssText = `
     position:fixed;inset:0;z-index:9000;
     background:#fff;
@@ -3030,15 +3033,15 @@ function loadClientDataFile(event) {
   reader.onload = e => {
     try {
       const d = JSON.parse(e.target.result);
-      if (d._type !== 'viewer_answers') throw new Error('Geçersiz dosya');
+      if (d._type !== 'viewer_answers' && d._tip !== 'viewer_cevaplar') throw new Error('Geçersiz dosya');
 
       // Viewer verilerini STATE'e yükle (admin'in mevcut verisi korunur — ayrı key'e yaz)
       localStorage.setItem('bg_gap_viewer_imported', e.target.result);
 
       // Admin STATE'ini viewer cevaplarıyla güncelle (analiz için)
-      STATE.answers     = d.answers     || {};
-      STATE.answers1296 = d.answers1296 || {};
-      STATE.projectName     = d.projectName     || STATE.projectName;
+      STATE.answers     = d.answers     || d.cevaplar     || {};
+      STATE.answers1296 = d.answers1296 || d.cevaplar1296 || {};
+      STATE.projectName = d.projectName || d.projeAdi || STATE.projectName;
 
       const nameInput = document.getElementById("project-name-input");
       if (nameInput) nameInput.value = STATE.projectName;
