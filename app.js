@@ -1258,12 +1258,12 @@ function render1296() {
           </div>
         </div>
         ${cv !== 'bos' ? `
-        <div id="b1296-${s.i}" style="display:none;padding:10px 16px 12px 16px;background:rgba(255,255,255,0.03);border-left:3px solid ${rs.left}">
+        <div id="b1296-${s.i}" style="display:none;padding:10px 16px 12px 16px;background:${bulguKaynak==='ai'?'rgba(99,102,241,0.05)':'rgba(255,255,255,0.03)'};border-left:3px solid ${bulguKaynak==='ai'?'#6366f1':rs.left}">
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
-            
-            ${(cv === 'kismi' || cv === 'hayir') && !cached1296 ? `<span style="font-size:9px;color:#6366f1;cursor:pointer;text-decoration:underline" onclick="event.stopPropagation();tekBulguUret(${s.i})">↺ Yenile</span>` : ''}
+            ${bulguKaynak==='ai' ? `<span style="font-size:9px;color:#818cf8;font-weight:600;letter-spacing:0.3px">✦ işlenmiş</span>` : `<span></span>`}
+            ${(cv === 'kismi' || cv === 'hayir') ? `<span style="font-size:9px;color:#6366f1;cursor:pointer;text-decoration:underline;opacity:0.85" onclick="event.stopPropagation();tekBulguUret(${s.i})">↺ Yenile</span>` : ''}
           </div>
-          <div style="font-size:11px;color:#cbd5e1;line-height:1.75">${bulguMetni}</div>
+          <div style="font-size:11px;color:${bulguKaynak==='ai'?'#e2e8f0':'#cbd5e1'};line-height:1.75">${bulguMetni}</div>
         </div>` : ''}
       </div>`;
     });
