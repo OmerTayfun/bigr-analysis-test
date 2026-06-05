@@ -2657,7 +2657,7 @@ function buildPdfReportHTML(danismanNotu) {
 </style>
 </head>
 <body>
-
+<button class="print-btn no-print" onclick="window.print()">🖨 PDF Olarak Kaydet</button>
 
 <!-- ══ KAPAK ══ -->
 <div style="background:#0D1B2E;min-height:280px;display:flex;flex-direction:column;justify-content:center;padding:50px 60px;position:relative;overflow:hidden">
