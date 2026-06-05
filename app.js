@@ -1182,12 +1182,19 @@ function render1296() {
     kapsam: { bg:'rgba(148,163,184,0.04)',left:'#94a3b8' },
     bos:    { bg:'transparent',           left:'#334155' }
   };
-  const cevapRenk = {
+  const isDarkTheme = document.documentElement.getAttribute('data-theme') === 'dark';
+  const cevapRenk = isDarkTheme ? {
     evet:   { bg:'rgba(16,185,129,0.15)', color:'#34d399', label:'✅ Uyumlu'      },
     kismi:  { bg:'rgba(245,158,11,0.15)', color:'#fbbf24', label:'🟡 Kısmen'      },
     hayir:  { bg:'rgba(239,68,68,0.15)',  color:'#f87171', label:'❌ Uyumsuz'     },
     kapsam: { bg:'rgba(148,163,184,0.15)',color:'#94a3b8', label:'⬜ Kapsam Dışı' },
     bos:    { bg:'rgba(100,116,139,0.15)',color:'#94a3b8', label:'— Cevapsız'    }
+  } : {
+    evet:   { bg:'rgba(16,185,129,0.15)', color:'#047857', label:'✅ Uyumlu'      },
+    kismi:  { bg:'rgba(245,158,11,0.18)', color:'#92400e', label:'🟡 Kısmen'      },
+    hayir:  { bg:'rgba(239,68,68,0.15)',  color:'#991b1b', label:'❌ Uyumsuz'     },
+    kapsam: { bg:'rgba(148,163,184,0.2)', color:'#475569', label:'⬜ Kapsam Dışı' },
+    bos:    { bg:'rgba(100,116,139,0.15)',color:'#475569', label:'— Cevapsız'    }
   };
 
   const groups = {};
@@ -1210,9 +1217,9 @@ function render1296() {
         <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
           <span style="font-size:11px;color:var(--green)">✅ ${cE}</span>
           <span style="font-size:11px;color:var(--amber)">🟡 ${cK}</span>
-          <span style="font-size:11px;color:#f87171">❌ ${cH}</span>
+          <span style="font-size:11px;color:var(--red)">❌ ${cH}</span>
           <span style="font-size:11px;color:var(--gray)">— ${cB}</span>
-          <span style="font-size:12px;font-weight:700;color:${skorRenk};background:rgba(0,0,0,0.2);padding:3px 10px;border-radius:12px">%${skor} Uyum</span>
+          <span style="font-size:12px;font-weight:700;color:${skorRenk};background:var(--bg3);padding:3px 10px;border-radius:12px">%${skor} Uyum</span>
           <span style="font-size:11px;color:var(--text3)">${n} tedbir</span>
         </div>
       </div>
@@ -1224,7 +1231,8 @@ function render1296() {
       const cr  = cevapRenk[cv];
       const parentQ    = SORULAR_100.find(q => q.id === s.p);
       const altKatKisa = s.altk.replace(/^\d+\.\d+\.\d+\.\s*/,'').replace(/^\d+\.\d+\.\s*/,'');
-      const bgHover    = cv==='bos' ? 'rgba(255,255,255,0.02)' : rs.bg.replace('0.04','0.08').replace('0.05','0.09');
+      const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+      const bgHover    = cv==='bos' ? (isDark ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.02)') : rs.bg.replace('0.04','0.08').replace('0.05','0.09');
 
       // Cache'den oku, yoksa şablon üret
       const cached1296 = STATE.bulgu1296[s.i];
@@ -1241,7 +1249,7 @@ function render1296() {
 
       const bulguKaynak = cached1296?.kaynak || (cv === 'kismi' || cv === 'hayir' ? 'sablon' : '');
 
-      html += `<div style="border-bottom:${idx<items.length-1?'1px solid rgba(255,255,255,0.04)':'none'}">
+      html += `<div style="border-bottom:${idx<items.length-1?'1px solid var(--border)':'none'}">
         <div style="display:grid;grid-template-columns:90px 160px 180px 1fr 130px 50px;gap:0;background:${rs.bg};border-left:3px solid ${rs.left};cursor:${cv!=='bos'?'pointer':'default'}"
           onmouseover="this.style.background='${bgHover}'"
           onmouseout="this.style.background='${rs.bg}'"
@@ -1258,12 +1266,12 @@ function render1296() {
           </div>
         </div>
         ${cv !== 'bos' ? `
-        <div id="b1296-${s.i}" style="display:none;padding:10px 16px 12px 16px;background:${bulguKaynak==='ai'?'rgba(99,102,241,0.05)':'rgba(255,255,255,0.03)'};border-left:3px solid ${bulguKaynak==='ai'?'#6366f1':rs.left}">
+        <div id="b1296-${s.i}" style="display:none;padding:10px 16px 12px 16px;background:${bulguKaynak==='ai'?'rgba(99,102,241,0.06)':'var(--bg3)'};border-left:3px solid ${bulguKaynak==='ai'?'#6366f1':rs.left}">
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
             ${bulguKaynak==='ai' ? `<span style="font-size:9px;color:#818cf8;font-weight:600;letter-spacing:0.3px">✦ </span>` : `<span></span>`}
             ${(cv === 'kismi' || cv === 'hayir') ? `<span style="font-size:9px;color:#6366f1;cursor:pointer;text-decoration:underline;opacity:0.85" onclick="event.stopPropagation();tekBulguUret(${s.i})">↺ Yenile</span>` : ''}
           </div>
-          <div style="font-size:11px;color:${bulguKaynak==='ai'?'#e2e8f0':'#cbd5e1'};line-height:1.75">${bulguMetni}</div>
+          <div style="font-size:11px;color:var(--text);line-height:1.75">${bulguMetni}</div>
         </div>` : ''}
       </div>`;
     });
