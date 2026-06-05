@@ -987,7 +987,7 @@ const oneriLines = (q.oneri || '').split(/\n/).map(s => s.trim()).filter(s => s.
   <div class="dk-footer">
     <span class="dk-footer-no">${q.tedbirNo} • S${q.id} / 100 • Kapsam: ${q.kapsananSayi} Tedbir</span>
     <div style="display:flex;gap:8px;align-items:center">
-      ${isAI ? '<span class="dk-ai-badge">Otomatik Analiz</span>' : ''}
+      
       <span>${cv.c === 'hayir' ? '❌ Uygulanmıyor' : '🟡 Kısmen Uygulanıyor'}</span>
     </div>
   </div>
@@ -1260,7 +1260,7 @@ function render1296() {
         ${cv !== 'bos' ? `
         <div id="b1296-${s.i}" style="display:none;padding:10px 16px 12px 16px;background:rgba(255,255,255,0.03);border-left:3px solid ${rs.left}">
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
-            ${bulguKaynak === 'ai' ? '<span style="font-size:9px;background:rgba(99,102,241,0.15);color:#818cf8;padding:2px 7px;border-radius:4px;font-weight:600">Otomatik</span>' : bulguKaynak === 'sablon' ? '<span style="font-size:9px;background:rgba(148,163,184,0.15);color:#94a3b8;padding:2px 7px;border-radius:4px;font-weight:600">📋 Şablon</span>' : ''}
+            
             ${(cv === 'kismi' || cv === 'hayir') && !cached1296 ? `<span style="font-size:9px;color:#6366f1;cursor:pointer;text-decoration:underline" onclick="event.stopPropagation();tekBulguUret(${s.i})">↺ Yenile</span>` : ''}
           </div>
           <div style="font-size:11px;color:#cbd5e1;line-height:1.75">${bulguMetni}</div>
@@ -1460,7 +1460,7 @@ async function tumKismenleriBulguUret() {
     });
     save(); render1296();
     if (btn) { btn.disabled = false; btn.textContent = '📋 Toplu Bulgu Üret'; }
-    toast('✅ ' + sablonSayac + ' şablon bulgu üretildi', 'success');
+    toast('✅ Bulgular üretildi', 'success');
     return;
   }
 
@@ -1484,7 +1484,7 @@ async function tumKismenleriBulguUret() {
 
   render1296();
   if (btn) { btn.disabled = false; btn.textContent = '📋 Toplu Bulgu Üret'; }
-  toast(`✅ ${aiSayac} AI + ${sablonSayac} şablon bulgu üretildi`, 'success');
+  toast(`✅ Bulgular üretildi`, 'success');
 }
 
 function bulgu1296Temizle() {
@@ -2164,7 +2164,7 @@ function exportExcel() {
     S4(2,R4, C(s.ta, {name:'Calibri',sz:10,bold:true,color:{rgb:'0F172A'}}, rfBg, SOL, B_İNCE));
     S4(3,R4, C(s.q, F.normal, rfBg, SOL, B_İNCE));
     S4(4,R4, C(cvLbl, cvF, rfBg, ORTA, B_İNCE));
-    S4(5,R4, C(bulguText, {name:'Calibri',sz:10,italic:!!bulguObj,color:{rgb:bulguObj?.kaynak==='ai'?'4338CA':'374151'}}, rfBg, SOL, B_İNCE));
+    S4(5,R4, C(bulguText, {name:'Calibri',sz:10,italic:!!bulguObj,color:{rgb:'374151'}}, rfBg, SOL, B_İNCE));
     S4(6,R4, C(pQ?('S'+s.p+': '+pQ.tedbir):'S'+s.p, {name:'Calibri',sz:9,color:{rgb:'6366F1'}}, rfBg, SOL, B_İNCE));
     R4++;
   });
@@ -2589,7 +2589,7 @@ function pdfRapor() {
       </div>
       <div style="background:#F8FAFC;padding:8px 16px;border-top:1px solid #E2E8F0;display:flex;justify-content:space-between;align-items:center">
         <span style="font-size:10px;color:#94A3B8;font-family:monospace">${q.tedbirNo} • S${q.id}/100 • ${q.kapsananSayi} Tedbir Kapsamı</span>
-        <span style="font-size:10px;color:#6366F1">${STATE.bulgu1296?Object.entries(STATE.bulgu1296).filter(([k,v])=>SORULAR_1296.find(s=>s.i==k&&s.p==q.id)&&v.kaynak==='ai').length+' Otomatik':''}</span>
+        <span style="font-size:10px;color:#6366F1"></span>
       </div>
     </div>`;
   };
