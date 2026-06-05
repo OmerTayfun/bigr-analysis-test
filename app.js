@@ -2472,7 +2472,38 @@ function pdfRapor() {
 
     const riskKatHTML = (() => {
       if(STATE.riskAnalizi[q.id]) {
-        return `<div style="font-size:11px;color:#1E293B;line-height:1.7;background:#F8FAFC;padding:10px;border-radius:6px">${STATE.riskAnalizi[q.id].replace(/\n/g,'<br>')}</div>`;
+        // AI metnini kategori kartlarına böl (renderRiskAIBox ile aynı mantık)
+        const aiText = STATE.riskAnalizi[q.id];
+        const pdfKatlar = [
+          { key: 'STRATEJİK RİSK',  icon: '⚡', renk: '#DC2626' },
+          { key: 'OPERASYONEL RİSK', icon: '🔧', renk: '#EA580C' },
+          { key: 'FİNANSAL RİSK',   icon: '💰', renk: '#D97706' },
+          { key: 'İTİBAR RİSKİ',    icon: '📣', renk: '#7C3AED' },
+        ];
+        const lines = aiText.split('\n').filter(l => l.trim());
+        let current = null, currentText = [];
+        const parsed = {};
+        lines.forEach(line => {
+          const match = pdfKatlar.find(k => line.toUpperCase().includes(k.key));
+          if (match) {
+            if (current && currentText.length) parsed[current] = currentText.join(' ').trim();
+            current = match.key;
+            // Başlık satırındaki metni de al, markdown temizle
+            currentText = [line.replace(/\*\*/g,'').replace(/.*(?:RİSK[İ]?|RİSK):?\s*/i,'').trim()];
+          } else if (current) {
+            currentText.push(line.replace(/\*\*/g,'').trim());
+          }
+        });
+        if (current && currentText.length) parsed[current] = currentText.join(' ').trim();
+        const herhangiParse = Object.keys(parsed).length > 0;
+        return pdfKatlar.map(kat => {
+          const metin = parsed[kat.key] || (herhangiParse ? '' : aiText.replace(/\*\*/g,''));
+          if (!metin) return '';
+          return `<div style="margin-bottom:6px;padding:7px 10px;background:#fff;border-radius:6px;border-left:3px solid ${kat.renk}">
+            <div style="font-size:10px;font-weight:700;color:${kat.renk};margin-bottom:3px">${kat.icon} ${kat.key}</div>
+            <div style="font-size:11px;color:#374151;line-height:1.5">${metin}</div>
+          </div>`;
+        }).join('');
       }
       const k = q.kritiklik; const isH = cv.c==='hayir';
       const isKisiselVeri = (q.anaKat||'').toLowerCase().includes('kişisel');
