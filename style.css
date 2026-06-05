@@ -926,7 +926,7 @@ body {
 .t-source { font-size: 10px; color: var(--teal); font-family: 'DM Mono', monospace; font-weight: 600; }
 .t-tn     { font-size: 11px; font-family: 'DM Mono', monospace; color: var(--teal); }
 
-.t-pagination .page-btn {
+#measures-pagination .page-btn {
   padding: 6px 12px;
   background: var(--bg2);
   border: 1px solid var(--border);
@@ -938,8 +938,8 @@ body {
   transition: all 0.15s;
 }
 
-.t-pagination .page-btn:hover  { background: var(--bg3); color: var(--text); }
-.t-pagination .page-btn.active { background: var(--teal-soft); color: var(--teal); border-color: var(--teal); }
+#measures-pagination .page-btn:hover  { background: var(--bg3); color: var(--text); }
+#measures-pagination .page-btn.active { background: var(--teal-soft); color: var(--teal); border-color: var(--teal); }
 
 .measures-stat-card {
   background: var(--bg2);
