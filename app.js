@@ -153,6 +153,8 @@
     setSession(username, userEntry.role);
     var ov = document.getElementById('auth-overlay');
     if (ov) ov.remove();
+    // DOM'u temiz başlatmak için sayfa yenilenir (rol değişimlerinde kritik)
+    location.reload();
 
     function showError() {
       err.style.display = 'block';
