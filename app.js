@@ -2871,9 +2871,7 @@ function applyViewerUI() {
   const logoSub = document.querySelector('.logo-sub');
   if (logoSub) logoSub.textContent = 'Uyumluluk Değerlendirme Anketi';
 
-  // Proje adı input'u gizle (viewer görmesine gerek yok)
-  const projeAyar = document.querySelector('.project-settings');
-  if (projeAyar) projeAyar.style.display = 'none';
+  // Firma adı inputu viewer'da görünür kalır
 }
 
 function applyAdminUI() {
@@ -2910,7 +2908,8 @@ function exportViewerAnswers() {
   const url  = URL.createObjectURL(blob);
   const a    = document.createElement('a');
   a.href     = url;
-  a.download = `viewer_answers_${new Date().toLocaleDateString('tr-TR').replace(/\./g,'-')}.json`;
+  const safeName = (STATE.projectName || 'Rapor').replace(/[^\w\s\-]/g,'').replace(/\s+/g,'_').trim() || 'Rapor';
+  a.download = `${safeName}_Gap_Raporu.json`;
   a.click();
   URL.revokeObjectURL(url);
   toast('✅ Cevaplarınız kaydedildi');
