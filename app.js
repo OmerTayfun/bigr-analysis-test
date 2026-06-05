@@ -1264,7 +1264,7 @@ function render1296() {
           </div>
           <div style="padding:10px 8px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px" title="${parentQ ? parentQ.tedbir : ''}">
             <span style="font-size:10px;color:var(--teal);font-family:monospace;font-weight:600;background:var(--teal-soft);padding:3px 7px;border-radius:8px">S${s.p}</span>
-            ${isAiBulgu ? `<span style="font-size:9px;color:#818cf8;font-weight:700;letter-spacing:0.3px;line-height:1" title="AI ile işlenmiş bulgu">✦ AI</span>` : ''}
+            ${isAiBulgu ? `<span style="font-size:9px;color:#818cf8;font-weight:700;letter-spacing:0.3px;line-height:1" title="AI ile işlenmiş bulgu">✦ </span>` : ''}
           </div>
         </div>
         ${cv !== 'bos' ? `
