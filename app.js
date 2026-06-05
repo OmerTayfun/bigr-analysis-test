@@ -3097,16 +3097,20 @@ function viewerOnayImport(event) {
   reader.onload = e => {
     try {
       const icerik = e.target.result;
+      // Eski JSON formatı yüklenmeye çalışılıyor mu?
+      if (icerik.trimStart().startsWith('{')) {
+        throw new Error('Bu eski format bir JSON dosyası. Lütfen danışmandan yeni .html formatında rapor isteyin.');
+      }
       // HTML dosyası mı kontrol et
-      if (!icerik.includes('<!DOCTYPE html') && !icerik.includes('<html')) {
-        throw new Error('Bu dosya geçerli bir rapor HTML\'i değil');
+      if (!icerik.trimStart().startsWith('<')) {
+        throw new Error('Bu dosya geçerli bir rapor dosyası değil');
       }
       // localStorage'a kaydet (sonraki girişte de açılsın)
       try { localStorage.setItem(VIEWER_ONAY_KEY, icerik); } catch(e) {}
       showViewerRapor(icerik);
       toast('✅ Raporunuz yüklendi');
     } catch(err) {
-      toast('❌ Geçersiz dosya: ' + err.message, 'error');
+      toast('❌ ' + err.message, 'error');
     }
   };
   reader.readAsText(file);
@@ -3135,7 +3139,17 @@ document.addEventListener('DOMContentLoaded', () => {
     // Viewer: onay var mı kontrol et
     const onay = localStorage.getItem(VIEWER_ONAY_KEY);
     if (onay) {
-      showViewerRapor(onay); // artık HTML string
+      // Eski JSON formatı mı yoksa yeni HTML mi?
+      const isHtml = onay.trimStart().startsWith('<');
+      if (isHtml) {
+        showViewerRapor(onay);
+      } else {
+        // Eski JSON kaydı — temizle, bekleme ekranına düş
+        localStorage.removeItem(VIEWER_ONAY_KEY);
+        showViewerBekleme();
+        switchTab('sorular');
+        renderQuestion();
+      }
     } else {
       showViewerBekleme();
       switchTab('sorular');
