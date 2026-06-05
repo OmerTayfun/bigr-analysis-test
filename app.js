@@ -1249,8 +1249,9 @@ function render1296() {
 
       const bulguKaynak = cached1296?.kaynak || (cv === 'kismi' || cv === 'hayir' ? 'sablon' : '');
 
+      const isAiBulgu = bulguKaynak === 'ai';
       html += `<div style="border-bottom:${idx<items.length-1?'1px solid var(--border)':'none'}">
-        <div style="display:grid;grid-template-columns:90px 160px 180px 1fr 130px 50px;gap:0;background:${rs.bg};border-left:3px solid ${rs.left};cursor:${cv!=='bos'?'pointer':'default'}"
+        <div style="display:grid;grid-template-columns:90px 160px 180px 1fr 130px 70px;gap:0;background:${rs.bg};border-left:3px solid ${rs.left};cursor:${cv!=='bos'?'pointer':'default'}"
           onmouseover="this.style.background='${bgHover}'"
           onmouseout="this.style.background='${rs.bg}'"
           ${cv !== 'bos' ? `onclick="const b=document.getElementById('b1296-${s.i}');if(b){b.style.display=b.style.display==='block'?'none':'block'}"` : ''}>
@@ -1261,8 +1262,9 @@ function render1296() {
           <div style="padding:10px 8px;display:flex;align-items:center;justify-content:center">
             <span style="display:inline-block;background:${cr.bg};color:${cr.color};font-size:11px;font-weight:600;padding:4px 10px;border-radius:12px;text-align:center;white-space:nowrap">${cr.label}</span>
           </div>
-          <div style="padding:10px 8px;display:flex;align-items:center;justify-content:center" title="${parentQ ? parentQ.tedbir : ''}">
+          <div style="padding:10px 8px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px" title="${parentQ ? parentQ.tedbir : ''}">
             <span style="font-size:10px;color:var(--teal);font-family:monospace;font-weight:600;background:var(--teal-soft);padding:3px 7px;border-radius:8px">S${s.p}</span>
+            ${isAiBulgu ? `<span style="font-size:9px;color:#818cf8;font-weight:700;letter-spacing:0.3px;line-height:1" title="AI ile işlenmiş bulgu">✦ AI</span>` : ''}
           </div>
         </div>
         ${cv !== 'bos' ? `
