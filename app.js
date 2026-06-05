@@ -2994,12 +2994,7 @@ function showApprovedReport(raporHtml) {
         <span style="font-size:11px;color:#94a3b8">Danışman tarafından onaylandı</span>
       </div>
       <div style="display:flex;gap:8px">
-        <button onclick="
-          const frm=document.getElementById('report-iframe');
-          if(frm){frm.contentWindow.print();}
-        " style="background:#1e3a5f;color:#93c5fd;border:1px solid rgba(96,165,250,0.3);padding:6px 14px;border-radius:6px;cursor:pointer;font-size:12px;font-weight:600">
-          🖨️ Yazdır / PDF
-        </button>
+        
         <button onclick="document.getElementById('approved-report-overlay').remove();renderQuestion();"
           style="background:rgba(255,255,255,0.08);color:#94a3b8;border:1px solid rgba(255,255,255,0.1);padding:6px 14px;border-radius:6px;cursor:pointer;font-size:12px">
           ✕ Kapat
