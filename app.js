@@ -153,8 +153,6 @@
     setSession(username, userEntry.role);
     var ov = document.getElementById('auth-overlay');
     if (ov) ov.remove();
-    // DOM'u temiz başlatmak için sayfa yenilenir (rol değişimlerinde önemli)
-    location.reload();
 
     function showError() {
       err.style.display = 'block';
@@ -2298,7 +2296,7 @@ function exportData() {
   a.click();
 }
 
-function pdfRapor() {
+function pdfRaporHTML(danismanNotu) {
   const firmaAdi = STATE.projeAdi || 'Kurum Adı';
   const tarih = new Date().toLocaleDateString('tr-TR', { day:'2-digit', month:'long', year:'numeric' });
   const all = Object.values(STATE.cevaplar);
@@ -2806,6 +2804,20 @@ function pdfRapor() {
 </body>
 </html>`;
 
+  // Danışman notu varsa footer'dan önce ekle
+  const notHTML = danismanNotu ? `
+<div style="background:#EEF2FF;border:2px solid #6366f1;border-radius:10px;padding:20px 28px;margin:0 0 32px 0;page-break-inside:avoid">
+  <div style="font-size:11px;font-weight:700;color:#6366f1;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">📋 Danışman Notu</div>
+  <div style="font-size:13px;color:#1e1b4b;line-height:1.7">${danismanNotu}</div>
+</div>` : '';
+
+  // Not'u footer'dan önce yerleştir
+  const finalHtml = html.replace('<!-- ══ FOOTER ══ -->', notHTML + '<!-- ══ FOOTER ══ -->');
+  return finalHtml;
+}
+
+function pdfRapor() {
+  const html = pdfRaporHTML();
   const w = window.open('', '_blank');
   w.document.write(html);
   w.document.close();
@@ -2951,74 +2963,56 @@ function showViewerBekleme() {
   }
 }
 
-function showViewerRapor(onayData) {
-  // Onaylı raporu tam ekran göster
+function showViewerRapor(raporHtml) {
+  // Mevcut overlay varsa kaldır
+  const mevcut = document.getElementById('viewer-rapor-overlay');
+  if (mevcut) mevcut.remove();
+
+  // Tam ekran overlay
   const overlay = document.createElement('div');
   overlay.id = 'viewer-rapor-overlay';
   overlay.style.cssText = `
     position:fixed;inset:0;z-index:9000;
-    background:var(--bg);overflow-y:auto;
-    font-family:'Inter',-apple-system,sans-serif;
-    padding:2rem;
+    background:#fff;
+    display:flex;flex-direction:column;
   `;
 
-  const tarih = new Date(onayData._onayTarihi).toLocaleDateString('tr-TR', { day:'2-digit', month:'long', year:'numeric' });
-
+  // Üst bar
   overlay.innerHTML = `
-    <div style="max-width:860px;margin:0 auto">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:2rem;flex-wrap:wrap;gap:1rem">
-        <div>
-          <div style="font-size:11px;font-weight:700;color:var(--teal);text-transform:uppercase;letter-spacing:1.5px;margin-bottom:.4rem">
-            ✅ Onaylı Rapor
-          </div>
-          <div style="font-size:22px;font-weight:800;color:var(--text)">Gap Analizi Sonuçları</div>
-          <div style="font-size:12px;color:var(--text3);margin-top:.3rem">${tarih} tarihinde danışman tarafından onaylandı</div>
-        </div>
+    <div style="
+      background:#0D1B2E;padding:10px 20px;
+      display:flex;align-items:center;justify-content:space-between;
+      flex-shrink:0;gap:12px;
+    ">
+      <div style="display:flex;align-items:center;gap:10px">
+        <span style="font-size:14px;font-weight:700;color:#D4AF4A">📋 Gap Analizi Raporu</span>
+        <span style="font-size:11px;color:#94a3b8">Danışman tarafından onaylandı</span>
+      </div>
+      <div style="display:flex;gap:8px">
+        <button onclick="
+          const frm=document.getElementById('rapor-iframe');
+          if(frm){frm.contentWindow.print();}
+        " style="background:#1e3a5f;color:#93c5fd;border:1px solid rgba(96,165,250,0.3);padding:6px 14px;border-radius:6px;cursor:pointer;font-size:12px;font-weight:600">
+          🖨️ Yazdır / PDF
+        </button>
         <button onclick="document.getElementById('viewer-rapor-overlay').remove()"
-          style="background:none;border:1px solid var(--border);color:var(--text2);padding:8px 16px;border-radius:8px;cursor:pointer;font-size:12px">
+          style="background:rgba(255,255,255,0.08);color:#94a3b8;border:1px solid rgba(255,255,255,0.1);padding:6px 14px;border-radius:6px;cursor:pointer;font-size:12px">
           ✕ Kapat
         </button>
       </div>
-
-      <!-- Özet kartları -->
-      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:12px;margin-bottom:2rem">
-        ${[
-          { lbl:'Uyumlu',      val: onayData.ozet.evet,  renk:'var(--green)' },
-          { lbl:'Kısmen',      val: onayData.ozet.kismi, renk:'var(--amber)' },
-          { lbl:'Uyumsuz',     val: onayData.ozet.hayir, renk:'var(--red)'   },
-          { lbl:'Uyum Skoru',  val: onayData.ozet.skor + '%', renk:'var(--teal)' }
-        ].map(k => `
-          <div style="background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:1rem;text-align:center">
-            <div style="font-size:28px;font-weight:800;color:${k.renk}">${k.val}</div>
-            <div style="font-size:11px;color:var(--text3);margin-top:.3rem">${k.lbl}</div>
-          </div>
-        `).join('')}
-      </div>
-
-      <!-- Danışman notu -->
-      ${onayData.danismanNotu ? `
-      <div style="background:rgba(99,102,241,0.06);border:1px solid rgba(99,102,241,0.2);border-radius:10px;padding:1.25rem 1.5rem;margin-bottom:2rem">
-        <div style="font-size:11px;font-weight:700;color:#818cf8;text-transform:uppercase;letter-spacing:1px;margin-bottom:.6rem">📋 Danışman Notu</div>
-        <div style="font-size:13px;color:var(--text);line-height:1.7">${onayData.danismanNotu}</div>
-      </div>` : ''}
-
-      <!-- Bulgular listesi -->
-      <div style="font-size:14px;font-weight:700;color:var(--text);margin-bottom:1rem">Tespit Edilen Bulgular</div>
-      <div style="display:flex;flex-direction:column;gap:.75rem">
-        ${(onayData.bulgular || []).map(b => `
-          <div style="background:var(--bg2);border:1px solid var(--border);border-radius:8px;border-left:4px solid ${b.renkSol};padding:1rem 1.25rem">
-            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.4rem;flex-wrap:wrap;gap:.5rem">
-              <span style="font-size:12px;font-weight:700;color:var(--text)">${b.tedbir}</span>
-              <span style="font-size:10px;font-weight:700;padding:2px 10px;border-radius:10px;background:${b.riskBg};color:${b.riskRenk}">${b.riskLabel}</span>
-            </div>
-            <div style="font-size:11px;color:var(--text3);margin-bottom:.6rem">${b.altKat}</div>
-            ${b.tespit ? `<div style="font-size:12px;color:var(--text2);line-height:1.65">${b.tespit}</div>` : ''}
-          </div>
-        `).join('')}
-      </div>
     </div>
+    <iframe id="rapor-iframe" style="flex:1;border:none;width:100%;height:100%"></iframe>
   `;
+
   document.body.appendChild(overlay);
+
+  // iframe'e HTML yaz
+  const iframe = document.getElementById('rapor-iframe');
+  iframe.onload = () => {}; // hazır
+  const doc = iframe.contentDocument || iframe.contentWindow.document;
+  doc.open();
+  doc.write(raporHtml);
+  doc.close();
 }
 
 // ── ADMİN FONKSİYONLARI ──────────────────────────────────────
@@ -3063,13 +3057,7 @@ function adminViewerImportFile(event) {
 }
 
 function adminOnayVer() {
-  const all    = Object.values(STATE.cevaplar);
-  const evet   = all.filter(v => v.c === 'evet').length;
-  const kismi  = all.filter(v => v.c === 'kismi').length;
-  const hayir  = all.filter(v => v.c === 'hayir').length;
-  const skorBaz = evet + kismi + hayir;
-  const skor   = skorBaz > 0 ? Math.round(100*(evet + kismi*0.5)/skorBaz) : 0;
-
+  const skorBaz = Object.values(STATE.cevaplar).filter(v => ['evet','kismi','hayir'].includes(v.c)).length;
   if (skorBaz === 0) {
     toast('⚠️ Önce müşteri verisi yüklenmeli', 'error');
     return;
@@ -3079,46 +3067,23 @@ function adminOnayVer() {
   const not = prompt('Müşteriye iletilecek danışman notu (boş bırakabilirsiniz):');
   if (not === null) return; // iptal
 
-  // Bulgular listesi
-  const bulgular = SORULAR_100
-    .filter(q => {
-      const cv = STATE.cevaplar[q.id];
-      return cv && cv.c !== 'evet' && cv.c !== 'kapsam';
-    })
-    .sort((a,b) => (riskDurumu(b, STATE.cevaplar[b.id].c)?.skor||0) - (riskDurumu(a, STATE.cevaplar[a.id].c)?.skor||0))
-    .map(q => {
-      const cv = STATE.cevaplar[q.id];
-      const rd = riskDurumu(q, cv.c);
-      const renkSol  = rd?.label==='Çok Riskli' ? '#dc2626' : rd?.label==='Riskli' ? '#f59e0b' : '#94a3b8';
-      const riskBg   = rd?.label==='Çok Riskli' ? 'rgba(220,38,38,0.1)' : rd?.label==='Riskli' ? 'rgba(245,158,11,0.1)' : 'rgba(148,163,184,0.1)';
-      const riskRenk = rd?.label==='Çok Riskli' ? '#dc2626' : rd?.label==='Riskli' ? '#d97706' : '#64748b';
-      return {
-        tedbir:    q.tedbir,
-        altKat:    shortCat(q.altKat),
-        riskLabel: rd?.label || 'Orta Riskli',
-        renkSol, riskBg, riskRenk,
-        tespit: cv.bulgu || cv.obs || ''
-      };
-    });
+  // Mevcut PDF HTML'ini danışman notuyla üret
+  const raporHtml = pdfRaporHTML(not.trim() || null);
 
-  const onayData = {
-    _tip:         'viewer_onay',
-    _onayTarihi:  new Date().toISOString(),
-    projeAdi:     STATE.projeAdi,
-    danismanNotu: not.trim(),
-    ozet:         { evet, kismi, hayir, skor },
-    bulgular
-  };
+  // localStorage'a yaz — viewer aynı tarayıcıda hemen görebilir
+  try {
+    localStorage.setItem(VIEWER_ONAY_KEY, raporHtml);
+  } catch(e) {
+    // localStorage dolu olabilir (büyük rapor) — sadece dosya indir
+    console.warn('localStorage yazılamadı:', e);
+  }
 
-  // LocalStorage'a yaz (viewer aynı cihazda test için)
-  localStorage.setItem(VIEWER_ONAY_KEY, JSON.stringify(onayData));
-
-  // JSON dosyası olarak da indir (farklı cihaza göndermek için)
-  const blob = new Blob([JSON.stringify(onayData, null, 2)], { type: 'application/json' });
+  // HTML dosyası olarak indir — farklı cihaza göndermek için
+  const blob = new Blob([raporHtml], { type: 'text/html;charset=utf-8' });
   const url  = URL.createObjectURL(blob);
   const a    = document.createElement('a');
   a.href     = url;
-  a.download = `onay_rapor_${STATE.projeAdi.replace(/\s/g,'_')}_${new Date().toLocaleDateString('tr-TR').replace(/\./g,'-')}.json`;
+  a.download = `rapor_${(STATE.projeAdi||'kurum').replace(/\s/g,'_')}_${new Date().toLocaleDateString('tr-TR').replace(/\./g,'-')}.html`;
   a.click();
   URL.revokeObjectURL(url);
 
@@ -3131,10 +3096,14 @@ function viewerOnayImport(event) {
   const reader = new FileReader();
   reader.onload = e => {
     try {
-      const d = JSON.parse(e.target.result);
-      if (d._tip !== 'viewer_onay') throw new Error('Bu dosya bir onay raporu değil');
-      localStorage.setItem(VIEWER_ONAY_KEY, e.target.result);
-      showViewerRapor(d);
+      const icerik = e.target.result;
+      // HTML dosyası mı kontrol et
+      if (!icerik.includes('<!DOCTYPE html') && !icerik.includes('<html')) {
+        throw new Error('Bu dosya geçerli bir rapor HTML\'i değil');
+      }
+      // localStorage'a kaydet (sonraki girişte de açılsın)
+      try { localStorage.setItem(VIEWER_ONAY_KEY, icerik); } catch(e) {}
+      showViewerRapor(icerik);
       toast('✅ Raporunuz yüklendi');
     } catch(err) {
       toast('❌ Geçersiz dosya: ' + err.message, 'error');
@@ -3166,7 +3135,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Viewer: onay var mı kontrol et
     const onay = localStorage.getItem(VIEWER_ONAY_KEY);
     if (onay) {
-      showViewerRapor(JSON.parse(onay));
+      showViewerRapor(onay); // artık HTML string
     } else {
       showViewerBekleme();
       switchTab('sorular');
