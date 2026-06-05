@@ -6,7 +6,8 @@
 
   // Yetkili kullanıcılar — hash: sha256(username + ':' + password)
   const USERS = {
-    'admin': '5730ed99bddc18fa466ee8cbbdbb362cc6bfd08d82aae6d0cba6fbdcecb8efbf'
+    'admin': { hash: '5730ed99bddc18fa466ee8cbbdbb362cc6bfd08d82aae6d0cba6fbdcecb8efbf', role: 'admin' },
+    'omer':  { hash: '7d5269012a1ad1ade208192c3026eb5d544df652b677a73b8c598d6c5a98afb9', role: 'viewer' }
   };
 
   async function sha256(str) {
@@ -21,9 +22,10 @@
     } catch { return false; }
   }
 
-  function setSession(username) {
+  function setSession(username, role) {
     sessionStorage.setItem(SESSION_KEY, JSON.stringify({
       user: username,
+      role: role,
       exp: Date.now() + SESSION_TTL
     }));
   }
@@ -142,13 +144,13 @@
 
     await new Promise(function(r) { setTimeout(r, 600); });
 
-    var expectedHash = USERS[username];
-    if (!expectedHash) { showError(); return; }
+    var userEntry = USERS[username];
+    if (!userEntry) { showError(); return; }
 
     var inputHash = await sha256(username + ':' + password);
-    if (inputHash !== expectedHash) { showError(); return; }
+    if (inputHash !== userEntry.hash) { showError(); return; }
 
-    setSession(username);
+    setSession(username, userEntry.role);
     var ov = document.getElementById('auth-overlay');
     if (ov) ov.remove();
 
@@ -197,7 +199,6 @@ const STATE = {
 const CATEGORIES = [...new Set(SORULAR_100.map(s => s.anaKat))];
 
 // ── STORAGE ──────────────────────────────────────────────────
-// save fonksiyonunu güncelleyelim
 function save() {
   try {
     const toSave = {
@@ -209,16 +210,17 @@ function save() {
       activePage:   STATE.activePage,
       page1296:     STATE.page1296,
       riskAnalizi:  STATE.riskAnalizi,
-      bulgu1296:   STATE.bulgu1296
+      bulgu1296:    STATE.bulgu1296
     };
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(toSave));
+    const key = isViewer() ? VIEWER_STORAGE_KEY : STORAGE_KEY;
+    localStorage.setItem(key, JSON.stringify(toSave));
   } catch(e) { console.warn('Save hatası:', e); }
 }
 
-// load fonksiyonunu güncelleyelim
 function load() {
   try {
-    const r = localStorage.getItem(STORAGE_KEY);
+    const key = isViewer() ? VIEWER_STORAGE_KEY : STORAGE_KEY;
+    const r = localStorage.getItem(key);
     if (!r) return;
     const d = JSON.parse(r);
     STATE.projeAdi    = d.projeAdi    || 'Yeni Proje';
@@ -230,12 +232,25 @@ function load() {
     STATE.activePage  = d.activePage  || 'sorular';
     STATE.page1296    = d.page1296    || 0;
     STATE.riskAnalizi = d.riskAnalizi || {};
-    STATE.bulgu1296  = d.bulgu1296  || {};
+    STATE.bulgu1296   = d.bulgu1296   || {};
   } catch(e) { console.warn('Load hatası:', e); }
 }
 
 
-// ── UTILS ────────────────────────────────────────────────────
+// ── ROL & VİEWER ─────────────────────────────────────────────
+const VIEWER_STORAGE_KEY  = 'bg_gap_viewer_v1';
+const VIEWER_ONAY_KEY     = 'bg_gap_onay_v1';
+
+function getRole() {
+  try {
+    const s = JSON.parse(sessionStorage.getItem('bg_gap_auth') || 'null');
+    return s?.role || 'viewer';
+  } catch { return 'viewer'; }
+}
+function isAdmin()  { return getRole() === 'admin'; }
+function isViewer() { return getRole() === 'viewer'; }
+
+// ── UTILS ─────────────────────────────────────────────────────
 function shortCat(c) { return c.replace(/^\d+\.\d+\.\s*/, ''); }
 
 function toast(msg, type='') {
@@ -478,7 +493,7 @@ function renderQuestion() {
           style="width:100%;min-height:85px;padding:9px;background:var(--bg);border:1px solid rgba(255,255,255,0.1);border-radius:7px;color:var(--text);font-size:13px;line-height:1.6;resize:vertical;font-family:inherit"
           placeholder="Gözlem notlarınızı buraya yazın...">${obs}</textarea>
         <div style="display:flex;gap:7px;margin-top:7px;justify-content:flex-end">
-          ${(sel !== 'evet' && sel !== 'kapsam') ? `<button class="btn-ai" id="ai-gen-btn" onclick="bulguUret()" ${!obs.trim() ? 'disabled' : ''}>📋 Bulgu Üret</button>` : ''}
+          ${(sel !== 'evet' && sel !== 'kapsam' && isAdmin()) ? `<button class="btn-ai" id="ai-gen-btn" onclick="bulguUret()" ${!obs.trim() ? 'disabled' : ''}>📋 Bulgu Üret</button>` : ''}
         </div>
         ${bulgu ? `
         <div style="background:rgba(167,139,250,0.1);border:1px solid rgba(167,139,250,0.25);border-radius:7px;padding:.9rem;margin-top:.6rem">
@@ -527,6 +542,12 @@ function setCevap(val) {
   updateStats();
   buildSidebar();
   renderQuestion();
+
+  // Viewer: 100 soru tamamlandıysa bekleme ekranı göster
+  if (isViewer() && Object.keys(STATE.cevaplar).length >= 100) {
+    viewerExport(); // otomatik kaydet
+    setTimeout(() => showViewerBekleme(), 400);
+  }
 }
 
 // ── bulguUret ─────────────────────────────────────────────────
@@ -2789,9 +2810,347 @@ function pdfRapor() {
 }
 
 
-// ── INIT ─────────────────────────────────────────────────────
+
+
+// ══════════════════════════════════════════════════════════════
+// ROL BAZLI UI
+// ══════════════════════════════════════════════════════════════
+
+function applyViewerUI() {
+  // Sekmeleri gizle — sadece Sorular kalır
+  ['rapor','uyumlu','tedbirler','ozet'].forEach(tab => {
+    const el = document.querySelector(`.tab[data-page="${tab}"]`);
+    if (el) el.style.display = 'none';
+  });
+
+  // Header butonlarını gizle
+  ['theme-toggle'].forEach(id => {
+    const el = document.getElementById(id);
+    // tema toggle açık kalsın, diğerlerini kapat
+  });
+
+  // Header sağdaki buton grubunu sadeleştir
+  const headerBtns = document.querySelector('.header-btns');
+  if (headerBtns) {
+    headerBtns.innerHTML = `
+      <button id="theme-toggle" class="btn btn-ghost" onclick="toggleTheme()" title="Tema değiştir"></button>
+      <button class="btn btn-ghost" onclick="viewerExport()" title="Cevaplarımı Kaydet">💾 Kaydet</button>
+      <button class="btn btn-ghost" onclick="document.getElementById('onay-upload').click()" title="Raporumu Görüntüle" style="color:var(--teal)">📄 Raporumu Gör</button>
+      <input type="file" id="onay-upload" style="display:none" accept=".json" onchange="viewerOnayImport(event)">
+    `;
+    // Temayı yeniden uygula
+    const saved = localStorage.getItem('bg_gap_theme') || 'dark';
+    const btn = document.getElementById('theme-toggle');
+    if (btn) btn.textContent = saved === 'dark' ? '☀️' : '🌙';
+  }
+
+  // Header stats gizle
+  const hstats = document.querySelector('.header-stats');
+  if (hstats) hstats.style.display = 'none';
+
+  // Logo alt başlığı güncelle
+  const logoSub = document.querySelector('.logo-sub');
+  if (logoSub) logoSub.textContent = 'Uyumluluk Değerlendirme Anketi';
+
+  // Proje adı input'u gizle (viewer görmesine gerek yok)
+  const projeAyar = document.querySelector('.proje-ayarlar');
+  if (projeAyar) projeAyar.style.display = 'none';
+}
+
+function applyAdminUI() {
+  // Admin: mevcut tüm UI açık — sadece müşteri veri butonlarını ekle
+  const headerBtns = document.querySelector('.header-btns');
+  if (!headerBtns) return;
+
+  // Mevcut butonların önüne müşteri veri butonlarını ekle
+  const viewerBtns = document.createElement('div');
+  viewerBtns.style.cssText = 'display:flex;gap:6px;align-items:center;padding-right:8px;border-right:1px solid var(--border);margin-right:2px';
+  viewerBtns.innerHTML = `
+    <button class="btn btn-ghost" onclick="adminViewerImport()" title="Müşteri cevaplarını yükle" style="color:var(--teal);border-color:var(--teal)">
+      👤 Müşteri Verisi
+    </button>
+    <button class="btn btn-ghost" onclick="adminOnayVer()" title="Raporu müşteriye sun" style="color:var(--green);border-color:var(--green)" id="btn-onay">
+      ✅ Raporu Onayla
+    </button>
+    <input type="file" id="viewer-upload" style="display:none" accept=".json" onchange="adminViewerImportFile(event)">
+  `;
+  headerBtns.insertBefore(viewerBtns, headerBtns.firstChild);
+}
+
+// ── VİEWER FONKSİYONLARI ─────────────────────────────────────
+
+function viewerExport() {
+  const data = {
+    _tip: 'viewer_cevaplar',
+    _tarih: new Date().toISOString(),
+    projeAdi: STATE.projeAdi,
+    cevaplar: STATE.cevaplar,
+    cevaplar1296: STATE.cevaplar1296
+  };
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href     = url;
+  a.download = `viewer_cevaplar_${new Date().toLocaleDateString('tr-TR').replace(/\./g,'-')}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+  toast('✅ Cevaplarınız kaydedildi');
+}
+
+function showViewerBekleme() {
+  // Sayfa 1 (sorular) görünür, üstüne bilgi banner'ı ekle
+  const main = document.getElementById('page-sorular');
+  if (!main) return;
+
+  // Tamamlanma durumunu kontrol et
+  const total = Object.keys(STATE.cevaplar).length;
+
+  if (total >= 100) {
+    // Tüm sorular cevaplandı — bekleme mesajı göster
+    const banner = document.createElement('div');
+    banner.id = 'viewer-bekleme-banner';
+    banner.style.cssText = `
+      position:fixed;inset:0;z-index:9000;
+      background:var(--bg);
+      display:flex;flex-direction:column;align-items:center;justify-content:center;
+      font-family:'Inter',-apple-system,sans-serif;
+      text-align:center;padding:2rem;
+    `;
+    banner.innerHTML = `
+      <div style="max-width:480px">
+        <div style="font-size:48px;margin-bottom:1.5rem">🔐</div>
+        <div style="font-size:22px;font-weight:800;color:var(--text);margin-bottom:.75rem">
+          Cevaplarınız Alındı
+        </div>
+        <div style="font-size:14px;color:var(--text2);line-height:1.7;margin-bottom:2rem">
+          Gap analizi cevaplarınız başarıyla kaydedildi. Danışman ekibi inceleme ve AI analizi sürecini tamamladıktan sonra raporunuz bu ekranda görünecektir.
+        </div>
+        <div style="background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:1.25rem 1.5rem;margin-bottom:2rem">
+          <div style="font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:1px;margin-bottom:.5rem">Durum</div>
+          <div style="display:flex;align-items:center;gap:10px;justify-content:center">
+            <span style="width:8px;height:8px;border-radius:50%;background:var(--amber);display:inline-block;animation:pulse 2s infinite"></span>
+            <span style="font-size:13px;font-weight:600;color:var(--amber)">Raporunuz Hazırlanıyor...</span>
+          </div>
+        </div>
+        <div style="font-size:11px;color:var(--text3)">
+          Rapor hazırlandığında bu sayfa otomatik olarak güncellenecektir.<br>
+          Sayfayı açık tutmanıza gerek yok — tekrar giriş yaptığınızda görüntüleyebilirsiniz.
+        </div>
+        <button onclick="document.getElementById('viewer-bekleme-banner').remove()" 
+          style="margin-top:1.5rem;background:none;border:1px solid var(--border);color:var(--text3);padding:8px 20px;border-radius:8px;cursor:pointer;font-size:12px">
+          ← Cevaplarıma Dön
+        </button>
+      </div>
+      <style>
+        @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
+      </style>
+    `;
+    document.body.appendChild(banner);
+  }
+}
+
+function showViewerRapor(onayData) {
+  // Onaylı raporu tam ekran göster
+  const overlay = document.createElement('div');
+  overlay.id = 'viewer-rapor-overlay';
+  overlay.style.cssText = `
+    position:fixed;inset:0;z-index:9000;
+    background:var(--bg);overflow-y:auto;
+    font-family:'Inter',-apple-system,sans-serif;
+    padding:2rem;
+  `;
+
+  const tarih = new Date(onayData._onayTarihi).toLocaleDateString('tr-TR', { day:'2-digit', month:'long', year:'numeric' });
+
+  overlay.innerHTML = `
+    <div style="max-width:860px;margin:0 auto">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:2rem;flex-wrap:wrap;gap:1rem">
+        <div>
+          <div style="font-size:11px;font-weight:700;color:var(--teal);text-transform:uppercase;letter-spacing:1.5px;margin-bottom:.4rem">
+            ✅ Onaylı Rapor
+          </div>
+          <div style="font-size:22px;font-weight:800;color:var(--text)">Gap Analizi Sonuçları</div>
+          <div style="font-size:12px;color:var(--text3);margin-top:.3rem">${tarih} tarihinde danışman tarafından onaylandı</div>
+        </div>
+        <button onclick="document.getElementById('viewer-rapor-overlay').remove()"
+          style="background:none;border:1px solid var(--border);color:var(--text2);padding:8px 16px;border-radius:8px;cursor:pointer;font-size:12px">
+          ✕ Kapat
+        </button>
+      </div>
+
+      <!-- Özet kartları -->
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:12px;margin-bottom:2rem">
+        ${[
+          { lbl:'Uyumlu',      val: onayData.ozet.evet,  renk:'var(--green)' },
+          { lbl:'Kısmen',      val: onayData.ozet.kismi, renk:'var(--amber)' },
+          { lbl:'Uyumsuz',     val: onayData.ozet.hayir, renk:'var(--red)'   },
+          { lbl:'Uyum Skoru',  val: onayData.ozet.skor + '%', renk:'var(--teal)' }
+        ].map(k => `
+          <div style="background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:1rem;text-align:center">
+            <div style="font-size:28px;font-weight:800;color:${k.renk}">${k.val}</div>
+            <div style="font-size:11px;color:var(--text3);margin-top:.3rem">${k.lbl}</div>
+          </div>
+        `).join('')}
+      </div>
+
+      <!-- Danışman notu -->
+      ${onayData.danismanNotu ? `
+      <div style="background:rgba(99,102,241,0.06);border:1px solid rgba(99,102,241,0.2);border-radius:10px;padding:1.25rem 1.5rem;margin-bottom:2rem">
+        <div style="font-size:11px;font-weight:700;color:#818cf8;text-transform:uppercase;letter-spacing:1px;margin-bottom:.6rem">📋 Danışman Notu</div>
+        <div style="font-size:13px;color:var(--text);line-height:1.7">${onayData.danismanNotu}</div>
+      </div>` : ''}
+
+      <!-- Bulgular listesi -->
+      <div style="font-size:14px;font-weight:700;color:var(--text);margin-bottom:1rem">Tespit Edilen Bulgular</div>
+      <div style="display:flex;flex-direction:column;gap:.75rem">
+        ${(onayData.bulgular || []).map(b => `
+          <div style="background:var(--bg2);border:1px solid var(--border);border-radius:8px;border-left:4px solid ${b.renkSol};padding:1rem 1.25rem">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.4rem;flex-wrap:wrap;gap:.5rem">
+              <span style="font-size:12px;font-weight:700;color:var(--text)">${b.tedbir}</span>
+              <span style="font-size:10px;font-weight:700;padding:2px 10px;border-radius:10px;background:${b.riskBg};color:${b.riskRenk}">${b.riskLabel}</span>
+            </div>
+            <div style="font-size:11px;color:var(--text3);margin-bottom:.6rem">${b.altKat}</div>
+            ${b.tespit ? `<div style="font-size:12px;color:var(--text2);line-height:1.65">${b.tespit}</div>` : ''}
+          </div>
+        `).join('')}
+      </div>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+}
+
+// ── ADMİN FONKSİYONLARI ──────────────────────────────────────
+
+function adminViewerImport() {
+  document.getElementById('viewer-upload')?.click();
+}
+
+function adminViewerImportFile(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      const d = JSON.parse(e.target.result);
+      if (d._tip !== 'viewer_cevaplar') throw new Error('Geçersiz dosya');
+
+      // Viewer verilerini STATE'e yükle (admin'in mevcut verisi korunur — ayrı key'e yaz)
+      localStorage.setItem('bg_gap_viewer_imported', e.target.result);
+
+      // Admin STATE'ini viewer cevaplarıyla güncelle (analiz için)
+      STATE.cevaplar     = d.cevaplar     || {};
+      STATE.cevaplar1296 = d.cevaplar1296 || {};
+      STATE.projeAdi     = d.projeAdi     || STATE.projeAdi;
+
+      const projeInput = document.getElementById('proje-adi-input');
+      if (projeInput) projeInput.value = STATE.projeAdi;
+
+      save();
+      buildSidebar();
+      updateStats();
+      renderQuestion();
+      switchTab('rapor');
+
+      toast(`✅ Müşteri cevapları yüklendi — ${Object.keys(STATE.cevaplar).length} soru`, 'success');
+    } catch(err) {
+      toast('❌ Dosya geçersiz: ' + err.message, 'error');
+    }
+  };
+  reader.readAsText(file);
+  event.target.value = '';
+}
+
+function adminOnayVer() {
+  const all    = Object.values(STATE.cevaplar);
+  const evet   = all.filter(v => v.c === 'evet').length;
+  const kismi  = all.filter(v => v.c === 'kismi').length;
+  const hayir  = all.filter(v => v.c === 'hayir').length;
+  const skorBaz = evet + kismi + hayir;
+  const skor   = skorBaz > 0 ? Math.round(100*(evet + kismi*0.5)/skorBaz) : 0;
+
+  if (skorBaz === 0) {
+    toast('⚠️ Önce müşteri verisi yüklenmeli', 'error');
+    return;
+  }
+
+  // Danışman notu iste
+  const not = prompt('Müşteriye iletilecek danışman notu (boş bırakabilirsiniz):');
+  if (not === null) return; // iptal
+
+  // Bulgular listesi
+  const bulgular = SORULAR_100
+    .filter(q => {
+      const cv = STATE.cevaplar[q.id];
+      return cv && cv.c !== 'evet' && cv.c !== 'kapsam';
+    })
+    .sort((a,b) => (riskDurumu(b, STATE.cevaplar[b.id].c)?.skor||0) - (riskDurumu(a, STATE.cevaplar[a.id].c)?.skor||0))
+    .map(q => {
+      const cv = STATE.cevaplar[q.id];
+      const rd = riskDurumu(q, cv.c);
+      const renkSol  = rd?.label==='Çok Riskli' ? '#dc2626' : rd?.label==='Riskli' ? '#f59e0b' : '#94a3b8';
+      const riskBg   = rd?.label==='Çok Riskli' ? 'rgba(220,38,38,0.1)' : rd?.label==='Riskli' ? 'rgba(245,158,11,0.1)' : 'rgba(148,163,184,0.1)';
+      const riskRenk = rd?.label==='Çok Riskli' ? '#dc2626' : rd?.label==='Riskli' ? '#d97706' : '#64748b';
+      return {
+        tedbir:    q.tedbir,
+        altKat:    shortCat(q.altKat),
+        riskLabel: rd?.label || 'Orta Riskli',
+        renkSol, riskBg, riskRenk,
+        tespit: cv.bulgu || cv.obs || ''
+      };
+    });
+
+  const onayData = {
+    _tip:         'viewer_onay',
+    _onayTarihi:  new Date().toISOString(),
+    projeAdi:     STATE.projeAdi,
+    danismanNotu: not.trim(),
+    ozet:         { evet, kismi, hayir, skor },
+    bulgular
+  };
+
+  // LocalStorage'a yaz (viewer aynı cihazda test için)
+  localStorage.setItem(VIEWER_ONAY_KEY, JSON.stringify(onayData));
+
+  // JSON dosyası olarak da indir (farklı cihaza göndermek için)
+  const blob = new Blob([JSON.stringify(onayData, null, 2)], { type: 'application/json' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href     = url;
+  a.download = `onay_rapor_${STATE.projeAdi.replace(/\s/g,'_')}_${new Date().toLocaleDateString('tr-TR').replace(/\./g,'-')}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+
+  toast('✅ Rapor onaylandı ve indirildi — müşteriye iletin', 'success');
+}
+
+function viewerOnayImport(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      const d = JSON.parse(e.target.result);
+      if (d._tip !== 'viewer_onay') throw new Error('Bu dosya bir onay raporu değil');
+      localStorage.setItem(VIEWER_ONAY_KEY, e.target.result);
+      showViewerRapor(d);
+      toast('✅ Raporunuz yüklendi');
+    } catch(err) {
+      toast('❌ Geçersiz dosya: ' + err.message, 'error');
+    }
+  };
+  reader.readAsText(file);
+  event.target.value = '';
+}
+
 document.addEventListener('DOMContentLoaded', () => {
   load();
+
+  if (isViewer()) {
+    applyViewerUI();
+  } else {
+    applyAdminUI();
+  }
+
   buildSidebar();
   updateStats();
 
@@ -2801,19 +3160,31 @@ document.addEventListener('DOMContentLoaded', () => {
     projeInput.value = STATE.projeAdi;
   }
 
-  if (STATE.activePage !== 'sorular') {
-    switchTab(STATE.activePage);
+  if (isViewer()) {
+    // Viewer: onay var mı kontrol et
+    const onay = localStorage.getItem(VIEWER_ONAY_KEY);
+    if (onay) {
+      showViewerRapor(JSON.parse(onay));
+    } else {
+      showViewerBekleme();
+      switchTab('sorular');
+      renderQuestion();
+    }
   } else {
-    renderQuestion();
-  }
+    if (STATE.activePage !== 'sorular') {
+      switchTab(STATE.activePage);
+    } else {
+      renderQuestion();
+    }
 
-  if (STATE.activeFilter !== 'all') {
-    const idx = CATEGORIES.indexOf(STATE.activeFilter);
-    if (idx >= 0) {
-      const el = document.getElementById(`cat-${idx}`);
-      if (el) {
-        document.querySelectorAll('.cat-item').forEach(b => b.classList.remove('active'));
-        el.classList.add('active');
+    if (STATE.activeFilter !== 'all') {
+      const idx = CATEGORIES.indexOf(STATE.activeFilter);
+      if (idx >= 0) {
+        const el = document.getElementById(`cat-${idx}`);
+        if (el) {
+          document.querySelectorAll('.cat-item').forEach(b => b.classList.remove('active'));
+          el.classList.add('active');
+        }
       }
     }
   }
